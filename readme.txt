@@ -1,4 +1,4 @@
-Readme/Help for PyPE 1.5 (Python Programmer's Editor')
+Readme/Help for PyPE 1.6 (Python Programmer's Editor')
 http://come.to/josiah
 
 PyPE is copyright (c) 2003 Josiah Carlson.

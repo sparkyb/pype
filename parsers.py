@@ -26,9 +26,9 @@ def detectLineEndings(text):
     else:# cr_ is mx:
         return '\r'
 
-def recur_compiled(obj, heir, lines):
+def recur_compiled(obj, hier, lines):
     if isinstance(obj, Function) or isinstance(obj, Class):
-        h = heir + [obj.name]
+        h = hier + [obj.name]
         if obj.doc is None:
             docstring = {obj.name: ['']}
         else:
@@ -38,17 +38,17 @@ def recur_compiled(obj, heir, lines):
             if not obj.doc:
                 docstring[obj.name][0] = "%s(%s) %s"%(obj.name, ', '.join(obj.argnames), '.'.join(h))
             if obj.name == '__init__':
-                if heir:
-                    if heir[-1] in docstring:
-                        docstring[heir[-1]].append(docstring[obj.name][0])
+                if hier:
+                    if hier[-1] in docstring:
+                        docstring[hier[-1]].append(docstring[obj.name][0])
                     else:
-                        docstring[heir[-1]] = [docstring[obj.name][0]]
+                        docstring[hier[-1]] = [docstring[obj.name][0]]
         else:# isinstance(obj, Class)
             n = 'class '+obj.name
         out = [(n, (n.lower(), obj.lineno-1), leading(lines[obj.lineno-1]), [])]
         ot = out[0][-1]
     else:
-        h = heir
+        h = hier
         docstring = {}
         out = []
         ot = out
@@ -65,7 +65,7 @@ def slow_parser(source, line_ending, flat=0):
 
     lines = source.split(line_ending)
     mod = compiler.parse(source)
-    heir, docstring = recur_compiled(mod, [], lines)
+    hier, docstring = recur_compiled(mod, [], lines)
     #for nam, dsl in ds.iteritems():
     #    if nam in docstring: docstring[nam].extend(dsl)
     #    else: docstring[nam] = dsl
@@ -75,11 +75,11 @@ def slow_parser(source, line_ending, flat=0):
         new_ds[i] = filter(None, j)
 
     if flat == 0:
-        return heir, new_ds.keys()
+        return hier, new_ds.keys()
     elif flat == 1:
         return new_ds
     else:
-        return heir, new_ds.keys(), new_ds
+        return hier, new_ds.keys(), new_ds
 
 def leading(line):
     cur = 0
@@ -137,7 +137,7 @@ def tim(p=1, ct = [None]):
         if p: print ret,
         return ret
 
-if __name__ == '__main__':
+def test():
     import sys, time
 
     if len(sys.argv)>1:
@@ -154,3 +154,34 @@ if __name__ == '__main__':
 
     else:
         print 'usage:\n python parsers.py <source file>'
+
+def main():
+    import fileinput
+    import sys
+    
+    #get the lines to the parsable file
+    lines = []
+    fil = '-'
+    if len(sys.argv)>1 and sys.argv[1]:
+        fil = sys.argv[1]
+    for line in fileinput.input(fil):
+        lines.append(line)
+    #parse the file
+    toparse = ''.join(lines)
+    le = detectLineEndings(toparse)
+    try:
+        toprint = slow_parser(toparse, le, 2)
+    except:
+        toprint = fast_parser(toparse, le)
+    #print parsed representation
+    if fil == '-':
+        print repr(toprint)
+    else:
+        print fil
+        os.remove(fil)
+        a = open("%s.out"%fil, 'w')
+        a.write(repr(toprint))
+        a.close()
+
+if __name__ == '__main__':
+    main()

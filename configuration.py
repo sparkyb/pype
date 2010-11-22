@@ -18,6 +18,20 @@ eolmode = fmt_mode[eol]
 
 runpath = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
+se = sys.executable
+a = se
+b = sys.argv[0]
+if ' ' in a:
+    a = '"%s"'%a
+if ' ' in b:
+    b = '"%s"'%b
+runme = "%s %s"%(a,b)
+
+if se[-8:] == 'pype.exe':
+    runme = a
+
+del a;del b;del se
+
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
 #light vert line just before this column number
@@ -71,13 +85,23 @@ extns = {'py' : 'python',
 
 # cmt-001 08/06/2003 - Create a pype configuration directory to store info
 default_homedir = os.path.dirname(os.path.abspath(__file__))
+
 try:
-    homedir = os.path.join(os.environ['HOME'], ".pype")
+    #all user-based OSes
+    thd = os.path.expanduser("~")
+    if thd == "~": raise
+    homedir = os.path.join(thd, ".pype")
 except:
     try:
-        homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
+        #*nix fallback
+        homedir = os.path.join(os.environ['HOME'], ".pype")
     except:
-        homedir = os.path.join(default_homedir, ".pype")
+        try:
+            #windows NT,2k,XP,etc. fallback
+            homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
+        except:
+            #What os are people using?
+            homedir = os.path.join(default_homedir, ".pype")
 try:
     # create the config directory if it
     # doesn't already exist

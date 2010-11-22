@@ -1,3 +1,80 @@
+(PyPE 1.6)
+(please note) I am going on vacation from September 3 to September 14.  Any
+bug reports will be silently ignored until at least the 15th.  If you have
+problems using 1.6, try using 1.5.1 until I get back to you.
+
+(made better) user profile path discovery.  Thanks Erik Lechak.
+(fixed) if the user profile cannot be saved, you will get a dialog informing
+you of this.  Previously, this was not the case, it would be silently ignored.
+(fixed) there was a bug in the recently open documents menu that would cause
+certain documents to be placed in the menu, and others not to be.  From now
+on, any document opened will be placed in the menu.  The document will have
+the file name and path normalized, as per os.path.normcase and
+os.path.normpath.  This will result in duplicate file entries until the menu
+gets cleared out of old entries for Windows users, as the menu thinks there is
+a difference between c:\doc.txt and C:\Doc.TXT on Windows.  You can speed this
+up by dragging and dropping 9 random text files onto PyPE.
+(fixed) a foolish bug that stopped me from using map anywhere in PyPE, I had
+assigned map to be a mapping for the find/replace dialog stuff.
+(changed) Code snippets are now optionally turned off in the view menu.  In
+turning off code snippets, then closing down and starting back up PyPE, you
+will no longer have a code snippet bar on the left side, nor will the hot keys
+work.  For those people who use code snippets, I'll do my best to not remove
+the functionality, and keep it an option, but may arbitrarily remove it in the
+2.x series, if development proceeds that far.
+(added) goto line as a menu command and hotkey.  I've been wanting it for a
+while, and it was requested by another user.  So I added it.
+(added) the option to add a search path for modules.  This is a setting that
+will be saved, and is of primary use for those using the windows binary on a
+system with Python installed.  To tell the truth, I've been using the binary
+for a while; it starts up faster.  This addition makes the binary as powerful
+as the source version.  To remove paths from the module search, one must delve
+into the history.txt file.  I really should write an abstracted class to
+handle pathmarks, shell commands and module paths...maybe in a later version.
+(fixed) inserted a minor change that fixed the autoindent for lines that
+contain slices.
+(changed) hitting F5 will now cause the slow parser to do its magic, and if it
+fails (due to a syntax error), the fast parser will kick in.  If you always
+want the fast parser to work, just leave a syntax error in your source until
+just before you run it.  When opening multiple files, 
+(cleaned up) some imports, variable declarations, etc.
+(tried to change but failed) I had attempted to make all parsing occur in the
+background with an additional thread so that the GUI wouldn't seize up.
+Unfortunately, there seems to be a bug with either Python garbage collection,
+wxStyledTextCtrl, or STCStyleEditor.py.  How do I know?  Because doing any
+operation that causes garbage to be generated (for the garbage collector to
+collect) while updating the wxStyledTextCtrl component with the STCStyleEditor
+module causes a garbage collection error in both Python 2.2 and Python 2.3.
+Certainly I can spend a few weeks testing and inserting locks around portions
+that could cause problems, but I will not.  On the upside, I'm really good at
+creating new events, event handlers, and other such things, so if there ever
+is a need for background processing (IE the garbage collection error gets
+fixed), It'll be a 5-minute job.
+(finally succeeded) the trick to getting background parsing lay within the use
+of os.popen4.  Keeping the parsing out of process fixed the problem I was
+having, and I could even use some threads to wait for the child.stdout.read()
+to complete.  Works fabulously.  It takes about 110% as long to do it as an
+external process (through the use of a=repr(obj), eval(a) and pipes), but that
+is OK as it no longer delays the GUI.  Ah HAH!  Spelunkers into the code will
+notice that I'm actually calling the editor itself...with an argument of
+'--parse', and I've also done away with runscript.py, by calling the editor
+itself using '--exec' as an argument.
+(changed parsing) the current parsing method does not use pipes or threads,
+and also limits itself to parsing one file at any one time (I've dropped 20
+files onto PyPE with the threading approach, and PyPE would not respond for
+a while).  Now PyPE is always responsive (as long as your processor has
+available cycles).
+(fixed) it seems as though runscript.py was never included in the windows-only
+version of PyPE.   No worries, it is now a part of the editor, so should just
+work.
+(fixed) there seemed to be a long-standing bug in calling PyPE with relative
+command line arguments for files to open.  This has been fixed.  There is a
+minor but relating to the recently open files menu, but that'll be fixed when
+I get back from vacation.
+(fixed) my constant misspellings of hierarchy, I had been incorrectly spelling
+it as heirarchy.  Misspelling pointed out by my wife.
+
+
 (PyPE 1.5.1)
 (fixed) a little bug with autoindent after [else, try, except, finally]
 statements.  I forgot to add them into the autoindent stuff.
@@ -116,9 +193,9 @@ text in an editor like PyPE is just plain ugly).
 (fixed) a little bug in MainWindow.OnDrop, where a failed file open should
 open up a dialog explaining why the open failed, but would instead cause
 another exception.  Ick.
-(added) a very rudimentary heirarchical python parser.  It only pays attention
+(added) a very rudimentary hierarchical python parser.  It only pays attention
 to leading spaces in function and class definitions.  That is why I call it
-rudimentary.  All bug reports regarding the heirarchical python parser will be
+rudimentary.  All bug reports regarding the hierarchical python parser will be
 ignored.  Patches for making the parser better will be merged, likely used,
 and properly attributed.
 (added) "autocompletion" dropdown for keyword/function/method completion.
@@ -157,7 +234,7 @@ your system.  One thing to note is that the slow parser, because it uses the
 parser module, has a few problems with line numbers (many lines that are in
 triple quoted strings are considered one line, and comment lines are discarded
 completely), so the slow parser uses the fast parser to get line numbers.
-Kinda funny really.  The accurate one (in terms of heirarchy) is completely
+Kinda funny really.  The accurate one (in terms of hierarchy) is completely
 off in terms of line numbers.  HAH!
 (fixed) a little bug regarding comment insertion.  If one would hit cancel, it
 would have caused an exception...that was ignored.
@@ -181,7 +258,7 @@ then elif then else statements in configuration.py.  I knew there had to be
 something like that in the os module.
 (added) an 'open module' functionality similar to what I remember of older
 IDLE, though this one searches in an identical fashion to the way an 'import'
-statement would in later versions of Python, that is, it includes heirarchical
+statement would in later versions of Python, that is, it includes hierarchical
 module importing, as well as the current path in the search for a module.
 (cleaned) some duplicated code out.  Opening a file, a module, or dropping a
 file onto PyPE causes the same code to run.  Isn't that nice?  I think so.
