@@ -507,7 +507,7 @@ class MultiFilter(object):
     def __setitem__(self, stc, value):
         self.datamap[stc.dirname, stc.filename, getattr(stc, 'NEWDOCUMENT', None)] = value
     def __delitem__(self, stc):
-        del self.datamap[stc.dirname, stc.filename, getattr(stc, 'NEWDOCUMENT', None)]
+        self.datamap.pop((stc.dirname, stc.filename, getattr(stc, 'NEWDOCUMENT', None)), None)
 
 class GlobalFilter(DefinitionList):
     def __init__(self, parent, root):
