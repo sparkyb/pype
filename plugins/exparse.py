@@ -13,10 +13,86 @@ Adapted from Synopsis package, which is LGPL licensed.
 """
 
 import compiler
+import inspect
 import parser
-import symbol
-import token
 import re
+import symbol
+import sys
+import token
+
+USE_AST = False
+if sys.version >= '2.5':
+    # try to use the new ast module, it's faster than compiler.ast :)
+    USE_AST = True
+    import _ast
+
+    # these functions are inspired/copied from their equivalents in Python
+    # 2.6's high-level ast module
+    fields = lambda node: ((field, getattr(node, field, None)) for field in node._fields)
+
+    def transform(node):
+        # transform the targets in for/with clauses to assignment nodes
+        if isinstance(node, _ast.For):
+            a = _ast.Assign()
+            a.targets = [node.target]
+            yield a
+        elif isinstance(node, _ast.With) and node.optional_vars:
+            a = _ast.Assign()
+            a.targets = [node.optional_vars]
+            yield a
+        yield node
+
+    def _child_nodes(node):
+        ast = _ast.AST
+        if not node._fields:
+            return
+        for name, field in fields(node):
+            if isinstance(field, ast):
+                yield field
+            elif isinstance(field, list):
+                for item in field:
+                    if isinstance(item, ast):
+                        yield item
+
+    def child_nodes(node):
+        trans = transform
+        for i in _child_nodes(node):
+            for j in trans(i):
+                yield j
+
+    def cleandoc(doc):
+        """Clean up indentation from docstrings.
+    
+        Any whitespace that can be uniformly removed from the second line
+        onwards is removed."""
+        # borrowed and modified from Python trunk source
+        try:
+            lines = doc.expandtabs().split('\n')
+        except UnicodeError:
+            return None
+        else:
+            # Find minimum indentation of any non-blank lines after first line.
+            margin = sys.maxint
+            for line in lines[1:]:
+                content = len(line.lstrip())
+                if content:
+                    indent = len(line) - content
+                    margin = min(margin, indent)
+            # Remove indentation.
+            if lines:
+                lines[0] = lines[0].lstrip()
+            if margin < sys.maxint:
+                for i in xrange(1, len(lines)):
+                    lines[i] = lines[i][margin:]
+            # Remove any trailing or leading blank lines.
+            return '\n'.join(lines).strip('\n')
+
+    def get_docstring(node, clean=True):
+        if not isinstance(node, (_ast.FunctionDef, _ast.ClassDef, _ast.Module)):
+            raise TypeError("%r can't have docstrings" % node.__class__.__name__)
+        if node.body and isinstance(node.body[0], _ast.Expr) and \
+           isinstance(node.body[0].value, _ast.Str):
+            return cleandoc(node.body[0].value.s)
 
 line_end = ((token.NEWLINE, ''), (token.INDENT, ''), (token.DEDENT, ''))
 
@@ -440,6 +516,7 @@ def translate_old_to_new(ucky_old_stuff, docs, last_line, depth=1, parent=''):
     return out
 
 _new_scope = (compiler.ast.Function, compiler.ast.Class)
+_new_scope_ast = (_ast.FunctionDef, _ast.ClassDef)
 
 class InfoObj(object):
     def __init__(self, *args):
@@ -459,7 +536,7 @@ class InfoObj(object):
     def __setitem__(self, index, value):
         setattr(self, self.__slots__[index], value)
     def __repr__(self):
-        return str([(k,getattr(self, k)) for k in self.__slots__ if k not in ('locals', 'search_list')])
+        return str([(k,getattr(self, k)) for k in self.__slots__ if k not in ('locals', 'search_list', 'lex_parent')])
     def __cmp__(self, other):
         if other is None:
             return 1
@@ -476,11 +553,18 @@ class Import(InfoObj):
     required = 3
 
 def postorder(node, depth):
+    if USE_AST:
+        for _ in postorder_ast(node, depth):
+            yield _
+        return
     new_scope = _new_scope
     rev = reversed
     get = getattr
     isi = isinstance
     nod = compiler.ast.Node
+    lam = (compiler.ast.GenExpr, compiler.ast.Lambda)
+    if sys.version >= '2.6':
+        lam = (compiler.ast.ListComp,) + lam
     
     stk = [(node, depth)]
     while stk:
@@ -491,10 +575,44 @@ def postorder(node, depth):
         node.visited = 1
         depth += isi(node, new_scope)
         ch = node.getChildNodes()
-        if ch:
+        if ch and not isi(node, lam):
             stk.append((node, depth))
             stk.extend((chi, depth) for chi in rev(ch) if isi(chi, nod))
         else:
+            yield node, depth
+
+def postorder_ast(node, depth):
+    new_scope = _new_scope_ast
+    nodes = child_nodes
+    has = hasattr
+    rev = reversed
+    get = getattr
+    isi = isinstance
+    nod = _ast.AST
+    lam = (_ast.GeneratorExp, _ast.Lambda)
+    if sys.version >= '3.0':
+        lam = (_ast.ListComp,) + lam
+    
+    _id = id
+
+    visited = set()
+    stk = [(node, depth)]
+    while stk:
+        node, depth = stk.pop()
+        if _id(node) in visited:
+            if isi(node, new_scope) and has(node, 'lineno') and has(node, 'decorators'):
+                node.lineno += len(node.decorators)
+            yield node, depth
+            continue
+        visited.add(_id(node))
+        depth += isi(node, new_scope)
+        ch = list(nodes(node))
+        if ch and not isi(node, lam):
+            stk.append((node, depth))
+            stk.extend((chi, depth) for chi in rev(ch) if isi(chi, nod))
+        else:
+            if isi(node, new_scope) and has(node, 'lineno') and has(node, 'decorators'):
+                node.lineno += len(node.decorators)
             yield node, depth
 
 def iter_tree(entries, include_labels=True):
@@ -555,12 +673,15 @@ def _fixup_extra(entries):
     return docs
 
 def _parse(source):
+    if USE_AST:
+        return _parse_ast(source)
     lines_to_positions = {0:0}
     for line, match in enumerate(re.finditer('\n', source)):
         lines_to_positions[line+1] = match.end()
     lines_to_positions[len(lines_to_positions)] = len(source)
 
     # cache these references
+    isi = isinstance
     new_scope = _new_scope
     fcn = compiler.ast.Function
     ass = compiler.ast.AssName
@@ -568,6 +689,7 @@ def _parse(source):
     name = compiler.ast.Name
     fro = compiler.ast.From
     imp = compiler.ast.Import
+    mod = compiler.ast.Module
     self_names = set(('self', 'cls', 'klass', 'class_', '_class'))
 
     # list of Info() objects
@@ -589,7 +711,7 @@ def _parse(source):
         if depth not in attrs:
             attrs[depth] = set()
         
-        if isinstance(node, new_scope):
+        if isi(node, new_scope):
             # pull the locals from the current depth, and toss it in the out
             # bucket; also add the function name to the depth-1 listing
             names = known.pop(depth)
@@ -623,16 +745,16 @@ def _parse(source):
             out.append(Info(node.lineno, node.name, signature, depth, indent, sorted(names), None, node.doc, node.lastlineno-node.lineno+1, None, None))
             known.setdefault(depth-1, set()).add(node.name)
         
-        elif isinstance(node, ass):
+        elif isi(node, ass):
             # it's an assignment, toss it into the locals list
             known[depth].add(node.name)
 
-        elif isinstance(node, assa):
+        elif isi(node, assa):
             # it's an attribute assignment, toss it into the attrs list
             if isinstance(node.expr, name) and node.expr.name in self_names:
                 attrs[depth].add(node.attrname)
         
-        elif isinstance(node, fro):
+        elif isi(node, fro):
             lead = node.level*'.' + node.modname
             for oname, dname in node.names:
                 if oname != '*':
@@ -641,7 +763,7 @@ def _parse(source):
                 else:
                     known[depth].add(Import(node.lineno, lead, oname))
         
-        elif isinstance(node, imp):
+        elif isi(node, imp):
             for oname, dname in node.names:
                 if dname is None or oname == dname:
                     known[depth].add(oname.split('.')[0])
@@ -651,9 +773,9 @@ def _parse(source):
                         known[depth].add(Import(node.lineno, oname, oname))
                 else:
                     known[depth].add(dname)
-                    known[depth].add(Import(node.lineno, dname, oname))
+                    known[depth].add(Import(node.lineno, oname, dname))
         
-        elif isinstance(node, compiler.ast.Module):
+        elif isi(node, mod):
             # don't really need the documentation here, but eh?
             names = known.pop(depth)
             for i in xrange(depth-1, max(attrs)+1):
@@ -664,6 +786,123 @@ def _parse(source):
     out.sort()
     docs = _fixup_extra(out)
     return out, docs
+
+def _parse_ast(source):
+    lines_to_positions = {0:0}
+    for line, match in enumerate(re.finditer('\n', source)):
+        lines_to_positions[line+1] = match.end()
+    lines_to_positions[len(lines_to_positions)] = len(source)
+
+    # cache these references
+    isi = isinstance
+    new_scope = _new_scope_ast
+    fcn = _ast.FunctionDef
+    ass = _ast.Assign
+    att = _ast.Attribute
+    name = _ast.Name
+    tup = (_ast.Tuple, _ast.List)
+    fro = _ast.ImportFrom
+    imp = _ast.Import
+    mod = _ast.Module
+    self_names = set(('self', 'cls', 'klass', 'class_', '_class'))
+
+    # list of Info() objects
+    out = []
+    # imports are a list of (line_no, module_import, local_name)
+    # indent is the indentation of the function/class, tabs = 8 spaces
+    
+    tree = compile(source, "<unknown>", "exec", _ast.PyCF_ONLY_AST)
+    known = {}
+    attrs = {}
+    last = {}
+
+    for node, depth in postorder_ast(tree, 0):
+        # this last dictionary is to allow us to pull the body of an entire
+        # function if necessary for discovering it's arg list
+        last[depth] = max(getattr(node, 'lineno', 0), last.get(depth, 0))
+        if depth not in known:
+            known[depth] = set()
+        if depth not in attrs:
+            attrs[depth] = set()
+        
+        if isi(node, new_scope):
+            # pull the locals from the current depth, and toss it in the out
+            # bucket; also add the function name to the depth-1 listing
+            names = known.pop(depth)
+            node.lastlineno = last.pop(depth)
+            last[depth-1] = max(node.lastlineno, last.get(depth-1, 0))
+            if isi(node, fcn):
+                an = [get_defaults(node, source, lines_to_positions)]
+                _a = node.args.args + [node.args.vararg, node.args.kwarg]
+                for _name in _a:
+                    if not _name:
+                        pass
+                    elif isi(_name, tuple):
+                        _a.extend(_name)
+                    elif isi(_name, _ast.Name):
+                        names.add(_name.id)
+                    elif isi(_name, (str, unicode)):
+                        names.add(_name)
+                signature = 'def %s(%s)'%(node.name, ', '.join(an))
+            else:
+                for i in xrange(depth, max(attrs)+1):
+                    names.update(attrs.pop(i, ()))
+                if not node.bases:
+                    signature = 'class %s'%(node.name,)
+                else:
+                    signature = 'class %s(%s)'%(node.name, get_defaults(node, source, lines_to_positions, 0))
+            startline = source[lines_to_positions[node.lineno-1]:lines_to_positions[node.lineno]].replace('\t', '        ')
+            indent = len(startline) - len(startline.lstrip())
+            out.append(Info(node.lineno, node.name, signature, depth, indent, sorted(names), None, get_docstring(node), node.lastlineno-node.lineno+1, None, None))
+            known.setdefault(depth-1, set()).add(node.name)
+        
+        elif isi(node, ass):
+            # it's an assignment, toss it into the locals list
+            _a = node.targets[:]
+            for _name in _a:
+                if isi(_name, name):
+                    known[depth].add(_name.id)
+                elif isi(_name, tup):
+                    _a.extend(_name.elts)
+                elif isi(_name, att):
+                    if isi(_name.value, name) and _name.value.id in self_names:
+                        attrs[depth].add(_name.attr)
+
+        elif isi(node, fro):
+            lead = node.level*'.' + node.module
+            for _name in node.names:
+                oname, dname = _name.name, _name.asname
+                if oname != '*':
+                    known[depth].add(dname or oname)
+                    known[depth].add(Import(node.lineno, lead + '.' + oname, dname or oname))
+                else:
+                    known[depth].add(Import(node.lineno, lead, oname))
+                
+        
+        elif isi(node, imp):
+            for _name in node.names:
+                oname, dname = _name.name, _name.asname
+                if dname is None or oname == dname:
+                    known[depth].add(oname.split('.')[0])
+                    known[depth].add(Import(node.lineno, oname, oname))
+                    while '.' in oname:
+                        oname = oname.rsplit('.', 1)[0]
+                        known[depth].add(Import(node.lineno, oname, oname))
+                else:
+                    known[depth].add(dname)
+                    known[depth].add(Import(node.lineno, oname, dname))
+        
+        elif isi(node, mod):
+            # don't really need the documentation here, but eh?
+            names = known.pop(depth)
+            for i in xrange(depth-1, max(attrs)+1):
+                names.update(attrs.pop(i, ()))
+            out.append(Info(-1, '', '', depth, -1, sorted(names), None, get_docstring(node), last[depth]))
+    
+    out.sort()
+    docs = _fixup_extra(out)
+    return out, {}
+
 
 def fix_tuples(x):
     if type(x) is not tuple:
@@ -694,15 +933,24 @@ def get_defaults(fnode, source, lines, fcn=1):
     pattern = (CLASS_BASE_PATTERN, FCN_ARG_PATTERN)[fcn]
     start = lines[fnode.lineno-1]
     fend = lines[fnode.lineno]
+    try:
+        fc = fnode.code
+        while isinstance(fc, compiler.ast.Stmt):
+            fc = fc.nodes
+        fend = lines[fc[0].lineno]
+    except:
+        fc = fnode.body
+        fend = lines[fc[0].lineno-1]
     end = lines[fnode.lastlineno]
     try:
-        # we'll try the fast version that only visits the function
-        # signature... as long as some doof isn't trying to put extra
-        # stuff on the same line, which would kill the parse :/
-        cur = _get_tree(source[start:fend].lstrip() + ' pass\n', pattern)
+        # We'll try the fast version that only visits the function
+        # signature...
+        # This will fail if the first non-blank line of a function is a
+        # comment.
+        cur = _get_tree(source[start:fend].strip() + ' pass\n', pattern)
     except:
-        # otherwise 
-        cur = _get_tree(source[start:end].lstrip(), pattern)
+        # otherwise we'll parse the entire function
+        cur = _get_tree(source[start:end].strip(), pattern)
     return ''.join(cur).replace(',', ', ')
 
 def recmatch(data, pattern):

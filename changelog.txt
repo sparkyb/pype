@@ -88,6 +88,12 @@ instance/class variables.
 (added) optional global filter for all parsed documents.
 (added) scoring method for filter tables (better matches float to the top of
 the listing).
+(fixed) long-standing issue with PyPE signaling a syntax error on the last
+line in some situations.
+(added) _ast-based parser for Python 2.5 and later (compiler.ast is deprecated
+in 2.6, and removed in 3.0).  The new parser is a bit faster on large files
+(1.2 seconds vs. 1.4 seconds to parse pype.py on my machine), and should be
+future-proof.
 
 
 #-------------------------------- PyPE 2.8.8 ---------------------------------

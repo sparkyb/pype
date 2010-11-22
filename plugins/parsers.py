@@ -363,8 +363,8 @@ def slower_parser(source, _1, flat, _2):
         else:
             out, docstring = exparse.parse(source)
     except:
-        import traceback
-        traceback.print_exc()
+        ## import traceback
+        ## traceback.print_exc()
         #parse error, defer to faster parser
         return faster_parser(source, '\n', flat, _2)
 

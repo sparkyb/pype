@@ -5626,7 +5626,7 @@ class PythonSTC(stc.StyledTextCtrl):
             return
 
         #check syntax if we are visible
-        content = self.getcmd(0).replace('\r\n', '\n').replace('\r', '\n')
+        content = self.getcmd(0).rstrip().replace('\r\n', '\n').replace('\r', '\n') + '\n'
         if not content and not self.has_bad:
             return
 
