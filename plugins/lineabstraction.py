@@ -107,8 +107,13 @@ class LineAbstraction(object):
         __metaclass__ = Property
         def get(self):
             x,y = self.stc.GetSelection()
+            x,y = min(x,y), max(x,y)
             start = self._line_range(self.stc.LineFromPosition(x))[0]
-            end = self._line_range(self.stc.LineFromPosition(y))[1]
+            #we use y-1 because otherwise
+            #for i in xrange(10):
+            #    lines.selectedlinesi = lines.selectedlinesi
+            #will continually select more and more lines
+            end = self._line_range(self.stc.LineFromPosition(y-1))[1]
             return self.stc.LineFromPosition(start), self.stc.LineFromPosition(max(end-1, start))+1
         
         def set(self, range):

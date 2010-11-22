@@ -5,7 +5,7 @@ class ListSelect(object):
     def __init__(self, tc=None, noctrl=0):
         if tc:
             tc.Bind(wx.EVT_CHAR, self.OnChar)
-        self.__noctrl = noctrl
+            self.__noctrl = noctrl
 
     def OnChar(self, e):
         key = e.GetKeyCode()
@@ -39,6 +39,13 @@ class ListSelect(object):
                 cs = max(cs - 1, 0)
         self.Select(cs)
         self.EnsureVisible(cs)
+    
+    def SelectI(self, i):
+        cs = self.GetFirstSelected()
+        while cs != -1:
+            self.Select(cs, 0)
+            cs = self.GetFirstSelected()
+        self.Select(i)
     
     def SelectNext(self):
         self._select(1)

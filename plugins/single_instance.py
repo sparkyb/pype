@@ -4,7 +4,7 @@ import asyncore
 import traceback
 import sys
 
-configuration = sys.modules['configuration']
+configuration = _pype
 
 callback = None
 

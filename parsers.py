@@ -9,16 +9,9 @@ import symbol
 import token
 from compiler import ast
 from compiler import consts
+from plugins import exparse
 
 todoexp = re.compile('([a-zA-Z0-9 ]+):(.*)', re.DOTALL)
-
-nam = '[a-zA-Z_][a-zA-Z0-9_]+'
-typ = '(?:' + nam + '(?:\s+%s)*'%nam + '(?:\s*\[\])*' + '(?:\s*\*)*' + ')*'
-clsnam = nam + '::' + '(?:%s|operator(?:\+|-|\*|/|=|<|>|\+=|-=|\*=|/=|<<|>>|<<=|>>=|==|!=|<=|>=|\+\+|--|%%|&|\^|!|\||~|&=|\^=|\|=|&&|\|\||%%=|\[\]|()|new|delete))'%nam
-args = '(?:%s\s*%s)*'%(typ,nam) + '(?:\s*,\s*%s\s*%s)*'%(typ,nam)
-cfcnre = '(%s)\s+(%s)\s+\(\s*(%s)\s*\)\s*{'%(typ, clsnam, args)
-
-cfcn = re.compile(cfcnre)
 
 _bad_todo = dict.fromkeys('if elif else def cdef class try except finally for while lambda'.split())
 _bad_urls = dict.fromkeys('http ftp mailto news gopher telnet file'.split())
@@ -45,7 +38,108 @@ def detectLineEndings(text):
 def leading(line):
     return len(line)-len(line.lstrip())
 
+#------------------------------- C/C++ parser --------------------------------
+
+defn = '(?:is+)*(?:is+\*+s+)?(?:is*::s*)?cs*\(a\)\s*{'
+rep = [('a', '(?:\b|b|b(?:,s*b)*)'),
+       ('b', '(?:i?[ \t\*&]*is*(?:\[[^\]]*\])*)'),
+       ('c', '(?:i|operator[^\w]+)'),
+       ('d', '(?:(?:is+)*(?:is+\*+s+)?is*;f*)'),
+       ('i', '(?:[a-zA-Z_]\w*)'),
+       ('s', '[ \t]'),
+       ('f', '\s'),
+       ('y', '(?:[dD][eE][fF][iI][nN][eE])')]
+
+fcn = '(#ys+i\(i(?:,s*i)*\))|(?:(cs*\([^\)]*\))[^{;\)]*[;{])'
+sdef = '(c)s*\('
+
+for i,j in rep:
+    try:
+        _ = re.compile(j)
+    except:
+        print j
+        raise
+    fcn = fcn.replace(i,j)
+    sdef = sdef.replace(i,j)
+
+fcnre = re.compile(fcn)
+sdefre = re.compile(sdef)
+
+badstarts = []
+for i in 'if for while switch case return'.split():
+    badstarts.append(i+'(')
+    badstarts.append(i+' ')
+    badstarts.append(i+'\t')
+
+ops = '+-=<>?%!~^&(|/"\''
+
 def c_parser(source, line_ending, flat, wxYield):
+    posn = 0
+    lc = 1
+    post = 0
+    out = []
+    docs = {}
+    for i in fcnre.finditer(source):
+        fcn = i.group(0).replace('\n', ' ')
+        
+        #update line count
+        lc += post + source.count('\n', posn, i.start())
+        post = 0
+        post = source.count('\n', i.start(), i.end())
+        posn = i.end()
+        
+        sm = sdefre.search(fcn)
+        short = sm.group(1)
+        
+        #check for function-like macros
+        if fcn.lower().startswith('#define'):
+            out.append((fcn, (short.lower(), lc, short), 0, []))
+            docs.setdefault(short, []).append(fcn[sm.start():])
+            continue
+        
+        #handle the 'badstarts'
+        cont = 0
+        for j in badstarts:
+            if fcn.startswith(j):
+                cont = 1
+                break
+        if cont:
+            continue
+        
+        #handle function calls
+        pp = fcn.rfind(')')
+        if fcn.endswith(';'):
+            xx = fcn[pp+1:-1]
+            if not xx.strip():
+                continue
+            for j in ops:
+                if j in xx:
+                    cont = 1
+                    break
+            if cont:
+                continue
+        
+        #get the start of the definition
+        linestart = source.rfind('\n', 0, i.start()) + 1 #yes, I really want this
+        
+        fcns = source[linestart:i.start()]
+        dfcns = dict.fromkeys(fcns)
+        
+        #check for operators in the beginning; for things like...
+        #x = fcncall(...) * X;
+        for j in ops:
+            if j in dfcns:
+                cont = 1
+                break
+        if cont:
+            continue
+        
+        if '[' not in short:
+            docs.setdefault(short, []).append(fcn[sm.start():pp+1])
+        #use the entire definition
+        fcn = ' '.join(fcns.split() + fcn[:pp+1].split())
+        out.append((fcn, (short.lower(), lc, short), 0, []))
+    
     texp = todoexp
     todo = []
     line_no = 0
@@ -65,140 +159,20 @@ def c_parser(source, line_ending, flat, wxYield):
                       tpl[1].count('!'),
                       tpl[1].strip()))
         #elif ...
-    if flat == 0:
-        return [], []
-    elif flat==1:
-        return {}
-    elif flat==2:
-        return [], [], {}
-    else:
-        return [], [], {}, todo
-
-def get_definition(lines, line_start):
-    cur_line = line_start-1
-    ls = lines[cur_line.lstrip()]
-    na = ls.find('(')
-    ds = ls.find(':')
-    if na == -1:
-        na = ds
-    if na != -1:
-        if ds == -1:
-            ds = na
-        fn = ls[len(i):ds].strip()
-        if fn:
-            lead = len(line)-len(ls)
-            while stk and (stk[-1][2] >= lead):
-                prev = stk.pop()
-                if stk: stk[-1][-1].append(prev)
-                else:   out.append(prev)
-            nam = i+fn
-            nl = nam.lower()
-            f = ls[len(i):na].strip()
     
-    
-
-def slow_walk_ast(tree):
-    transformer = Visitor
-    see = dict.fromkeys('Class Function'.split())
-    stack = [(tree, 0)]
-    while stack:
-        tree, seen = stack.pop()
-        if not isinstance(tree, ast.Node):
-            continue
-        name = tree.__class__.__name__
-        if name in see:
-            if seen:
-                yield 'end',
-                continue
-            
-            if hasattr(transformer, 'visit'+name):
-                yield 'start', getattr(transformer, 'visit'+name)(tree), tree.lineno
-            if tree.doc:
-                yield 'doc', tree.doc
-            stack.append((tree, 1))
-        x = list(tree.getChildren())
-        x.reverse()
-        for i in x:
-            if isinstance(i, ast.Node):
-                stack.append((i, 0))
-
-class Visitor:
-    def visitClass(self, node):
-        return 'class', node.name
-    
-    def visitFunction(self, node):
-        return 'def', node.name
-
-Visitor = Visitor()
+    return out, docs.keys(), docs, todo
 
 def slower_parser(source, _1, flat, _2):
     try:
-        x = compiler.parse(source)
+        out, docstring = exparse.parse(source)
     except:
         #parse error, defer to faster parser
         return faster_parser(source, '\n', flat, _2)
-    
-    stack = []
-    out = []
-    docstring = {}
-    
-    defs = get_defs(source)
-    
-    lines = source.split('\n')
-    
-    def finalize():
-        event, contents = stack.pop()
-        doc = ''
-        cont = []
-        for i in contents:
-            if i[0] == 'doc':
-                doc = i[1]
-            else:
-                cont.append(i)
-        lineno = event[-1]
-        line = lines[lineno-1]
-        name = event[1][1]
-        names = [i[0][1][1] for i in stack]
-        
-        h = name
-        if lineno in defs:
-            h = defs[lineno].split(None, 1)[-1]
-        names.append(h)
-        doc = '%s\n%s'%('.'.join(names), doc)
-        doc = doc.strip()
-        docstring.setdefault(name, []).append(doc)
-        
-        if stack and name in ('__init__', '__new__'):
-            parentname = stack[-1][0][1][1]
-            docstring.setdefault(parentname, []).append(doc)
-        
-        #line is where the definition occurs...
-        item = (defs.get(lineno, name),
-                (name.lower(), lineno, name),
-                len(line)-len(line.lstrip()),
-                cont)
-        if stack:
-            stack[-1][-1].append(item)
-        else:
-            out.append(item)
-    
-    try:
-        for event in slow_walk_ast(x):
-            if event[0] == 'start':
-                stack.append((event, []))
-            elif event[0] == 'doc':
-                if stack:
-                    stack[-1][-1].append(event)
-            elif event[0] == 'end':
-                finalize()
-    except Exception, why:
-        traceback.print_exc()
-        return faster_parser(source, '\n', flat, _2)
-    
+
     texp = todoexp
     bad_todo = _bad_todo
     todo = []
-    for line_no, line in enumerate(lines):
+    for line_no, line in enumerate(source.split('\n')):
         ls = line.lstrip()
         if ls[:1] == '#':
             r = texp.match(ls, 1 + ls.startswith('##'))
@@ -212,60 +186,6 @@ def slower_parser(source, _1, flat, _2):
     
     return out, docstring.keys(), docstring, todo
 #
-def get_defs(source, p=0):
-    if p:
-        pprint.pprint(parser.suite(source).tolist(1))
-    
-    DATA = 0
-    START = 1
-    END = 2
-    def parse(item):
-        if item[0] <= token.N_TOKENS:
-            yield DATA, item[1], item[2]
-        else:
-            li = len(item)
-            xtra = None
-            if isinstance(item[-1], (int, long)):
-                xtra = item[-1]
-                li -= 1
-            yield START, item[0], xtra
-            for i in xrange(1, li):
-                for j in parse(item[i]):
-                    yield j
-            yield END, item[0]
-    
-    stk = []
-    stk2 = []
-    stk3 = []
-    ret = {}
-    inf = 1e155*1e155
-    for node in parse(parser.suite(source).tolist(1)):
-        if node[0] == DATA and stk:
-            sp = ''
-            if stk[-1][-1:] == ',' or stk[-1] in ('def', 'class'):
-                sp = ' '
-            stk[-1] += sp + node[1]
-            stk2[-1] = min(stk2[-1], node[2])
-        elif node[0] == START:
-            if node[1] in (symbol.funcdef, symbol.classdef):
-                if node[1] in (symbol.funcdef, symbol.classdef):
-                    stk2.append(inf)
-                stk.append('')
-            elif node[1] == symbol.suite and stk:
-                ret[stk2.pop()] = stk.pop().rstrip(':')
-        ## elif node[0] == END:
-            ## if node[1] in (symbol.parameters,):#, symbol.testlist):
-                ## x = stk.pop()
-                ## stk[-1] += x
-                ## if node[1] == symbol.testlist:
-                    ## stk[-1] += ')'
-                ## ret[stk2.pop()] = stk.pop()
-    if p:
-        print
-        print stk, stk2
-        print
-    return ret
-
 def faster_parser(source, line_ending, flat, wxYield):
     texp = todoexp
     bad_todo = _bad_todo
@@ -345,24 +265,6 @@ def faster_parser(source, line_ending, flat, wxYield):
 def fast_parser(*args, **kwargs):
     return slower_parser(*args, **kwargs)
 
-'''
-([('def foo(x, y=6, *args, **kwargs)', ('foo', 5, 'foo'), 0, []),
-  ('class bar',
-   ('bar', 9, 'bar'),
-   0,
-   [('def __init__(self, foo=a, bar={1:2})',
-     ('__init__', 10, '__init__'),
-     4,
-     [])]),
-  ('class Baz(object, int)',
-   ('baz', 13, 'Baz'),
-   0,
-   [('def __init__(self, bar=(lambda:None))',
-     ('__init__', 14, '__init__'),
-     4,
-     [('def goo()', ('goo', 16, 'goo'), 8, [])])])],
- '''
-
 ## (full, (lower, lineno, upper), indent, contents)
 
 def latex_parser(source, line_ending, flat, _):
@@ -433,6 +335,15 @@ def latex_parser(source, line_ending, flat, _):
     else:
         return out, [], {}, todo
 
+#Are there any other non-opening tags?
+no_ends = []
+for i in ('br p input img area base basefont '
+          'col frame hr isindex meta param').split():
+    no_ends.append(i+' ')
+    no_ends.append(i+'>')
+    no_ends.append('/'+i+' ')
+    no_ends.append('/'+i+'>')
+
 def ml_parser(source, line_ending, flat, _):
     todo = []
     texp = todoexp
@@ -471,6 +382,25 @@ def ml_parser(source, line_ending, flat, _):
     else:
         return [], [], {}, todo
 
+
+'''
+([('def foo(x, y=6, *args, **kwargs)', ('foo', 5, 'foo'), 0, []),
+  ('class bar',
+   ('bar', 9, 'bar'),
+   0,
+   [('def __init__(self, foo=a, bar={1:2})',
+     ('__init__', 10, '__init__'),
+     4,
+     [])]),
+  ('class Baz(object, int)',
+   ('baz', 13, 'Baz'),
+   0,
+   [('def __init__(self, bar=(lambda:None))',
+     ('__init__', 14, '__init__'),
+     4,
+     [('def goo()', ('goo', 16, 'goo'), 8, [])])])],
+ '''
+
 if __name__ == '__main__':
     a = '''import a, b, c
 
@@ -492,4 +422,4 @@ class Baz(object, int):
 '''
     import pprint
     ## pprint.pprint(get_defs(a,1))
-    pprint.pprint(slower_parser(a, '\n', 3, lambda:None)[-1])
+    pprint.pprint(slower_parser(a, '\n', 3, lambda:None)[0])

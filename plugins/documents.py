@@ -129,7 +129,7 @@ class MyNB(wx.Notebook):
                 
                 if win.dirname:
                     try:
-                        os.chdir(win.dirname)
+                        __main__.current_path = win.dirname
                     except:
                         traceback.print_exc()
                         pass

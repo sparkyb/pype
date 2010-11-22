@@ -149,61 +149,6 @@ class GetKeyDialog(wx.Dialog):
         self.Destroy()
     
 
-class GetKeyDialog_(wx.Dialog):
-    def __init__(self, parent, defa, curr, currk=''):
-        wx.Dialog.__init__(self, parent, -1, "Enter key combination",
-                          style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER,
-                          size=(320, 240))
-        self.parent = parent
-        
-        self.key = currk or curr
-        self.keysink = KeySink(self, defa, curr, self.key)
-        
-        self.text = wx.TextCtrl(self, -1, curr, style=wx.TE_READONLY|wx.TE_LEFT)
-        self.text2 = wx.TextCtrl(self, -1, self.key, style=wx.TE_READONLY|wx.TE_LEFT)
-        
-        ok1 = wx.Button(self, wx.NewId(), "This one")
-        ok2 = wx.Button(self, wx.NewId(), "This one")
-        
-        cancel = wx.Button(self, wx.CANCEL, "Cancel")
-
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.keysink, 1, wx.GROW)
-        
-        t1 = wx.BoxSizer(wx.HORIZONTAL)
-        t1.Add(self.text, 1, wx.EXPAND)
-        t1.Add(ok1)
-        sizer.Add(t1, 0, wx.GROW)
-        
-        t2 = wx.BoxSizer(wx.HORIZONTAL)
-        t2.Add(self.text2, 1, wx.EXPAND)
-        t2.Add(ok2)
-        sizer.Add(t2, 0, wx.GROW)
-        
-        sizer.Add(cancel, 0, wx.ALIGN_RIGHT)
-
-        self.SetSizer(sizer)
-        self.Bind(wx.EVT_BUTTON, self.OnOK1, ok1)
-        self.Bind(wx.EVT_BUTTON, self.OnOK2, ok2)
-        self.Bind(wx.EVT_BUTTON, self.OnCancel, cancel)
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
-
-    def OnClose(self, evt):
-        self.OnCancel(evt)
-
-    def OnOK1(self, evt):
-        self.parent.accelerator = self.text.GetValue()
-        self.parent.acceleratork = self.text2.GetValue()
-        self.Destroy()
-    def OnOK2(self, evt):
-        self.parent.accelerator = self.text2.GetValue()
-        self.parent.acceleratork = self.text2.GetValue()
-        self.Destroy()
-    def OnCancel(self, evt):
-        self.parent.accelerator = self.keysink.curr
-        self.parent.acceleratork = self.keysink.currk
-        self.Destroy()
-
 class HotkeyList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
     def __init__(self, parent):
         wx.ListCtrl.__init__(self, parent, -1,

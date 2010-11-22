@@ -99,5 +99,7 @@ Python source.
 Move PythonSTC definition out of pype.py
 
 2.6+/2.7:
-Hotkey support for macros.
-
+* Hotkey support for macros.
+If I can get more than one indicator working, or perhaps disable syntax
+highlighting, getting a remote pair/group programming setup similar to
+SubErthaEdit would be quite neat.

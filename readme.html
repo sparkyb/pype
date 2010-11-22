@@ -46,26 +46,31 @@ pre.literal-block {
 <li><a class="reference" href="#what-happens-when-smart-case-is-enabled-during-a-replace" id="id25" name="id25">What happens when &quot;Smart Case&quot; is enabled during a replace?</a></li>
 <li><a class="reference" href="#what-is-up-with-the-enable-file-drops-checkbox-in-the-edit-menu" id="id26" name="id26">What is up with the &quot;Enable File Drops&quot; checkbox in the 'Edit' menu?</a></li>
 <li><a class="reference" href="#how-do-i-use-the-todo-list" id="id27" name="id27">How do I use the 'Todo' list?</a></li>
-<li><a class="reference" href="#what-are-the-known-issues-within-pype-s-parser" id="id28" name="id28">What are the known issues within PyPE's parser?</a></li>
-<li><a class="reference" href="#how-do-you-get-usable-calltips" id="id29" name="id29">How do you get usable Calltips?</a></li>
-<li><a class="reference" href="#how-do-you-get-autocompletion" id="id30" name="id30">How do you get autocompletion?</a></li>
-<li><a class="reference" href="#crlf-lf-cr-line-endings" id="id31" name="id31">CRLF/LF/CR line endings</a></li>
-<li><a class="reference" href="#stcstyleeditor-py" id="id32" name="id32">STCStyleEditor.py</a></li>
-<li><a class="reference" href="#expandable-collapsable-foldable-code" id="id33" name="id33">Expandable/collapsable/foldable code</a></li>
-<li><a class="reference" href="#converting-between-tabs-and-spaces" id="id34" name="id34">Converting between tabs and spaces</a></li>
+<li><a class="reference" href="#what-are-the-known-issues-within-pype-s-parser" id="id28" name="id28">What are the known issues within PyPE's parser?</a><ul>
+<li><a class="reference" href="#the-c-c-parser" id="id29" name="id29">The C/C++ parser</a></li>
+<li><a class="reference" href="#the-python-parser" id="id30" name="id30">The Python parser</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#how-do-i-program-my-own-macros" id="id35" name="id35">How do I program my own macros?</a><ul>
-<li><a class="reference" href="#an-example-nontrivial-macro" id="id36" name="id36">An example nontrivial macro</a></li>
-<li><a class="reference" href="#using-macros-as-code-snippets" id="id37" name="id37">Using macros as code snippets</a></li>
+<li><a class="reference" href="#how-do-you-get-usable-calltips" id="id31" name="id31">How do you get usable Calltips?</a></li>
+<li><a class="reference" href="#how-do-you-get-autocompletion" id="id32" name="id32">How do you get autocompletion?</a></li>
+<li><a class="reference" href="#crlf-lf-cr-line-endings" id="id33" name="id33">CRLF/LF/CR line endings</a></li>
+<li><a class="reference" href="#stcstyleeditor-py" id="id34" name="id34">STCStyleEditor.py</a></li>
+<li><a class="reference" href="#expandable-collapsable-foldable-code" id="id35" name="id35">Expandable/collapsable/foldable code</a></li>
+<li><a class="reference" href="#converting-between-tabs-and-spaces" id="id36" name="id36">Converting between tabs and spaces</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#faq" id="id38" name="id38">FAQ</a><ul>
-<li><a class="reference" href="#what-s-the-deal-with-the-version-numbering-scheme" id="id39" name="id39">What's the deal with the version numbering scheme?</a></li>
-<li><a class="reference" href="#how-did-pype-come-about" id="id40" name="id40">How did PyPE come about?</a></li>
+<li><a class="reference" href="#how-do-i-program-my-own-macros" id="id37" name="id37">How do I program my own macros?</a><ul>
+<li><a class="reference" href="#an-example-nontrivial-macro" id="id38" name="id38">An example nontrivial macro</a></li>
+<li><a class="reference" href="#using-macros-as-code-snippets" id="id39" name="id39">Using macros as code snippets</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#thank-yous" id="id41" name="id41">Thank Yous</a></li>
+<li><a class="reference" href="#faq" id="id40" name="id40">FAQ</a><ul>
+<li><a class="reference" href="#how-do-you-come-up-with-new-feature-ideas" id="id41" name="id41">How do you come up with new feature ideas?</a></li>
+<li><a class="reference" href="#what-s-the-deal-with-the-version-numbering-scheme" id="id42" name="id42">What's the deal with the version numbering scheme?</a></li>
+<li><a class="reference" href="#how-did-pype-come-about" id="id43" name="id43">How did PyPE come about?</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#thank-yous" id="id44" name="id44">Thank Yous</a></li>
 </ul>
 </div>
 <div class="section" id="license-and-contact-information">
@@ -74,8 +79,8 @@ pre.literal-block {
 <a class="reference" href="http://come.to/josiah">http://come.to/josiah</a></p>
 <p>PyPE is copyright 2003-2006 Josiah Carlson.
 Contributions are copyright their respective authors.</p>
-<p>This software is licensed under the GPL (GNU General Public License) as it
-appears here: <a class="reference" href="http://www.gnu.org/copyleft/gpl.html">http://www.gnu.org/copyleft/gpl.html</a>
+<p>This software is licensed under the GPL (GNU General Public License) version 2
+as it appears here: <a class="reference" href="http://www.gnu.org/copyleft/gpl.html">http://www.gnu.org/copyleft/gpl.html</a>
 It is also included with this archive as <a class="reference" href="gpl.txt">gpl.txt</a>.</p>
 <p>The included STCStyleEditor.py, which is used to support styles, was released
 under the wxWindows license and is copyright (c) 2001 - 2002 Riaan Booysen.
@@ -169,7 +174,11 @@ documentation to impart the necessary information.  Either way, you are going
 to have to wait for the debian/ubuntu/whatever repositories to update.  You
 can always get the most recent PyPE from <a class="reference" href="http://sourceforge.net/projects/pype">http://sourceforge.net/projects/pype</a></p>
 <p>I'm not going to package any RPMs for PyPE, primarily because I'm not going to
-install the RPM build/install stuff into Ubuntu.</p>
+install the RPM build/install stuff into Ubuntu.  Recent attempts to get
+bdist_wininst working in such a way that the results don't mangle Python
+installations have failed, and this experience leads me to believe that
+bdist_rpm has similar issues.  Essentially, you are on your own with regards
+to rpm packages.</p>
 </div>
 <div class="section" id="why-doesn-t-pype-work-on-osx">
 <h2><a class="toc-backref" href="#id10" name="why-doesn-t-pype-work-on-osx">Why doesn't PyPE work on OSX?</a></h2>
@@ -271,6 +280,21 @@ all 'abc ghi' -&gt; #1
 exact 'jkl stu' -&gt; Nothing
 any 'jkl stu' -&gt; #1, #2, #3
 all 'jkl stu' -&gt; Nothing
+</pre>
+<p>Please note that the line count information can be off significantly.  This is
+due to the simple algorithm that it uses to &quot;count&quot; lines.  Really, all it
+does is to say that the number of lines for definition A is the number of
+lines from the start of definition A to the next definition.</p>
+<p>For example, <tt class="docutils literal"><span class="pre">cls</span></tt> in the following example has 1 line, but <tt class="docutils literal"><span class="pre">fcn</span></tt> has 5:</p>
+<pre class="literal-block">
+class cls:
+    def fcn(self):
+        pass
+
+
+
+def foo():
+    pass
 </pre>
 </div>
 <div class="section" id="dictionaries-and-alphabets-for-the-spell-checker">
@@ -427,9 +451,49 @@ and telnet.</p>
 </div>
 <div class="section" id="what-are-the-known-issues-within-pype-s-parser">
 <h2><a class="toc-backref" href="#id28" name="what-are-the-known-issues-within-pype-s-parser">What are the known issues within PyPE's parser?</a></h2>
-<p>If given a syntactically correct Python source file, the Python parser should
-work without issue (as long as --nothread is not provided), though it may not
-be fast (where fast is &lt; .1 seconds).</p>
+<div class="section" id="the-c-c-parser">
+<h3><a class="toc-backref" href="#id29" name="the-c-c-parser">The C/C++ parser</a></h3>
+<p>The recently added C/C++ parser uses a combination of regular expressions and
+a few checks to extract function definition information.  Note that it can
+handle things like the following and their variations:</p>
+<pre class="literal-block">
+int ** foo(char* arg1, int larg1) \{ ...
+
+str1 myClass :: operator[] (indices, count)
+int* indices;
+int count;
+\{ ...
+</pre>
+<p>Generally speaking, it searches for all matches of the following regular
+expressions for function-like examples of <tt class="docutils literal"><span class="pre">#define</span></tt> and functions
+respectively:</p>
+<pre class="literal-block">
+(#ys+i\(i(?:,s*i)*\))
+(?:(cs*\([^\)]*\))[^{;\)]*[;{])
+</pre>
+<p>Where the following replacements are made, in-order to the regular expressions
+prior to matching:</p>
+<pre class="literal-block">
+c -&gt; (?:i|operator[^\w]+)
+i -&gt; (?:[a-zA-Z_]\w*)
+s -&gt; [ \t]
+y -&gt; (?:[dD][eE][fF][iI][nN][eE])
+</pre>
+<p>The function-like macros are returned unchanged, while the possible function
+matches have various other tests performed on them, and the addition of
+everything on the same line as the potential function definition.</p>
+<p>Note that the parser doesn't recognize struct definitions, data members of
+classes, class hierarchies, functions with default values, etc.  It should be
+sufficient for most navigation and/or</p>
+</div>
+<div class="section" id="the-python-parser">
+<h3><a class="toc-backref" href="#id30" name="the-python-parser">The Python parser</a></h3>
+<p>For Python source files, if given a syntactically correct Python source file,
+the Python parser should work without issue (as long as --nothread is not
+provided), though it may not be quite as fast as desired (where fast is &lt; .1
+seconds).  Recent versions of PyPE have a much faster &quot;slow&quot; parser than
+previous versions, but it is still limited to syntactically correct source
+files.</p>
 <p>If not given a syntactically correct Python source file (or if --nothread was
 provided as a command line option), the parser splits the file into lines,
 performing a check to see if there is a function, class, or comment on that
@@ -460,19 +524,20 @@ definitions properly.</p>
 precisely a parser would do on TeX/LaTeX, HTML or XML is beyond me, so they
 also only extract %todo: and &lt;!-- todo: --&gt; items respectively.</p>
 </div>
+</div>
 <div class="section" id="how-do-you-get-usable-calltips">
-<h2><a class="toc-backref" href="#id29" name="how-do-you-get-usable-calltips">How do you get usable Calltips?</a></h2>
+<h2><a class="toc-backref" href="#id31" name="how-do-you-get-usable-calltips">How do you get usable Calltips?</a></h2>
 <p>Hit F5.  This will also rebuild the browsable source tree, autocomplete
 listing, and todo list.</p>
 </div>
 <div class="section" id="how-do-you-get-autocompletion">
-<h2><a class="toc-backref" href="#id30" name="how-do-you-get-autocompletion">How do you get autocompletion?</a></h2>
+<h2><a class="toc-backref" href="#id32" name="how-do-you-get-autocompletion">How do you get autocompletion?</a></h2>
 <p>Easy.  In the 'Document' menu, there is an entry for 'Show autocomplete'.
 Make sure there is a check by it, and you are set.  If you want to get a new
 or updated listing of functions, hit the F5 key on your keyboard.</p>
 </div>
 <div class="section" id="crlf-lf-cr-line-endings">
-<h2><a class="toc-backref" href="#id31" name="crlf-lf-cr-line-endings">CRLF/LF/CR line endings</a></h2>
+<h2><a class="toc-backref" href="#id33" name="crlf-lf-cr-line-endings">CRLF/LF/CR line endings</a></h2>
 <p>PyPE will attempt to figure out what kind of file was opened, it does this by
 counting the number of different kinds of line endings.  Which ever line
 ending appears the most in an open file will set the line ending support for
@@ -486,7 +551,7 @@ copying and pasting to/from the host operating system's native line endings.</p>
 'Document' menu.</p>
 </div>
 <div class="section" id="stcstyleeditor-py">
-<h2><a class="toc-backref" href="#id32" name="stcstyleeditor-py">STCStyleEditor.py</a></h2>
+<h2><a class="toc-backref" href="#id34" name="stcstyleeditor-py">STCStyleEditor.py</a></h2>
 <p>As I didn't write this, I can offer basically no support for it.  It seems to
 work to edit python colorings, and if you edit some of the last 30 or so lines
 of it, you can actually use the editor to edit some of the other styles that
@@ -496,7 +561,7 @@ stc-styles.rc.cfg that is included with the distribution of PyPE you received.
 As it is a known-good version, use it.</p>
 </div>
 <div class="section" id="expandable-collapsable-foldable-code">
-<h2><a class="toc-backref" href="#id33" name="expandable-collapsable-foldable-code">Expandable/collapsable/foldable code</a></h2>
+<h2><a class="toc-backref" href="#id35" name="expandable-collapsable-foldable-code">Expandable/collapsable/foldable code</a></h2>
 <p>Since the beginning, there have been expandable and collapsable scopes thanks
 to wxStyledTextCtrl.  How to use them...
 Given the below...</p>
@@ -521,7 +586,7 @@ scopes contained within.</p>
 Play around with them, you may like it.</p>
 </div>
 <div class="section" id="converting-between-tabs-and-spaces">
-<h2><a class="toc-backref" href="#id34" name="converting-between-tabs-and-spaces">Converting between tabs and spaces</a></h2>
+<h2><a class="toc-backref" href="#id36" name="converting-between-tabs-and-spaces">Converting between tabs and spaces</a></h2>
 <p>So, you got tabs and you want spaces, or you have spaces and want to make them
 tabs.  As it is not a menu option, you're probably wondering &quot;how in the hell
 am I going to do this&quot;.  Well, if you read the above stuff about string
@@ -534,7 +599,7 @@ allowed me to be explicit in this documentation.</p>
 </div>
 </div>
 <div class="section" id="how-do-i-program-my-own-macros">
-<h1><a class="toc-backref" href="#id35" name="how-do-i-program-my-own-macros">How do I program my own macros?</a></h1>
+<h1><a class="toc-backref" href="#id37" name="how-do-i-program-my-own-macros">How do I program my own macros?</a></h1>
 <p>Users of PyPE 2.5.1 (a test release) and later will have the ability to
 record, edit, playback, and delete macros.  Most keyboard related tasks are
 recorded (typing, keyboard movement, selection, cut, copy, paste, etc.), as
@@ -642,7 +707,7 @@ is the default for normal triggers), use <tt class="docutils literal"><span clas
 </li>
 </ol>
 <div class="section" id="an-example-nontrivial-macro">
-<h2><a class="toc-backref" href="#id36" name="an-example-nontrivial-macro">An example nontrivial macro</a></h2>
+<h2><a class="toc-backref" href="#id38" name="an-example-nontrivial-macro">An example nontrivial macro</a></h2>
 <p>When I was writing macro support, I would have found macros to be quite
 convenient for developing macros.  What do I mean?  Let us say that I wanted
 to turn a line that read (from main_window_callback.c in the gPHPedit sources):</p>
@@ -673,7 +738,7 @@ def macro(self):
 but they shouldn't be terribly difficult.</p>
 </div>
 <div class="section" id="using-macros-as-code-snippets">
-<h2><a class="toc-backref" href="#id37" name="using-macros-as-code-snippets">Using macros as code snippets</a></h2>
+<h2><a class="toc-backref" href="#id39" name="using-macros-as-code-snippets">Using macros as code snippets</a></h2>
 <ol class="arabic simple">
 <li>Create a macro.</li>
 <li>Paste the content of your snippet into a global variable in the macro and
@@ -701,9 +766,43 @@ def macro(self):
 </div>
 </div>
 <div class="section" id="faq">
-<h1><a class="toc-backref" href="#id38" name="faq">FAQ</a></h1>
+<h1><a class="toc-backref" href="#id40" name="faq">FAQ</a></h1>
+<div class="section" id="how-do-you-come-up-with-new-feature-ideas">
+<h2><a class="toc-backref" href="#id41" name="how-do-you-come-up-with-new-feature-ideas">How do you come up with new feature ideas?</a></h2>
+<p>Every once and a while, I'll be editing with PyPE, and I'll say, &quot;hey, it
+would be neat if I could do X with PyPE&quot;.  This is rare, though it has
+produced things like the draggable document list, spell check, customizable
+menu hotkey bindings, open module, &quot;One PyPE&quot;, etc.</p>
+<p>More often than not, I will be surfing the net, and someone will rant and rave
+about their super ultra mega favorite editor X, and how it has so many
+features that are so great that no other editor has.  Out of curiosity, I'll
+usually go to the specific site, look at the editor, the features it offers,
+and consider if I would want PyPE to have such features, what changes would be
+necessary, and what it would take to make them happen.  This has produced
+things like workspaces, shells, find/replace bars (idea from Firefox),
+triggers (and everything else in the Transforms menu), the name and line
+oriented browsable source trees, etc.</p>
+<p>Occasionally, some user of PyPE will contact me, perhaps report a bug, or
+somesuch, and eventually either suggest features or offer up patches.  While
+I had written the original Search tab, the current Search tab and the table
+display of results were submitted almost complete.  Suggestions have resulted
+in the addition of Start/End selection, bookmarks, the line-based abstraction
+for macros, macros themselves, tools whose positions can be switched, title
+options, the optional toolbar, caret tracking and width options, find/replace
+bar history, the actual find/replace bar keybindings and what they do based on
+context, the embedded HTML help, the Find Definition/filter tool, etc.</p>
+<p>Astute observers will note that I have not really come up with anything
+terribly original myself.  However, through observing other editors and IDEs,
+and recieving great suggestions from users, I think that PyPE has managed to
+acquire some very useful features.  Generally, I have written PyPE primarily
+for myself, so if tools have a particular aesthetic or design, it's so that
+look and work according to how I think they should (the exception being how
+document preferences are handled, I really need to change that design).  I
+hope that others find PyPE as natural to use as I do, but if not, then I
+welcome your feedback.</p>
+</div>
 <div class="section" id="what-s-the-deal-with-the-version-numbering-scheme">
-<h2><a class="toc-backref" href="#id39" name="what-s-the-deal-with-the-version-numbering-scheme">What's the deal with the version numbering scheme?</a></h2>
+<h2><a class="toc-backref" href="#id42" name="what-s-the-deal-with-the-version-numbering-scheme">What's the deal with the version numbering scheme?</a></h2>
 <p>Early in development, PyPE raised version numbers very quickly.  From 1.0 to
 1.5, not much more than 2 months passed.  In that time, most of the major
 initial architectural changes that were to happen, happened.  This is not the
@@ -731,7 +830,7 @@ PyPE 2.0, the rest was either architectural (ick), or questionable as to
 whether or not anyone would even want to use the feature (even me).</p>
 </div>
 <div class="section" id="how-did-pype-come-about">
-<h2><a class="toc-backref" href="#id40" name="how-did-pype-come-about">How did PyPE come about?</a></h2>
+<h2><a class="toc-backref" href="#id43" name="how-did-pype-come-about">How did PyPE come about?</a></h2>
 <p>The beginnings of PyPE were written from 10:30PM on the 2nd of July through
 10:30PM on the 3rd of July, 2003.  Additional features were put together on
 the 4th of July along with some bug fixing and more testing for version 1.0.
@@ -755,7 +854,7 @@ Hotkeys.</p>
 </div>
 </div>
 <div class="section" id="thank-yous">
-<h1><a class="toc-backref" href="#id41" name="thank-yous">Thank Yous</a></h1>
+<h1><a class="toc-backref" href="#id44" name="thank-yous">Thank Yous</a></h1>
 <p>Certainly there are some people I should thank, because without them, the
 piece of software you are using right now, just wouldn't be possible.</p>
 <p>Guido van Rossum - without Guido, not only would I not have Python, I also
@@ -785,7 +884,7 @@ uncouth, but there's only so much a good woman can fix.</p>
 </div>
 <hr class="docutils footer" />
 <div class="footer">
-Generated on: 2006-07-24 08:51 UTC.
+Generated on: 2006-07-29 22:07 UTC.
 Generated by <a class="reference" href="http://docutils.sourceforge.net/">Docutils</a> from <a class="reference" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> source.
 </div>
 </body>

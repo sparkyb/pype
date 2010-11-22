@@ -1,25 +1,41 @@
 
-import wx
 import os
 import sys
 import todo
 import imp
 import time
 import random
-import __main__
+import mylistmix
+import keydialog
+__main__ = _pype
+import wx
 
-macropath = os.path.join(sys.modules['configuration'].runpath, 'macros')
+macropath = os.path.join(_pype.runpath, 'macros')
 
 columns = (
-    (0, "Macro Name", 50, 0),
+    (0, "Macro Name", 150, 0),
+    (1, "Hotkey", 50, 0),
     )
 
-class macroList(todo.vTodo):
+class macroList(todo.vTodo, mylistmix.ListSelect):
     def Refresh(self):
         self.SetItemCount(0)
-        wx.SafeYield()
+        try:
+            wx.Yield()
+        except:
+            pass
         self.SetItemCount(len(self.data))
         todo.vTodo.Refresh(self)
+    def OnGetItemText(self, item, col):
+        if col == 0:
+            return "%s" % (self.data[item][col],)
+        elif col == 1:
+            x = self.parent.d.get(self.data[item][1], (None, None))[1]
+            if hasattr(x, "hotkeydisplay"):
+                return "%s"%(x.hotkeydisplay,)
+            elif hasattr(x, "hotkeyaccept"):
+                return "%s"%(x.hotkeyaccept,)
+        return ""
     def OnGetItemAttr(self, item):
         if not self.parent.d[self.data[item][1]][1]:
             return red
@@ -28,10 +44,28 @@ class macroList(todo.vTodo):
 template = '''
 creation_date = %r
 name = %r
+hotkeydisplay = ""
+hotkeyaccept = ""
 
 %s
 
 '''
+
+hlp = '''\
+#Copy and paste the following code into the
+#source of the macro that you would like to
+#have this hotkey bound to.
+
+%(h)s
+
+#for example:
+#...
+%(d)s
+#...
+#def macro(self):
+#    ...
+'''
+
 
 red = wx.ListItemAttr()
 red.SetTextColour(wx.Colour(200, 0, 0))
@@ -67,30 +101,48 @@ Couldn't start macro because some other long-term action is
 already being performed within PyPE.  Please wait a few
 moments until it is complete, and try again.'''
 
-def bmButton(parent, id, which, help):
+def load_module(name, fname):
+    x = imp.new_module(name)
+    x.__file__ = fname
+    x.__name__ = name
+    x.__builtins__ = __builtins__
+    execfile(fname, x.__dict__)
+    return x
+
+def Button1(parent, id, which, help, extra):
     bitmap = wx.ArtProvider_GetBitmap(which, wx.ART_TOOLBAR, (16,16))
     z = wx.BitmapButton(parent, id, bitmap, (16,16), (26,26))
     z.SetToolTipString(help)
     return z
+
+def Button2(parent, id, which, help, extra):
+    z = wx.Button(parent, id, extra)
+    z.SetToolTipString(help)
+    return z
+
+bmButton = Button2
 
 class macroPanel(wx.Panel):
     def __init__(self, parent, root):
         wx.Panel.__init__(self, parent)
         self.root = root
         
-        self.rec1 = bmButton(self, -1, wx.ART_CDROM, "Start Recording")
-        self.rec2 = bmButton(self, -1, wx.ART_ERROR, "Stop Recording"); self.rec2.Hide()
-        self.edit = bmButton(self, -1, wx.ART_FOLDER_OPEN, "Edit Macro")
-        self.empty = bmButton(self, -1, wx.ART_NEW, "New Empty Macro")
-        self.play = bmButton(self, -1, wx.ART_REDO, "Run Macro")
-        self.de1 = bmButton(self, -1, wx.ART_DELETE, "Delete Macro")
+        self.rec1 = bmButton(self, -1, wx.ART_CDROM, "Start Recording", "Record")
+        self.rec2 = bmButton(self, -1, wx.ART_ERROR, "Stop Recording", "Stop!"); self.rec2.Hide()
+        self.edit = bmButton(self, -1, wx.ART_FOLDER_OPEN, "Edit Macro", "Edit")
+        self.empty = bmButton(self, -1, wx.ART_NEW, "New Empty Macro", "New")
+        self.hotkey = bmButton(self, -1, wx.ART_ADD_BOOKMARK, "Create Hotkey", "Hotkey")
+        self.play = bmButton(self, -1, wx.ART_REDO, "Run Macro", "Run")
+        self.de1 = bmButton(self, -1, wx.ART_DELETE, "Delete Macro", "Delete")
+        
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        a = (1, wx.EXPAND|wx.ALL, 3)
+        a = (1, wx.EXPAND|wx.ALL, 2)
         sz.Add(self.rec1, *a)
         sz.Add(self.rec2, *a)
         sz.Add(self.edit, *a)
         sz.Add(self.empty, *a)
+        sz.Add(self.hotkey, *a)
         sz.Add(self.play, *a)
         sz.Add(self.de1, *a)
         
@@ -104,23 +156,36 @@ class macroPanel(wx.Panel):
         
         self.m = []
         self.d = {}
+        self.hotkeys = {}
         self.macros.setData(self.m, copy=0)
 
         self.t = wx.Timer(self)
+        
+        self.accelerator = ''
+        self.acceleratork = ''
         
         self.macros.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
         self.rec1.Bind(wx.EVT_BUTTON, self.OnRec)
         self.rec2.Bind(wx.EVT_BUTTON, self.OnRec)
         self.edit.Bind(wx.EVT_BUTTON, self.OnEdit)
         self.empty.Bind(wx.EVT_BUTTON, self.OnEmpty)
+        self.hotkey.Bind(wx.EVT_BUTTON, self.GetHotkey)
         self.play.Bind(wx.EVT_BUTTON, self.OnPlay)
         self.de1.Bind(wx.EVT_BUTTON, self.OnDel)
         
-        self.t.Bind(wx.EVT_TIMER, self.CheckMacros)
+        ## self.t.Bind(wx.EVT_TIMER, self.CheckMacros)
         self.Bind(wx.EVT_TIMER, self.CheckMacros)
         self.t.Start(1000, wx.TIMER_CONTINUOUS)
         
-        self.CheckMacros(None)
+        wx.CallAfter(self.CheckMacros, None)
+    
+    def RunMacro(self, hotkey):
+        if hotkey not in self.hotkeys:
+            return 0
+        which = self.hotkeys[hotkey]
+        self.macros.SelectI(which)
+        wx.CallAfter(self.OnPlay, None)
+        return 1
     
     def update_button(self, stc=None):
         if not stc:
@@ -183,8 +248,7 @@ class macroPanel(wx.Panel):
             
             module = None
             try:
-                module = imp.load_module('__main__.macros.%s'%name,
-                                      open(file), file, (ext, 'r', imp.PY_SOURCE))
+                module = load_module('_'+name, file)
             except:
                 #module load failure...
                 #should probably report the exception...
@@ -225,6 +289,16 @@ class macroPanel(wx.Panel):
                 pass
         
         if changed:
+            self.hotkeys.clear()
+            for i, (n,f) in enumerate(self.m):
+                x = self.d[f][1]
+                hk = None
+                if hasattr(x, "hotkeyaccept"):
+                    hk = "%s"%(x.hotkeyaccept,)
+                elif hasattr(x, "hotkeydisplay"):
+                    hk = "%s"%(x.hotkeydisplay,)
+                if hk and hk not in self.hotkeys:
+                    self.hotkeys[hk] = i
             self.macros.Refresh()
     
     def OnRec(self, e):
@@ -327,3 +401,26 @@ class macroPanel(wx.Panel):
         except:
             self.root.exceptDialog("Macro deletion failed")
         self.CheckMacros(None)
+    
+    def GetHotkey(self, e):
+        self.accelerator = ''
+        self.acceleratork = ''
+        
+        dlg = keydialog.GetKeyDialog(self, '', '', '')
+        dlg.ShowModal()
+        
+        if not (self.accelerator or self.acceleratork):
+            return
+
+        ha = 'hotkeyaccept = %r'%self.accelerator
+        hd = 'hotkeydisplay = %r'%self.acceleratork
+        
+        if self.accelerator == self.acceleratork:
+            h = ha
+            d = '#'+h
+        else:
+            h = '\n'.join((ha,hd))
+            d = '\n'.join(('#'+ha,'#'+hd))
+        dlg = wx.lib.dialogs.ScrolledMessageDialog(self, hlp%locals(), "Your hotkey")
+        dlg.ShowModal()
+        dlg.Destroy()

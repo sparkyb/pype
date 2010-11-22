@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
-#-------------- User changable settings are in configuration.py --------------
-VERSION_ = VERSION = "2.6"
-#------------------------------ System Imports -------------------------------
+#------------ User-changable settings are available in the menus -------------
 from __future__ import generators
+from __version__ import *
 
+#------------------------ Startup/restart information ------------------------
 import sys, os
 if sys.platform == 'linux2' and 'DISPLAY' not in os.environ:
-    print 'DISPLAY not set.'
-    sys.exit(1)
+    raise SystemError('DISPLAY not set when importing or running pype')
 
 if not hasattr(sys, 'frozen'):
     v = '2.6'
@@ -34,6 +33,12 @@ def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
 
 sys.argv = [i for i in sys.argv if i not in ('--ansi', '--unicode', '--debug', '--nothread', '--macros')]
 
+#-------------- Create reference to this module in __builtins__ --------------
+if isinstance(__builtins__, dict):
+    __builtins__['_pype'] = sys.modules[__name__]
+else:
+    __builtins__._pype = sys.modules[__name__]
+#------------------------------ System Imports -------------------------------
 import stat
 import keyword, traceback, cStringIO, imp, fnmatch, re
 import time, pprint
@@ -56,6 +61,7 @@ import wx.gizmos
 if DEBUG:
     from wx.py import crust
 
+current_path = os.getcwd()
 EFFECTUAL_NORMCASE = os.path.normcase('AbCdEf') == 'abcdef'
 UNICODE = wxUSE_UNICODE
 
@@ -64,7 +70,12 @@ from configuration import *
 
 #---------------------------- Event Declarations -----------------------------
 
-class cancelled(Exception): pass
+class cancelled(Exception):
+    '''test docstring'''
+    def __init__(self, *args, **kwargs):
+        '''another test docstring'''
+        Exception.__init__(self, *args, **kwargs)
+    
 class pass_keyboard(cancelled): pass
 
 def isdirty(win):
@@ -190,8 +201,20 @@ if 1:
         return (n.split('\t', 1) + [''])[:2]
 
     def recmenu(menu, id):
-        #this was a pain in the ass.
-        if isinstance(menu, wxMenuItem) or isinstance(menu, wxMenuItemPtr):
+        ## print menu.__class__, wxMenuItem, wxMenuItemPtr, wxMenu, wxMenuPtr
+        if isinstance(menu, (wxMenuBar, wxMenuBarPtr)):
+            for i in xrange(menu.GetMenuCount()):
+                r = menu.GetMenu(i)
+                if r.FindItemById(id):
+                    return "%s->%s"%(menu.GetLabelTop(i), recmenu(r, id))
+        elif isinstance(menu, (wxMenu, wxMenuPtr)):
+            ITEMS = menu.GetMenuItems()
+            for i in ITEMS:
+                a = recmenu(i, id)
+                if a:
+                    return a
+            return ''
+        elif isinstance(menu, (wxMenuItem, wxMenuItemPtr)):
             sm = menu.GetSubMenu()
             if sm:
                 a = recmenu(sm, id)
@@ -202,19 +225,7 @@ if 1:
                 return menu.GetLabel()
             else:
                 return ''
-        elif isinstance(menu, wxMenu) or isinstance(menu, wxMenuPtr):
-            ITEMS = menu.GetMenuItems()
-            for i in ITEMS:
-                a = recmenu(i, id)
-                if a:
-                    return a
-            return ''
-        else:
-            for i in xrange(menu.GetMenuCount()):
-                r = menu.GetMenu(i)
-                if r.FindItemById(id):
-                    return "%s->%s"%(menu.GetLabelTop(i), recmenu(r, id))
-        raise Exception("Item not found.")
+        raise Exception("Tried adding a non-menu to a menu?  Contact the author.")
     
     def GETACC(X):
         if len(X) == 3:
@@ -1264,7 +1275,7 @@ class MainWindow(wxFrame):
         dlg.Destroy()
 
     def OnDrop(self, fnames, error=1):
-        cwd = os.getcwd()
+        cwd = current_path
         for i in fnames:
             dn, fn = os.path.split(self.getAlmostAbsolute(i, cwd))
             if self.isOpen(fn, dn):
@@ -1386,6 +1397,8 @@ class MainWindow(wxFrame):
                  'smartpaste':0}
         for _i in ASSOC:
             doc_def[_i[2]] = dict(dct)
+            if _i[2] in ('xml', 'html'):
+                doc_def['indent'] = 2
             doc_def[_i[2]]['triggers'] = {}
         for (nam, dflt) in [('modulepaths', []),
                             ## ('usesnippets', 0),
@@ -1505,7 +1518,7 @@ class MainWindow(wxFrame):
         ## if self.config['usesnippets'] and (not self.restart):
             ## self.config['display2code'] = self.snippet.display2code
             ## self.config['displayorder'] = self.snippet.displayorder
-        self.config['lastpath'] = self.config.get('lp', os.getcwd())
+        self.config['lastpath'] = self.config.get('lp', current_path)
         self.config['CARET_WIDTH'] = CARET_WIDTH
         self.config['ONE_TAB_'] = ONE_TAB_
         self.config['always_write_bom'] = always_write_bom
@@ -1618,7 +1631,7 @@ class MainWindow(wxFrame):
     def OnSaveAs(self,e):
         wnum, win = self.getNumWin(e)
 
-        dlg = wxFileDialog(self, "Save file as...", os.getcwd(), "", "All files (*.*)|*.*", wxSAVE|wxOVERWRITE_PROMPT)
+        dlg = wxFileDialog(self, "Save file as...", current_path, "", "All files (*.*)|*.*", wxSAVE|wxOVERWRITE_PROMPT)
         rslt = dlg.ShowModal()
         if rslt == wxID_OK:
             fn=dlg.GetFilename()
@@ -1672,7 +1685,7 @@ class MainWindow(wxFrame):
             self.control.SetSelection(sel)
 
     def OnOpen(self,e):
-        wd = self.config.get('lastpath', os.getcwd())
+        wd = self.config.get('lastpath', current_path)
         dlg = wxFileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wxOPEN|wxMULTIPLE|wxHIDE_READONLY)
         if dlg.ShowModal() == wxID_OK:
             self.OnDrop(dlg.GetPaths())
@@ -1683,7 +1696,7 @@ class MainWindow(wxFrame):
         fndmod = mod.split('.')
         lf = len(fndmod)
         pth = sys.path[:]
-        pth[1:1] = [os.getcwd()]
+        pth[1:1] = [current_path]
         for j in range(lf):
             i = fndmod[j]
             fdsc = imp.find_module(i, pth)
@@ -2560,19 +2573,18 @@ class MainWindow(wxFrame):
 #----------------------------- Help Menu Methods -----------------------------
     def OnAbout(self, e):
         txt = """
-        You're wondering what this editor is all about, right?  Easy, this edior was
-        written to scratch an itch.  I (Josiah Carlson), was looking for an editor
-        that had the features I wanted, I couldn't find one.  So I wrote one.  And
-        here it is.
+        PyPE was written to scratch an itch.  I (Josiah Carlson), was looking for
+        an editor for Python that had the features I wanted.  I couldn't find one,
+        so I wrote PyPE.
 
         PyPE %s (Python Programmers Editor)
         http://come.to/josiah
         PyPE is copyright 2003-2006 Josiah Carlson.
         Contributions are copyright their respective authors.
 
-        This software is licensed under the GPL (GNU General Public License) as it
-        appears here: http://www.gnu.org/copyleft/gpl.html  It is also included with
-        this software as gpl.txt.
+        This software is licensed under the GPL (GNU General Public License) version 2
+        as it appears here: http://www.gnu.org/copyleft/gpl.html
+        It is also included with this software as gpl.txt.
 
         If you do not also receive a copy of gpl.txt with your version of this
         software, please inform the me of the violation at the web page near the top
@@ -2609,6 +2621,8 @@ class MainWindow(wxFrame):
         
         if keypressed in HOTKEY_TO_ID:
             return self.keyboardShortcut(keypressed, event)
+        if self.macropage.RunMacro(keypressed):
+            return
 
         key = event.KeyCode()
         wnum = self.control.GetSelection()
@@ -2739,20 +2753,13 @@ message_lookup_table = {
     2348:'LineEndDisplayExtend'
 }
 class PythonSTC(wxStyledTextCtrl):
-    if 1:
-        pass
-    ## class lines:
-        ## __metaclass__ = lineabstraction.Property
-        ## def get(self):
-            ## return lineabstraction.LineAbstraction(self)
-    
     def __init__(self, notebook, ID, parent):
         wxStyledTextCtrl.__init__(self, parent, ID)#, style = wxNO_FULL_REPAINT_ON_RESIZE)
         self.SetWordChars('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         self.SetEndAtLastLine(False)
         self.cached = None
         self.MarkerDefine(BOOKMARKNUMBER, BOOKMARKSYMBOL, 'blue', 'blue')
-
+        
         _, flags = CARET_OPTION_TO_ID[caret_option]
         self.SetXCaretPolicy(flags, caret_slop*caret_multiplier)
         self.SetYCaretPolicy(flags, caret_slop)
@@ -3448,7 +3455,7 @@ class PythonSTC(wxStyledTextCtrl):
                 x = self.GetLineEndPosition(curline)
                 self.SetSelection(x,x)
                 if self.GetLineIndentation(curline)+self.PositionFromLine(curline) != x:
-                    self._tdisable(self.root._autoindent, self)
+                    self._tdisable(self._autoindent, self)
                 
                 #sanitize the information to be pasted
                 lines = d.replace('\r\n', '\n').replace('\r', '\n').split('\n')
@@ -3969,7 +3976,7 @@ class PythonSTC(wxStyledTextCtrl):
             self.ReplaceSelection(self.format)
         
         elif lang == 'cpp':
-            print "indent on return for cpp"
+            ## print "indent on return for cpp"
             dmap = {'{':1, '}':2}
             first = None
             x = [0,0,0]
@@ -3984,22 +3991,31 @@ class PythonSTC(wxStyledTextCtrl):
                 xtra -= 1
         
         elif lang in ('xml', 'html'):
-            print "trying", lang
+            ## print "trying", lang
             ls = line.split('<')
             for i in xrange(len(ls)-1, -1, -1):
                 lsi = ls[i]
                 lsis = lsi.strip()
+                lsil = lsi.lower()
+                c = 0
+                for i in no_ends:
+                    if lsil.startswith(i):
+                        c = 1
+                        break
+                if c:
+                    continue
+                
                 if '/>' in lsi or '/ >' in lsi:
                     continue
                 elif lsi[:1] == '/':
                     xtra -= 1
-                    break #limit to one indent/return
-                elif lsis: #should check for non-opening tags like img, etc.
+                elif lsis: 
                     xtra += 1
-                    break #limit to one indent/return
+            #we are limiting ourselves to 1 indent/dedent per step
+            xtra = min(max(xtra, -1), 1)
         
         elif lang == 'tex':
-            print "trying", lang, line.strip()
+            ## print "trying", lang, line.strip()
             if line.lstrip().startswith('\\begin'):
                 xtra = 1
             #end doesn't make sense, as it should be on the same indent level
@@ -4120,6 +4136,17 @@ class PythonSTC(wxStyledTextCtrl):
         else:
             self.SetAnchor(self.selep)
             self.selep = None
+    
+    def _AddTextWAttr(self, start, end, text, attr):
+        ## attr = attr % 3
+        self.SetTargetStart(start)
+        self.SetTargetEnd(end)
+        self.ReplaceTarget(text)
+        self.StartStyling(start, wxSTC_INDIC0_MASK)
+        self.SetStyling(len(text), wxSTC_INDIC0_MASK)
+        self.IndicatorSetStyle(wxSTC_INDIC0_MASK, wx.stc.STC_INDIC_BOX)
+        self.IndicatorSetForeground(wxSTC_INDIC0_MASK, wx.RED)
+    
 
 class FileDropTarget(wxFileDropTarget):
     def __init__(self, root):
@@ -4177,7 +4204,7 @@ class SplitterWindow(wxSplitterWindow):
 VS = wx.VERSION_STRING
 
 def main():
-    docs = [os.path.abspath(os.path.join(os.getcwd(), i))
+    docs = [os.path.abspath(os.path.join(current_path, i))
             for i in sys.argv[1:]]
     if single_instance.send_documents(docs):
         return

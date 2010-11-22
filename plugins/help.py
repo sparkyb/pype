@@ -5,7 +5,7 @@ import sys
 import os
 import webbrowser
 
-a = sys.modules['configuration'].runpath + '/readme.html'
+a = _pype.runpath + '/readme.html'
 
 class MyHtmlWindow(html.HtmlWindow):
     def __init__(self, parent):

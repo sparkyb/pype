@@ -1,3 +1,38 @@
+#-------------------------------- PyPE 2.6.1 ---------------------------------
+(added) FAQ topic in the help/readme explaining where ideas for PyPE's
+features come from.
+(fixed) autoindent for XML/HTML when your cursor is to the left of some tags.
+(fixed) autoindent for XML/HTML when non-opening tags are to the left of the
+cursor (br, p, input, etc.).
+(changed) significantly improved the speed at which the 'slow' parser is able
+to parse, thanks to an extension of the Python parser from within the Synopsis
+package.  Improvements on the order of 7 to .9 seconds doesn't seem to be
+uncommon, leaving it at roughly 2 or 3 times slower than the fast parser.
+(changed) improved the calltips when using the slow parser.
+(fixed) problem where smartpaste wouldn't paste multiple lines were in the
+clipboard, and your cursor was not on a currently empty line.
+(added) rudimentary parser for C/C++ based on regular expressions.  Also
+supports function-like macros.
+(added) support code for the filter tool to handle C/C++ documents and
+definitions.
+(fixed) repeated lines.selectedlinei = lines.selectedlinesi continually
+selecting an additional line each time.
+(added) hotkey support for macros.  They are checked after menu hotkeys, but
+before other controls get their chance.
+(added) repurposed hotkey dialog for choosing hotkeys for macros.
+(added) button for choosing hotkeys for macros within the macro tool.
+(fixed) line endings in logger/stdout for non-Windows platforms.
+(fixed) importing of C modules from macros will no longer cause unexpected
+consequences (crashes, nothing gets logged anymore, etc.)
+(removed) implicit imports using sys.modules references.
+(added) support for 'sdist' to setup.py .
+(added) explicitly disabled 'bdist_wininst' and 'bdist_rpm' due to the broken
+nature of bdist_wininst; namely that it will mangle your Python installation,
+and the belief that bdist_rpm suffers from the same problems.
+(changed) PyPE distributions available from sourceforge will now always be
+archived such that the contents are all in a PyPE-X.Y.Z/ subfolder.
+
+
 #--------------------------------- PyPE 2.6 ----------------------------------
 (fixed) added initialization to the filter tool to prevent errors if a user
 attempts to filter a list that hasn't been filled by the parser yet.

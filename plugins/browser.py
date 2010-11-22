@@ -21,7 +21,7 @@ class FilesystemBrowser(wx.Panel):
         wx.EVT_BUTTON(self, self.button.GetId(), self.OnButton)
         sizer.Add(self.button, 0, wx.EXPAND)
         
-        self.browser = wx.GenericDirCtrl(self, -1, style=wx.DIRCTRL_SHOW_FILTERS, filter=sys.modules['configuration'].wildcard, defaultFilter=0)
+        self.browser = wx.GenericDirCtrl(self, -1, style=wx.DIRCTRL_SHOW_FILTERS, filter=_pype.wildcard, defaultFilter=0)
         self.browser.ShowHidden(1)
         tree = self.browser.GetTreeCtrl()
         tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.OnActivate, tree)
@@ -47,7 +47,7 @@ class FilesystemBrowser(wx.Panel):
     
     def chdir(self, path):
         self.root.config.pop('lastpath', None)
-        os.chdir(path)
+        _pype.current_path = path
     
     def gethier(self):
         p = self.browser.GetFilePath()

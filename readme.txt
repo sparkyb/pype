@@ -23,8 +23,8 @@ http://come.to/josiah
 PyPE is copyright 2003-2006 Josiah Carlson.
 Contributions are copyright their respective authors.
 
-This software is licensed under the GPL (GNU General Public License) as it
-appears here: http://www.gnu.org/copyleft/gpl.html
+This software is licensed under the GPL (GNU General Public License) version 2
+as it appears here: http://www.gnu.org/copyleft/gpl.html
 It is also included with this archive as `gpl.txt <gpl.txt>`_.
 
 The included STCStyleEditor.py, which is used to support styles, was released
@@ -137,7 +137,11 @@ to have to wait for the debian/ubuntu/whatever repositories to update.  You
 can always get the most recent PyPE from http://sourceforge.net/projects/pype
 
 I'm not going to package any RPMs for PyPE, primarily because I'm not going to
-install the RPM build/install stuff into Ubuntu.
+install the RPM build/install stuff into Ubuntu.  Recent attempts to get
+bdist_wininst working in such a way that the results don't mangle Python
+installations have failed, and this experience leads me to believe that
+bdist_rpm has similar issues.  Essentially, you are on your own with regards
+to rpm packages.
 
 
 Why doesn't PyPE work on OSX?
@@ -251,6 +255,22 @@ subsequence searching::
     exact 'jkl stu' -> Nothing
     any 'jkl stu' -> #1, #2, #3
     all 'jkl stu' -> Nothing
+
+Please note that the line count information can be off significantly.  This is
+due to the simple algorithm that it uses to "count" lines.  Really, all it
+does is to say that the number of lines for definition A is the number of
+lines from the start of definition A to the next definition.
+
+For example, ``cls`` in the following example has 1 line, but ``fcn`` has 5::
+
+    class cls:
+        def fcn(self):
+            pass
+    
+    
+    
+    def foo():
+        pass
 
 
 Dictionaries and alphabets for the Spell checker
@@ -436,9 +456,52 @@ The following lines are all valid todos ::
 
 What are the known issues within PyPE's parser?
 ===============================================
-If given a syntactically correct Python source file, the Python parser should
-work without issue (as long as --nothread is not provided), though it may not
-be fast (where fast is < .1 seconds).
+
+The C/C++ parser
+----------------
+The recently added C/C++ parser uses a combination of regular expressions and
+a few checks to extract function definition information.  Note that it can
+handle things like the following and their variations::
+
+    int ** foo(char* arg1, int larg1) \{ ...
+    
+    str1 myClass :: operator[] (indices, count)
+    int* indices;
+    int count;
+    \{ ...
+
+Generally speaking, it searches for all matches of the following regular
+expressions for function-like examples of ``#define`` and functions
+respectively::
+
+    (#ys+i\(i(?:,s*i)*\))
+    (?:(cs*\([^\)]*\))[^{;\)]*[;{])
+
+Where the following replacements are made, in-order to the regular expressions
+prior to matching::
+    
+    c -> (?:i|operator[^\w]+)
+    i -> (?:[a-zA-Z_]\w*)
+    s -> [ \t]
+    y -> (?:[dD][eE][fF][iI][nN][eE])
+
+The function-like macros are returned unchanged, while the possible function
+matches have various other tests performed on them, and the addition of
+everything on the same line as the potential function definition.
+
+Note that the parser doesn't recognize struct definitions, data members of
+classes, class hierarchies, functions with default values, etc.  It should be
+sufficient for most navigation and/or 
+
+
+The Python parser
+-----------------
+For Python source files, if given a syntactically correct Python source file,
+the Python parser should work without issue (as long as --nothread is not
+provided), though it may not be quite as fast as desired (where fast is < .1
+seconds).  Recent versions of PyPE have a much faster "slow" parser than
+previous versions, but it is still limited to syntactically correct source
+files.
 
 If not given a syntactically correct Python source file (or if --nothread was
 provided as a command line option), the parser splits the file into lines,
@@ -732,9 +795,48 @@ You would create the following macro::
     def macro(self):
         self.InterpretTrigger(snippet, 1)
 
+
 ---
 FAQ
 ---
+
+How do you come up with new feature ideas?
+==========================================
+Every once and a while, I'll be editing with PyPE, and I'll say, "hey, it
+would be neat if I could do X with PyPE".  This is rare, though it has
+produced things like the draggable document list, spell check, customizable
+menu hotkey bindings, open module, "One PyPE", etc.
+
+More often than not, I will be surfing the net, and someone will rant and rave
+about their super ultra mega favorite editor X, and how it has so many
+features that are so great that no other editor has.  Out of curiosity, I'll
+usually go to the specific site, look at the editor, the features it offers,
+and consider if I would want PyPE to have such features, what changes would be
+necessary, and what it would take to make them happen.  This has produced
+things like workspaces, shells, find/replace bars (idea from Firefox),
+triggers (and everything else in the Transforms menu), the name and line
+oriented browsable source trees, etc.
+
+Occasionally, some user of PyPE will contact me, perhaps report a bug, or
+somesuch, and eventually either suggest features or offer up patches.  While
+I had written the original Search tab, the current Search tab and the table
+display of results were submitted almost complete.  Suggestions have resulted
+in the addition of Start/End selection, bookmarks, the line-based abstraction
+for macros, macros themselves, tools whose positions can be switched, title
+options, the optional toolbar, caret tracking and width options, find/replace
+bar history, the actual find/replace bar keybindings and what they do based on
+context, the embedded HTML help, the Find Definition/filter tool, etc.
+
+Astute observers will note that I have not really come up with anything
+terribly original myself.  However, through observing other editors and IDEs,
+and recieving great suggestions from users, I think that PyPE has managed to
+acquire some very useful features.  Generally, I have written PyPE primarily
+for myself, so if tools have a particular aesthetic or design, it's so that
+look and work according to how I think they should (the exception being how
+document preferences are handled, I really need to change that design).  I
+hope that others find PyPE as natural to use as I do, but if not, then I
+welcome your feedback.
+
 
 What's the deal with the version numbering scheme?
 ==================================================

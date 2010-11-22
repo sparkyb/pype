@@ -8,7 +8,7 @@ import traceback
 import sys
 
 try:
-    UNICODE = sys.modules['__main__'].UNICODE
+    UNICODE = _pype.UNICODE
 except:
     UNICODE = 0
 

@@ -3,6 +3,7 @@ import wx
 from findinfiles import FoundTable
 import mylistmix
 import todo
+import codetree
 import __main__
 
 columns = (
@@ -16,23 +17,15 @@ options = None
 
 #colors
 if 1:
-    blue = wx.Colour(0, 0, 200)
-    red = wx.Colour(200, 0, 0)
-    green = wx.Colour(0, 200, 0)
-    D = {'cl':blue,
-         'de':red,
-         'cd':green,
-         '\\l':red,
-         '\\s':blue}
-    
-    for i,j in D.items():
+    D = {}
+    for i,j in codetree.D.items():
         k = wx.ListItemAttr()
         k.SetTextColour(j)
         D[i] = k
     
     default = D['de']
     
-    del i, j, k, blue, red, green
+    del i, j, k
 
 def lcsseq(x, y):
     _enum = enumerate
@@ -103,7 +96,7 @@ def rstr1(str, rch):
     return str
 
 def get_line_counts(h, lang):
-    if lang != 'python':
+    if lang not in ('python', 'cpp'):
         return {}
     #need implementation for C/C++, but only after parser for C/C++ is done
     
@@ -120,16 +113,20 @@ def get_line_counts(h, lang):
         
         while cur:
             name, line_no, leading, children = cur.pop()
-            pre, shortname1 = name.split(None, 1)
-            shortname = partition(partition(shortname1, ':')[0], '(')[0]
-            key = '%s%s%s'%('.'.join(nstk), '.'[:bool(nstk)], shortname)
+            if lang == 'python':
+                pre, shortname1 = name.split(None, 1)
+                shortname = partition(partition(shortname1, ':')[0], '(')[0]
+                key = '%s%s%s'%('.'.join(nstk), '.'[:bool(nstk)], shortname)
+            
+            elif lang == 'cpp':
+                key, shortname = name, line_no[2]
             
             if lastn:
                 counts.setdefault(lastn, []).append(line_no[1]-lastl)
             
             lastn = key
             lastl = line_no[1]
-            
+                
             if children:
                 stk.append(cur)
                 nstk.append(shortname)
@@ -211,7 +208,7 @@ class DefinitionList(wx.Panel):
     def new_hierarchy(self, hier):
         #parse the hierarchy, set the data
         lang = self.stc.style()
-        if lang not in ('python', 'tex'):
+        if lang not in ('python', 'tex', 'cpp'):
             return
         names = []
         stk = [hier[::-1]]
@@ -251,9 +248,15 @@ class DefinitionList(wx.Panel):
                                   0
                                   ))
                 
-                else:
-                    #need implementation for C/C++, but only after parser for C/C++ is done
-                    continue
+                elif lang == 'cpp':
+                    shortname = line_no[2]
+                    shortname2 = name
+                    x = '.'.join(nstk+[shortname])
+                    y = name.find(line_no[2])
+                    names.append((name, line_no, x,
+                                  "%s %s%s%s"%(name[:y].strip(), '.'.join(nstk), '.'[:bool(nstk)], name[y:].strip()),
+                                  ' '.join(nstk2+[name]),
+                                  (counts.get(name) or [0]).pop(0)))
                 
                 if children:
                     stk.append(cur)

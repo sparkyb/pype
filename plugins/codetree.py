@@ -5,6 +5,17 @@ icons = 1
 colors = 1
 newroot = sys.platform != 'win32'
 
+blue = wx.Colour(0, 0, 200)
+red = wx.Colour(200, 0, 0)
+green = wx.Colour(0, 200, 0)
+
+D = {'cl':blue,
+     'de':red,
+     'cd':green,
+     '\\l':red,
+     '\\s':blue,
+     '#d':green}
+
 class TreeCtrl(wx.TreeCtrl):
     def __init__(self, parent, st):
         wx.TreeCtrl.__init__(self, parent, -1, style=wx.TR_DEFAULT_STYLE|wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
@@ -58,14 +69,6 @@ class hierCodeTreePanel(wx.Panel):
             self.tree.root = self.tree.AddRoot("Unseen Root")
         root = [self.tree.root]
         stk = [hier[:]]
-        blue = wx.Colour(0, 0, 200)
-        red = wx.Colour(200, 0, 0)
-        green = wx.Colour(0, 200, 0)
-        D = {'cl':blue,
-             'de':red,
-             'cd':green,
-             '\\l':red,
-             '\\s':blue}
         while stk:
             cur = stk.pop()
             while cur:

@@ -12,6 +12,8 @@ import sys
 from wxPython.stc import wxSTC_EOL_CRLF, wxSTC_EOL_LF, wxSTC_EOL_CR
 from parsers import *
 
+startup_path = os.getcwd()
+
 fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
               "\n":wxSTC_EOL_LF,
               "\r":wxSTC_EOL_CR}
