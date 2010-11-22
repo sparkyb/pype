@@ -3,121 +3,423 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.3.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
 <title>Readme/Help for PyPE (Python Programmer's Editor)</title>
-<link rel="stylesheet" href="default.css" type="text/css" />
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 6194 2009-11-11 12:05:10Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left{
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: left }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
 </head>
 <body>
 <div class="document" id="readme-help-for-pype-python-programmer-s-editor">
 <h1 class="title">Readme/Help for PyPE (Python Programmer's Editor)</h1>
+
 <style type="text/css">
 pre.literal-block {
     background-color: rgb(192, 192, 255);
     margin: 0cm 1.5cm 0cm 1.5cm;
 }
 </style><div class="contents topic" id="table-of-contents">
-<p class="topic-title first"><a name="table-of-contents">Table of Contents</a></p>
+<p class="topic-title first">Table of Contents</p>
 <ul class="simple">
-<li><a class="reference" href="#license-and-contact-information" id="id4" name="id4">License and Contact information</a></li>
-<li><a class="reference" href="#requirements" id="id5" name="id5">Requirements</a></li>
-<li><a class="reference" href="#installation" id="id6" name="id6">Installation</a><ul>
-<li><a class="reference" href="#why-doesn-t-the-windows-install-work" id="id7" name="id7">Why doesn't the Windows install work?</a></li>
-<li><a class="reference" href="#why-doesn-t-pype-work-on-linux" id="id8" name="id8">Why doesn't PyPE work on Linux?</a></li>
-<li><a class="reference" href="#why-isn-t-the-most-recent-pype-available-as-deb-or-rpm" id="id9" name="id9">Why isn't the most recent PyPE available as deb or RPM?</a></li>
-<li><a class="reference" href="#why-doesn-t-pype-work-on-osx" id="id10" name="id10">Why doesn't PyPE work on OSX?</a></li>
+<li><a class="reference internal" href="#license-and-contact-information" id="id4">License and Contact information</a></li>
+<li><a class="reference internal" href="#requirements" id="id5">Requirements</a></li>
+<li><a class="reference internal" href="#installation" id="id6">Installation</a><ul>
+<li><a class="reference internal" href="#why-doesn-t-the-windows-install-work" id="id7">Why doesn't the Windows install work?</a></li>
+<li><a class="reference internal" href="#why-doesn-t-pype-work-on-linux" id="id8">Why doesn't PyPE work on Linux?</a></li>
+<li><a class="reference internal" href="#why-isn-t-the-most-recent-pype-available-as-deb-or-rpm" id="id9">Why isn't the most recent PyPE available as deb or RPM?</a></li>
+<li><a class="reference internal" href="#why-doesn-t-pype-work-on-osx" id="id10">Why doesn't PyPE work on OSX?</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#command-line-options" id="id11" name="id11">Command Line Options</a><ul>
-<li><a class="reference" href="#last" id="id12" name="id12">--last</a></li>
-<li><a class="reference" href="#unicode-and-ansi" id="id13" name="id13">--unicode and --ansi</a></li>
-<li><a class="reference" href="#fontsize" id="id14" name="id14">--fontsize</a></li>
-<li><a class="reference" href="#font" id="id15" name="id15">--font</a></li>
-<li><a class="reference" href="#nothread" id="id16" name="id16">--nothread</a></li>
-<li><a class="reference" href="#macros" id="id17" name="id17">--macros</a></li>
-<li><a class="reference" href="#standalone" id="id18" name="id18">--standalone</a></li>
-<li><a class="reference" href="#port" id="id19" name="id19">--port</a></li>
+<li><a class="reference internal" href="#command-line-options" id="id11">Command Line Options</a><ul>
+<li><a class="reference internal" href="#last" id="id12">--last</a></li>
+<li><a class="reference internal" href="#unicode-and-ansi" id="id13">--unicode and --ansi</a></li>
+<li><a class="reference internal" href="#fontsize" id="id14">--fontsize</a></li>
+<li><a class="reference internal" href="#font" id="id15">--font</a></li>
+<li><a class="reference internal" href="#nothread" id="id16">--nothread</a></li>
+<li><a class="reference internal" href="#macros" id="id17">--macros</a></li>
+<li><a class="reference internal" href="#standalone" id="id18">--standalone</a></li>
+<li><a class="reference internal" href="#port" id="id19">--port</a></li>
+<li><a class="reference internal" href="#use-old-parser" id="id20">--use_old_parser</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#pype-features-and-functionality" id="id20" name="id20">PyPE features and functionality</a><ul>
-<li><a class="reference" href="#what-to-expect-when-coming-from-other-editors-ides" id="id21" name="id21">What to expect when coming from other editors/IDEs</a></li>
-<li><a class="reference" href="#encoding-detection-for-opening-files" id="id22" name="id22">Encoding detection for opening files</a></li>
-<li><a class="reference" href="#encoding-detection-for-saving-files" id="id23" name="id23">Encoding detection for saving files</a></li>
-<li><a class="reference" href="#what-is-a-coding-directive" id="id24" name="id24">What is a &quot;coding directive&quot;?</a></li>
-<li><a class="reference" href="#shells" id="id25" name="id25">Shells</a></li>
-<li><a class="reference" href="#vim-options" id="id26" name="id26">Vim options</a></li>
-<li><a class="reference" href="#using-options-realtime-options-for-syntax-checking-and-tool-updates" id="id27" name="id27">Using Options -&gt; Realtime Options for syntax checking and tool updates</a></li>
-<li><a class="reference" href="#what-is-sloppy-cut-copy" id="id28" name="id28">What is Sloppy Cut/Copy?</a></li>
-<li><a class="reference" href="#what-is-smart-paste" id="id29" name="id29">What is Smart Paste?</a></li>
-<li><a class="reference" href="#what-do-the-different-options-in-the-filter-tool-do" id="id30" name="id30">What do the different options in the Filter tool do?</a></li>
-<li><a class="reference" href="#how-do-i-update-the-default-settings-for-a-particular-document-type" id="id31" name="id31">How do I update the default settings for a particular document type?</a></li>
-<li><a class="reference" href="#dictionaries-and-alphabets-for-the-spell-checker" id="id32" name="id32">Dictionaries and alphabets for the Spell checker</a></li>
-<li><a class="reference" href="#how-does-one-pype-work" id="id33" name="id33">How does &quot;One PyPE&quot; work?</a></li>
-<li><a class="reference" href="#what-the-heck-is-a-trigger" id="id34" name="id34">What the heck is a Trigger?</a></li>
-<li><a class="reference" href="#find-replace-bars" id="id35" name="id35">Find/Replace bars</a></li>
-<li><a class="reference" href="#what-happens-when-smart-case-is-enabled-during-a-replace" id="id36" name="id36">What happens when &quot;Smart Case&quot; is enabled during a replace?</a></li>
-<li><a class="reference" href="#string-escapes-in-regular-expressions-and-multiline-searches" id="id37" name="id37">String escapes in regular expressions and multiline searches?</a></li>
-<li><a class="reference" href="#how-do-i-use-the-todo-list" id="id38" name="id38">How do I use the 'Todo' list?</a></li>
-<li><a class="reference" href="#labels-transforms-insert-comment" id="id39" name="id39">Labels / Transforms -&gt; Insert Comment</a></li>
-<li><a class="reference" href="#what-are-the-known-issues-within-pype-s-parser" id="id40" name="id40">What are the known issues within PyPE's parser?</a><ul>
-<li><a class="reference" href="#the-c-c-parser" id="id41" name="id41">The C/C++ parser</a></li>
-<li><a class="reference" href="#the-python-parser" id="id42" name="id42">The Python parser</a></li>
-<li><a class="reference" href="#tex-latex" id="id43" name="id43">TeX/LaTeX</a></li>
-<li><a class="reference" href="#html-xml" id="id44" name="id44">HTML/XML</a></li>
-<li><a class="reference" href="#label-parser" id="id45" name="id45">Label Parser</a></li>
-<li><a class="reference" href="#name-line-expanded-state" id="id46" name="id46">Name/Line Expanded State</a></li>
+<li><a class="reference internal" href="#pype-features-and-functionality" id="id21">PyPE features and functionality</a><ul>
+<li><a class="reference internal" href="#what-to-expect-when-coming-from-other-editors-ides" id="id22">What to expect when coming from other editors/IDEs</a></li>
+<li><a class="reference internal" href="#encoding-detection-for-opening-files" id="id23">Encoding detection for opening files</a></li>
+<li><a class="reference internal" href="#encoding-detection-for-saving-files" id="id24">Encoding detection for saving files</a></li>
+<li><a class="reference internal" href="#what-is-a-coding-directive" id="id25">What is a &quot;coding directive&quot;?</a></li>
+<li><a class="reference internal" href="#shells" id="id26">Shells</a></li>
+<li><a class="reference internal" href="#vim-options" id="id27">Vim options</a></li>
+<li><a class="reference internal" href="#using-options-realtime-options-for-syntax-checking-and-tool-updates" id="id28">Using Options -&gt; Realtime Options for syntax checking and tool updates</a></li>
+<li><a class="reference internal" href="#what-is-sloppy-cut-copy" id="id29">What is Sloppy Cut/Copy?</a></li>
+<li><a class="reference internal" href="#what-is-smart-paste" id="id30">What is Smart Paste?</a></li>
+<li><a class="reference internal" href="#what-do-the-different-options-in-the-filter-tool-do" id="id31">What do the different options in the Filter tool do?</a></li>
+<li><a class="reference internal" href="#how-do-i-update-the-default-settings-for-a-particular-document-type" id="id32">How do I update the default settings for a particular document type?</a></li>
+<li><a class="reference internal" href="#dictionaries-and-alphabets-for-the-spell-checker" id="id33">Dictionaries and alphabets for the Spell checker</a></li>
+<li><a class="reference internal" href="#how-does-one-pype-work" id="id34">How does &quot;One PyPE&quot; work?</a></li>
+<li><a class="reference internal" href="#what-the-heck-is-a-trigger" id="id35">What the heck is a Trigger?</a></li>
+<li><a class="reference internal" href="#find-replace-bars" id="id36">Find/Replace bars</a></li>
+<li><a class="reference internal" href="#what-happens-when-smart-case-is-enabled-during-a-replace" id="id37">What happens when &quot;Smart Case&quot; is enabled during a replace?</a></li>
+<li><a class="reference internal" href="#string-escapes-in-regular-expressions-and-multiline-searches" id="id38">String escapes in regular expressions and multiline searches?</a></li>
+<li><a class="reference internal" href="#how-do-i-use-the-todo-list" id="id39">How do I use the 'Todo' list?</a></li>
+<li><a class="reference internal" href="#labels-transforms-insert-comment" id="id40">Labels / Transforms -&gt; Insert Comment</a></li>
+<li><a class="reference internal" href="#what-are-the-known-issues-within-pype-s-parser" id="id41">What are the known issues within PyPE's parser?</a><ul>
+<li><a class="reference internal" href="#the-c-c-parser" id="id42">The C/C++ parser</a></li>
+<li><a class="reference internal" href="#the-python-parser" id="id43">The Python parser</a></li>
+<li><a class="reference internal" href="#tex-latex" id="id44">TeX/LaTeX</a></li>
+<li><a class="reference internal" href="#html-xml" id="id45">HTML/XML</a></li>
+<li><a class="reference internal" href="#label-parser" id="id46">Label Parser</a></li>
+<li><a class="reference internal" href="#name-line-expanded-state" id="id47">Name/Line Expanded State</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#how-do-you-get-usable-calltips" id="id47" name="id47">How do you get usable Calltips?</a></li>
-<li><a class="reference" href="#how-do-you-get-autocompletion" id="id48" name="id48">How do you get autocompletion?</a></li>
-<li><a class="reference" href="#crlf-lf-cr-line-endings" id="id49" name="id49">CRLF/LF/CR line endings</a></li>
-<li><a class="reference" href="#stcstyleeditor-py" id="id50" name="id50">STCStyleEditor.py</a></li>
-<li><a class="reference" href="#expandable-collapsable-foldable-code" id="id51" name="id51">Expandable/collapsable/foldable code</a></li>
-<li><a class="reference" href="#converting-between-tabs-and-spaces" id="id52" name="id52">Converting between tabs and spaces</a></li>
+<li><a class="reference internal" href="#how-do-you-get-usable-calltips" id="id48">How do you get usable Calltips?</a></li>
+<li><a class="reference internal" href="#how-do-you-get-autocompletion" id="id49">How do you get autocompletion?</a></li>
+<li><a class="reference internal" href="#crlf-lf-cr-line-endings" id="id50">CRLF/LF/CR line endings</a></li>
+<li><a class="reference internal" href="#stcstyleeditor-py" id="id51">STCStyleEditor.py</a></li>
+<li><a class="reference internal" href="#expandable-collapsable-foldable-code" id="id52">Expandable/collapsable/foldable code</a></li>
+<li><a class="reference internal" href="#converting-between-tabs-and-spaces" id="id53">Converting between tabs and spaces</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#how-do-i-program-my-own-macros" id="id53" name="id53">How do I program my own macros?</a><ul>
-<li><a class="reference" href="#an-example-nontrivial-macro" id="id54" name="id54">An example nontrivial macro</a></li>
-<li><a class="reference" href="#using-macros-as-code-snippets" id="id55" name="id55">Using macros as code snippets</a></li>
-<li><a class="reference" href="#sample-macros-included-with-pype" id="id56" name="id56">Sample Macros included with PyPE</a></li>
-<li><a class="reference" href="#non-white-background-colors" id="id57" name="id57">Non-white background colors</a></li>
+<li><a class="reference internal" href="#how-do-i-program-my-own-macros" id="id54">How do I program my own macros?</a><ul>
+<li><a class="reference internal" href="#an-example-nontrivial-macro" id="id55">An example nontrivial macro</a></li>
+<li><a class="reference internal" href="#using-macros-as-code-snippets" id="id56">Using macros as code snippets</a></li>
+<li><a class="reference internal" href="#sample-macros-included-with-pype" id="id57">Sample Macros included with PyPE</a></li>
+<li><a class="reference internal" href="#non-white-background-colors" id="id58">Non-white background colors</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#faq" id="id58" name="id58">FAQ</a><ul>
-<li><a class="reference" href="#how-do-you-come-up-with-new-feature-ideas" id="id59" name="id59">How do you come up with new feature ideas?</a></li>
-<li><a class="reference" href="#what-s-the-deal-with-the-version-numbering-scheme" id="id60" name="id60">What's the deal with the version numbering scheme?</a></li>
-<li><a class="reference" href="#how-did-pype-come-about" id="id61" name="id61">How did PyPE come about?</a></li>
+<li><a class="reference internal" href="#faq" id="id59">FAQ</a><ul>
+<li><a class="reference internal" href="#how-do-you-come-up-with-new-feature-ideas" id="id60">How do you come up with new feature ideas?</a></li>
+<li><a class="reference internal" href="#what-s-the-deal-with-the-version-numbering-scheme" id="id61">What's the deal with the version numbering scheme?</a></li>
+<li><a class="reference internal" href="#how-did-pype-come-about" id="id62">How did PyPE come about?</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#thank-yous" id="id62" name="id62">Thank Yous</a></li>
+<li><a class="reference internal" href="#thank-yous" id="id63">Thank Yous</a></li>
 </ul>
 </div>
 <div class="section" id="license-and-contact-information">
-<h1><a class="toc-backref" href="#id4" name="license-and-contact-information">License and Contact information</a></h1>
-<p><a class="reference" href="http://pype.sourceforge.net">http://pype.sourceforge.net</a>
-<a class="reference" href="http://come.to/josiah">http://come.to/josiah</a></p>
+<h1><a class="toc-backref" href="#id4">License and Contact information</a></h1>
+<p><a class="reference external" href="http://pype.sourceforge.net">http://pype.sourceforge.net</a>
+<a class="reference external" href="http://come.to/josiah">http://come.to/josiah</a></p>
 <p>PyPE is copyright 2003-2006 Josiah Carlson.
 Contributions are copyright their respective authors.</p>
 <p>This software is licensed under the GPL (GNU General Public License) version 2
-as it appears here: <a class="reference" href="http://www.gnu.org/copyleft/gpl.html">http://www.gnu.org/copyleft/gpl.html</a>
-It is also included with this archive as <a class="reference" href="gpl.txt">gpl.txt</a>.</p>
-<p>The included STCStyleEditor.py, which is used to support styles, was released
-under the wxWindows license and is copyright (c) 2001 - 2002 Riaan Booysen.
-The copy included was also distributed with the wxPython Demos and Docs for
-wxPython version 2.6 for Python 2.3, and may or may not have been modified by
-the time you read this.  The wxWindows license and the LGPL license it
-references are included with this software as <a class="reference" href="wxwindows.txt">wxwindows.txt</a>
-and <a class="reference" href="lgpl.txt">lgpl.txt</a>.</p>
+as it appears here: <a class="reference external" href="http://www.gnu.org/copyleft/gpl.html">http://www.gnu.org/copyleft/gpl.html</a>
+It is also included with this archive as <a class="reference external" href="gpl.txt">gpl.txt</a>.</p>
+<p>The portions of STCStyleEditor.py included in StyleSetter.py, which is used to
+support styles, was released under the wxWindows license and is copyright (c)
+2001 - 2002 Riaan Booysen.  The wxWindows license and the LGPL license it
+references are included with this software as <a class="reference external" href="wxwindows.txt">wxwindows.txt</a>
+and <a class="reference external" href="lgpl.txt">lgpl.txt</a>.</p>
 <p>The included stc-styles.rc.cfg was modified from the original version in order
 to not cause exceptions during style changes, as well as adding other language
 style definitions, and was originally distributed with wxPython version
 2.4.1.2 for Python 2.2 .</p>
-<p>If you do not also receive a copy of <a class="reference" href="gpl.txt">gpl.txt</a>,
-<a class="reference" href="wxwindows.txt">wxwindows.txt</a>, and <a class="reference" href="lgpl.txt">lgpl.txt</a> with your version
+<p>If you do not also receive a copy of <a class="reference external" href="gpl.txt">gpl.txt</a>,
+<a class="reference external" href="wxwindows.txt">wxwindows.txt</a>, and <a class="reference external" href="lgpl.txt">lgpl.txt</a> with your version
 of this software, please inform me of the violation at either web page at the
 top of this document.</p>
 </div>
 <div class="section" id="requirements">
-<h1><a class="toc-backref" href="#id5" name="requirements">Requirements</a></h1>
+<h1><a class="toc-backref" href="#id5">Requirements</a></h1>
 <p>Either a machine running Python and wxPython, or a Windows machine that can
 run the binaries should be sufficient.  Initial revisions of PyPE were
 developed on a PII-400 with 384 megs of ram, but it should work on any machine
@@ -126,10 +428,10 @@ that can run the most recent wxPython revisions.  Some portions may be slow
 the scintilla text editor control), but it should still be usable.</p>
 <p>PyPE 2.x has been tested on Python 2.3 and wxPython 2.6.3.0.  It should work
 on later versions of Python and wxPython.  If you are having issues, file a
-bug report on <a class="reference" href="http://sourceforge.net/projects/pype">http://sourceforge.net/projects/pype</a> .</p>
+bug report on <a class="reference external" href="http://sourceforge.net/projects/pype">http://sourceforge.net/projects/pype</a> .</p>
 </div>
 <div class="section" id="installation">
-<h1><a class="toc-backref" href="#id6" name="installation">Installation</a></h1>
+<h1><a class="toc-backref" href="#id6">Installation</a></h1>
 <p>If you have Python 2.3 or later as well as wxPython 2.6.3 or later, you can
 extract PyPE-X.Y.Z-src.zip anywhere and run it by double-clicking on pype.py
 or pype.pyw .  Note that the 2.6.3.3 ansi build of wxPython has issues with
@@ -156,7 +458,7 @@ doesn't mean that you /have/ to run them.  If you have a Python and wxPython
 installation, you should have the necessary dlls to make PyPE run (Python is
 shipped with the 7.1 runtime, and wxPython 2.7+ ships with the gdi plus dll).</p>
 <div class="section" id="why-doesn-t-the-windows-install-work">
-<h2><a class="toc-backref" href="#id7" name="why-doesn-t-the-windows-install-work">Why doesn't the Windows install work?</a></h2>
+<h2><a class="toc-backref" href="#id7">Why doesn't the Windows install work?</a></h2>
 <p>Depending on your platform, it may or may not work.  It works for me on
 Windows 2k and XP.  Most problems people have is that they mistakenly extract
 library.zip, which they shouldn't do (and in recent PyPE binary releases
@@ -164,7 +466,7 @@ may not be able to do).  It could also be due to the lack of some DLL, in
 which case an error message should inform you of which DLL you are missing.</p>
 </div>
 <div class="section" id="why-doesn-t-pype-work-on-linux">
-<h2><a class="toc-backref" href="#id8" name="why-doesn-t-pype-work-on-linux">Why doesn't PyPE work on Linux?</a></h2>
+<h2><a class="toc-backref" href="#id8">Why doesn't PyPE work on Linux?</a></h2>
 <p>PyPE 2.5+ has been tested on Ubuntu 6.06 with...</p>
 <ul class="simple">
 <li>python-wxversion_2.6.1.2ubuntu2_all.deb</li>
@@ -196,7 +498,7 @@ been fixed in PyPE 2.4.1 and later, but this documentation persists &quot;just i
 case&quot;.</p>
 </div>
 <div class="section" id="why-isn-t-the-most-recent-pype-available-as-deb-or-rpm">
-<h2><a class="toc-backref" href="#id9" name="why-isn-t-the-most-recent-pype-available-as-deb-or-rpm">Why isn't the most recent PyPE available as deb or RPM?</a></h2>
+<h2><a class="toc-backref" href="#id9">Why isn't the most recent PyPE available as deb or RPM?</a></h2>
 <p>Short answer: it's a pain in the ass.</p>
 <p>Longer answer: I'm not the maintainer for the PyPE package in any of the
 Ubuntu repositories, but have recently discovered that PyPE has a newer
@@ -206,7 +508,7 @@ I can either blame on a personal failure to comprehend the documentation, or a
 failure in the documentation to impart the necessary information.  Either way,
 you are going to have to wait for the debian/ubuntu/whatever repositories to
 update, or you can get the most recent PyPE from
-<a class="reference" href="http://sourceforge.net/projects/pype">http://sourceforge.net/projects/pype</a> and extract it wherever you desire.  I'm
+<a class="reference external" href="http://sourceforge.net/projects/pype">http://sourceforge.net/projects/pype</a> and extract it wherever you desire.  I'm
 a fan of ~/apps/PyPE, but choose what you will.</p>
 <p>I'm not going to package any RPMs for PyPE, primarily because I'm not going to
 install the RPM build/install stuff into Ubuntu.  Recent attempts to get
@@ -216,31 +518,37 @@ bdist_rpm has similar issues.  Essentially, you are on your own with regards
 to rpm packages.</p>
 </div>
 <div class="section" id="why-doesn-t-pype-work-on-osx">
-<h2><a class="toc-backref" href="#id10" name="why-doesn-t-pype-work-on-osx">Why doesn't PyPE work on OSX?</a></h2>
+<h2><a class="toc-backref" href="#id10">Why doesn't PyPE work on OSX?</a></h2>
 <p>Aside from &quot;PyPE works on OSX&quot; (or &quot;almost works&quot;) from 2 users, I don't know
 what may be causing PyPE to not work in OSX.  If you send bug reports with
 tracebacks, etc., we can probably figure out what is going on and how we can
 fix it.</p>
+<p>In the summer of 2008, I actually had an OS X laptop to use mid June 2008 to
+late August 2008.  I did my best to improve PyPE, but because of how slow PyPE
+is on OS X (I believe it is caused by the way the editor control is wrapped on
+OS X with wxPython), I actually abandoned the platform.  PyPE inside an Ubuntu
+or Windows virtual machine (Virtual Box or Parallels are both good) works
+well on OS X.</p>
 </div>
 </div>
 <div class="section" id="command-line-options">
-<h1><a class="toc-backref" href="#id11" name="command-line-options">Command Line Options</a></h1>
+<h1><a class="toc-backref" href="#id11">Command Line Options</a></h1>
 <div class="section" id="last">
-<h2><a class="toc-backref" href="#id12" name="last">--last</a></h2>
+<h2><a class="toc-backref" href="#id12">--last</a></h2>
 <p>When PyPE is run with the '--last' command line option, PyPE will attempt to
 load all documents that were opened the last time you shut down PyPE.  This is
 equivalent to starting up PyPE and using File-&gt;Open Last .</p>
 </div>
 <div class="section" id="unicode-and-ansi">
-<h2><a class="toc-backref" href="#id13" name="unicode-and-ansi">--unicode and --ansi</a></h2>
+<h2><a class="toc-backref" href="#id13">--unicode and --ansi</a></h2>
 <p>If PyPE is started up with the --unicode or --ansi command line options, it
 will attempt to use the unicode or ansi versions of wxPython respectively.  On
 failure, it will display to the user with a failure notice.  These options
-have no effect on the Windows distributions of PyPE, or wherever 
-<tt class="docutils literal"><span class="pre">hasattr(sys,</span> <span class="pre">'frozen')</span></tt> is true.</p>
+have no effect on the Windows distributions of PyPE, or wherever
+<tt class="docutils literal">hasattr(sys, 'frozen')</tt> is true.</p>
 </div>
 <div class="section" id="fontsize">
-<h2><a class="toc-backref" href="#id14" name="fontsize">--fontsize</a></h2>
+<h2><a class="toc-backref" href="#id14">--fontsize</a></h2>
 <p>If you provide <tt class="docutils literal"><span class="pre">--fontsize=12</span></tt>, PyPE will change the font size for all open
 documents to 12.  The default font size that PyPE uses is 10.  If you want
 text to be bigger, use a number larger than 10.  If you want text to be
@@ -248,41 +556,48 @@ smaller, use a number smaller than 10.  The line number margin will be scaled
 proportional to the font size specified.</p>
 </div>
 <div class="section" id="font">
-<h2><a class="toc-backref" href="#id15" name="font">--font</a></h2>
+<h2><a class="toc-backref" href="#id15">--font</a></h2>
 <p>If you provide <tt class="docutils literal"><span class="pre">--font=Lucida-Console</span></tt>, PyPE will change the font for all
 open documents to &quot;Lucida Console&quot;.  The default font that PyPE uses is
 Courier New.</p>
 </div>
 <div class="section" id="nothread">
-<h2><a class="toc-backref" href="#id16" name="nothread">--nothread</a></h2>
+<h2><a class="toc-backref" href="#id16">--nothread</a></h2>
 <p>This command line option will disable the threaded parser, which has caused
 problems on some platforms.  This will reduce the accuracy of the tools in
 the &quot;Tools&quot; menu, due to the faster and not necessarily correct parser being
 used in its place.</p>
 </div>
 <div class="section" id="macros">
-<h2><a class="toc-backref" href="#id17" name="macros">--macros</a></h2>
+<h2><a class="toc-backref" href="#id17">--macros</a></h2>
 <p>PyPE 2.6 has what I would consider to be a fully-functioning macro system.
 The Python 2.5 <tt class="docutils literal"><span class="pre">--macros</span></tt> command line option is now ignored because macros
 are enabled by default in 2.6+.</p>
 </div>
 <div class="section" id="standalone">
-<h2><a class="toc-backref" href="#id18" name="standalone">--standalone</a></h2>
+<h2><a class="toc-backref" href="#id18">--standalone</a></h2>
 <p>Providing this command line option will use the path in which the PyPE source
 or binary is for where PyPE's state is saved (document history, menu
 configuration, etc.).  This will allow for 'embedded' applications.</p>
 </div>
 <div class="section" id="port">
-<h2><a class="toc-backref" href="#id19" name="port">--port</a></h2>
+<h2><a class="toc-backref" href="#id19">--port</a></h2>
 <p>Providing this command line option will allow you to choose the port number
 that PyPE uses when Options -&gt; One PyPE is checked.  The default port number
 is 9999.</p>
 </div>
+<div class="section" id="use-old-parser">
+<h2><a class="toc-backref" href="#id20">--use_old_parser</a></h2>
+<p>This uses the old parser (PyPE 2.8.8 and a few revisions prior).  It is faster
+than the modern parser, but it's not as accurrate, nor does it provide all of
+the scope introspection capabilities that the new compiler.ast-based parser
+does.</p>
+</div>
 </div>
 <div class="section" id="pype-features-and-functionality">
-<h1><a class="toc-backref" href="#id20" name="pype-features-and-functionality">PyPE features and functionality</a></h1>
+<h1><a class="toc-backref" href="#id21">PyPE features and functionality</a></h1>
 <div class="section" id="what-to-expect-when-coming-from-other-editors-ides">
-<h2><a class="toc-backref" href="#id21" name="what-to-expect-when-coming-from-other-editors-ides">What to expect when coming from other editors/IDEs</a></h2>
+<h2><a class="toc-backref" href="#id22">What to expect when coming from other editors/IDEs</a></h2>
 <p>While PyPE has quite a few of the features that one would expect from an IDE,
 I do not consider PyPE to be an IDE; I consider PyPE to be an editor.  The
 semantic difference between the two in my mind is a bit wishy-washy, so I'll
@@ -326,7 +641,7 @@ included with PyPE (including the failure conditions).</li>
 </ol>
 </div>
 <div class="section" id="encoding-detection-for-opening-files">
-<h2><a class="toc-backref" href="#id22" name="encoding-detection-for-opening-files">Encoding detection for opening files</a></h2>
+<h2><a class="toc-backref" href="#id23">Encoding detection for opening files</a></h2>
 <p>If you are using the Unicode version of PyPE, when opening a file, PyPE will
 attempt to decode your file using the following encodings in order:</p>
 <ol class="arabic simple">
@@ -342,14 +657,14 @@ display the correct content, and may cause corruption if you were to save the
 document.</p>
 <p>In 2.6.3 and earlier, PyPE would try 1, 2, then 3, but not 4.</p>
 <p>Note that PyPE does not default to assuming XML or HTML files are UTF-8 as per
-spec: <a class="reference" href="http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl">http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl</a> due to
+spec: <a class="reference external" href="http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl">http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl</a> due to
 backwards compatability concerns with PyPE 2.6.3 and earlier. Users desiring
 UTF-8 decoding support should make sure that their xml/html files include a
 UTF-8 encoding directive or BOM at the beginning of their file, which is
 recommended for all xml/html anyways.</p>
 </div>
 <div class="section" id="encoding-detection-for-saving-files">
-<h2><a class="toc-backref" href="#id23" name="encoding-detection-for-saving-files">Encoding detection for saving files</a></h2>
+<h2><a class="toc-backref" href="#id24">Encoding detection for saving files</a></h2>
 <p>If you are using the Unicode version of PyPE, when saving a file, PyPE will
 attempt to encode your file using the following encodings in order:</p>
 <ol class="arabic simple">
@@ -372,7 +687,7 @@ to succeed (UTF-8), and ask you if it is ok to continue.</p>
 <p>In 2.6.3 and earlier, PyPE would try 1, 2, 3, then 5.</p>
 </div>
 <div class="section" id="what-is-a-coding-directive">
-<h2><a class="toc-backref" href="#id24" name="what-is-a-coding-directive">What is a &quot;coding directive&quot;?</a></h2>
+<h2><a class="toc-backref" href="#id25">What is a &quot;coding directive&quot;?</a></h2>
 <p>If in the first two lines of your source file (all initial blank lines being
 ignored), the following regular expression matches something:</p>
 <pre class="literal-block">
@@ -390,7 +705,7 @@ expression was intended to match things like:</p>
 XML-style declarations in XML or HTML source.</p>
 </div>
 <div class="section" id="shells">
-<h2><a class="toc-backref" href="#id25" name="shells">Shells</a></h2>
+<h2><a class="toc-backref" href="#id26">Shells</a></h2>
 <p>PyPE includes the ability to open up Python or command shells.  See the File
 menu.  To choose which Python is used in the &quot;New Python Shell&quot; or &quot;Run
 Selected Code&quot;, see &quot;Options -&gt; Shell Options&quot;.</p>
@@ -406,9 +721,12 @@ code to the Python shell after reindenting it.</p>
 <p>When using &quot;Run Current File&quot;, PyPE will try to find a currently unused output
 document that was previously created.  If it cannot find one, it will open a
 new output document and use that.</p>
+<p>Note: as of May 2009, though shells work, there are some bugs, and seem to
+have become quite slow.  There are some things I've been meaning to do to
+improve their functionality, but I've not had time (in over 2 years).</p>
 </div>
 <div class="section" id="vim-options">
-<h2><a class="toc-backref" href="#id26" name="vim-options">Vim options</a></h2>
+<h2><a class="toc-backref" href="#id27">Vim options</a></h2>
 <p>When opening up a file that you have never opened before, or whose history you
 have cleared by closing and removing it from the &quot;Recently Open&quot; list in the
 Documents tab, PyPE will scan the first and last 20 lines of the file for
@@ -420,7 +738,7 @@ preferences in the Document menu.</p>
 <p>If there exists both sw and sts options, sw will be preferred.</p>
 </div>
 <div class="section" id="using-options-realtime-options-for-syntax-checking-and-tool-updates">
-<h2><a class="toc-backref" href="#id27" name="using-options-realtime-options-for-syntax-checking-and-tool-updates">Using Options -&gt; Realtime Options for syntax checking and tool updates</a></h2>
+<h2><a class="toc-backref" href="#id28">Using Options -&gt; Realtime Options for syntax checking and tool updates</a></h2>
 <p>Syntax checking is always enabled for Python shells, and will highlight the
 first line with an error as you type (it is actually checks shortly after you
 stop typing), using the same indicator as defined in Options -&gt; Shell Options.</p>
@@ -441,14 +759,14 @@ keyboard, etc., to do the automatic Document -&gt; Refresh call.</p>
 changed since the last time either operation was scheduled.</p>
 </div>
 <div class="section" id="what-is-sloppy-cut-copy">
-<h2><a class="toc-backref" href="#id28" name="what-is-sloppy-cut-copy">What is Sloppy Cut/Copy?</a></h2>
+<h2><a class="toc-backref" href="#id29">What is Sloppy Cut/Copy?</a></h2>
 <p>When selecting multiple lines for a cut/copy operation, Sloppy Cut/Copy will
 select the entirety of partially selected lines.  This saves the user from
 having to meticulously select the start and end points of multi-line
 selections.</p>
 </div>
 <div class="section" id="what-is-smart-paste">
-<h2><a class="toc-backref" href="#id29" name="what-is-smart-paste">What is Smart Paste?</a></h2>
+<h2><a class="toc-backref" href="#id30">What is Smart Paste?</a></h2>
 <p>Smart Paste is two functionalities in one.</p>
 <ol class="arabic simple">
 <li>When pasting multiple lines into a currently indented region, it will
@@ -462,18 +780,21 @@ while, def, etc., for Python, open curly braces '{' in C, etc.).</li>
 </ol>
 </div>
 <div class="section" id="what-do-the-different-options-in-the-filter-tool-do">
-<h2><a class="toc-backref" href="#id30" name="what-do-the-different-options-in-the-filter-tool-do">What do the different options in the Filter tool do?</a></h2>
+<h2><a class="toc-backref" href="#id31">What do the different options in the Filter tool do?</a></h2>
 <dl class="docutils">
 <dt>subsequence</dt>
-<dd>will match things like <tt class="docutils literal"><span class="pre">us.et</span></tt> to <tt class="docutils literal"><span class="pre">UserString.ExpandTabs</span></tt></dd>
+<dd>will match things like <tt class="docutils literal">us.et</tt> to <tt class="docutils literal">UserString.ExpandTabs</tt></dd>
+<dt>score</dt>
+<dd>when subsequence is defined, will score the matches and show the best
+matches at the top of the list</dd>
 <dt>no context</dt>
 <dd>will not provide any context in the display or search</dd>
 <dt>long</dt>
 <dd>will provide a 'verbose' display and search context, like
-<tt class="docutils literal"><span class="pre">class</span> <span class="pre">foo:</span> <span class="pre">def</span> <span class="pre">bar(self)</span></tt> .</dd>
+<tt class="docutils literal">class foo: def bar(self)</tt></dd>
 <dt>short</dt>
 <dd>will provide a concise display and search context, like
-<tt class="docutils literal"><span class="pre">def</span> <span class="pre">foo.bar(self)</span></tt></dd>
+<tt class="docutils literal">def foo.bar(self)</tt></dd>
 <dt>exact</dt>
 <dd>will find entries that include <em>exactly</em> what you typed in.</dd>
 <dt>any</dt>
@@ -481,7 +802,7 @@ while, def, etc., for Python, open curly braces '{' in C, etc.).</li>
 <dt>all</dt>
 <dd>will find the entries that include <em>all</em> of the 'words' you provide</dd>
 </dl>
-<p>Given the following three definitions and the <tt class="docutils literal"><span class="pre">no</span> <span class="pre">context</span></tt> option without
+<p>Given the following three definitions and the <tt class="docutils literal">no context</tt> option without
 subsequence searching:</p>
 <pre class="literal-block">
 def abc(ghi, jkl)
@@ -502,24 +823,11 @@ exact 'jkl stu' -&gt; Nothing
 any 'jkl stu' -&gt; #1, #2, #3
 all 'jkl stu' -&gt; Nothing
 </pre>
-<p>Please note that the line count information can be off significantly.  This is
-due to the simple algorithm that it uses to &quot;count&quot; lines.  Really, all it
-does is to say that the number of lines for definition A is the number of
-lines from the start of definition A to the next definition.</p>
-<p>For example, <tt class="docutils literal"><span class="pre">cls</span></tt> in the following example has 1 line, but <tt class="docutils literal"><span class="pre">fcn</span></tt> has 5:</p>
-<pre class="literal-block">
-class cls:
-    def fcn(self):
-        pass
-
-
-
-def foo():
-    pass
-</pre>
+<p>With the new parser introduced in PyPE 2.9, line count information should be
+fairly precise.</p>
 </div>
 <div class="section" id="how-do-i-update-the-default-settings-for-a-particular-document-type">
-<h2><a class="toc-backref" href="#id31" name="how-do-i-update-the-default-settings-for-a-particular-document-type">How do I update the default settings for a particular document type?</a></h2>
+<h2><a class="toc-backref" href="#id32">How do I update the default settings for a particular document type?</a></h2>
 <ol class="arabic simple">
 <li>Close all open documents of the particular type whose default settings you
 want to update.</li>
@@ -541,7 +849,7 @@ If you are going to change the default settings for all documents of a
 specific type, follow the above 5 steps.</p>
 </div>
 <div class="section" id="dictionaries-and-alphabets-for-the-spell-checker">
-<h2><a class="toc-backref" href="#id32" name="dictionaries-and-alphabets-for-the-spell-checker">Dictionaries and alphabets for the Spell checker</a></h2>
+<h2><a class="toc-backref" href="#id33">Dictionaries and alphabets for the Spell checker</a></h2>
 <p>You can create/delete custom dictionaries via the +/- buttons right next to
 the &quot;Custom Dictionaries:&quot; section.  You can add words to these custom
 dictionaries by &quot;Check&quot;ing your document for misspellings, checking all of the
@@ -551,8 +859,8 @@ you want the words added to.</p>
 that is utf-8 encoded, and place it into the same path that PyPE is.  This
 will be far faster for startup, shutdown, and creating the list than manually
 adding all of the words to custom dictionaries.  Fairly reasonable word lists
-for english (British, Canadian, or American) are available at Kevin's Word 
-list page: <a class="reference" href="http://wordlist.sourceforge.net/">http://wordlist.sourceforge.net/</a> Words should be separated by any
+for english (British, Canadian, or American) are available at Kevin's Word
+list page: <a class="reference external" href="http://wordlist.sourceforge.net/">http://wordlist.sourceforge.net/</a> Words should be separated by any
 standard whitespace character (spaces, tabs, line endings, etc.).</p>
 <p>If you want to customize the alphabet that PyPE uses for suggesting spelling,
 you can create an 'alphabet.txt' file that is utf-8 encoded, where alphabet
@@ -565,7 +873,7 @@ internally.  It then checks these suggestions against the user-supplied
 dictionaries, and any that match become suggestions.</p>
 </div>
 <div class="section" id="how-does-one-pype-work">
-<h2><a class="toc-backref" href="#id33" name="how-does-one-pype-work">How does &quot;One PyPE&quot; work?</a></h2>
+<h2><a class="toc-backref" href="#id34">How does &quot;One PyPE&quot; work?</a></h2>
 <p>If &quot;One PyPE&quot; is selected, it will remove the file named 'nosocket' from the
 path in which PyPE is running from (if it exists), and start a listening
 socket on 127.0.0.1:9999 .  If &quot;One PyPE&quot; is deselected, it will create a file
@@ -583,18 +891,18 @@ involving a read-only path which PyPE is on, or a read-only nosocket file).</p>
 sockets, create a file called 'nosocket' and make it read-only to PyPE.</p>
 </div>
 <div class="section" id="what-the-heck-is-a-trigger">
-<h2><a class="toc-backref" href="#id34" name="what-the-heck-is-a-trigger">What the heck is a Trigger?</a></h2>
+<h2><a class="toc-backref" href="#id35">What the heck is a Trigger?</a></h2>
 <p>Let us say that you writing a web page from scratch.  Let us also say that
 typing in everything has gotten a bit tiresome, so you want to offer yourself
 a few macro-like expansions, like 'img' -&gt; '&lt;img src=&quot;&quot;&gt;'.</p>
 <ol class="arabic simple">
 <li>Go to: Document-&gt;Set Triggers.</li>
 <li>Click on 'New Trigger'.</li>
-<li>In the 'input' column of the new trigger, type in <tt class="docutils literal"><span class="pre">img</span></tt></li>
-<li>In the 'output' column, type in <tt class="docutils literal"><span class="pre">&lt;img</span> <span class="pre">src=&quot;%C&quot;&gt;</span></tt></li>
+<li>In the 'input' column of the new trigger, type in <tt class="docutils literal">img</tt></li>
+<li>In the 'output' column, type in <tt class="docutils literal">&lt;img <span class="pre">src=&quot;%C&quot;&gt;</span></tt></li>
 </ol>
-<p>In the future, if you type in <tt class="docutils literal"><span class="pre">img</span></tt> and use Transforms-&gt;Perform Trigger, it
-will expand itself to <tt class="docutils literal"><span class="pre">&lt;img</span> <span class="pre">src=&quot;&quot;&gt;</span></tt> with your cursor between the two double
+<p>In the future, if you type in <tt class="docutils literal">img</tt> and use Transforms-&gt;Perform Trigger, it
+will expand itself to <tt class="docutils literal">&lt;img <span class="pre">src=&quot;&quot;&gt;</span></tt> with your cursor between the two double
 quotes.</p>
 <p>What other nifty things are possible?  How about automatic curly and square
 brace matching with [, [%C] and {, {%C}?  Note that triggers with a single
@@ -602,21 +910,21 @@ character in the 'enter' column are automatically done as you type, but
 triggers with multiple characters in the 'input' column require using
 Transforms-&gt;Perform Trigger (or its equivalent hotkey if you have assigned
 one via Options -&gt; Change Menus and Hotkeys).</p>
-<p>As described, there is a <tt class="docutils literal"><span class="pre">%C</span></tt> directive that defines where the cursor will
-end up.  There is also a <tt class="docutils literal"><span class="pre">%L</span></tt> directive that inserts a line break with
+<p>As described, there is a <tt class="docutils literal">%C</tt> directive that defines where the cursor will
+end up.  There is also a <tt class="docutils literal">%L</tt> directive that inserts a line break with
 autoindentation.  The semantics for string escapes are the same as in the
 Find/Replace bar, and a non-indenting line break can be inserted with the
-standard <tt class="docutils literal"><span class="pre">\n</span></tt>.</p>
+standard <tt class="docutils literal">\n</tt>.</p>
 </div>
 <div class="section" id="find-replace-bars">
-<h2><a class="toc-backref" href="#id35" name="find-replace-bars">Find/Replace bars</a></h2>
+<h2><a class="toc-backref" href="#id36">Find/Replace bars</a></h2>
 <p>If you have ' or &quot; as the first character in a find or find/replace entry, and
 what you entered is a proper string declaration in Python, PyPE will use the
 compiler module to parse and discover the the string.  For example, to
-discover LF characters, use <tt class="docutils literal"><span class="pre">&quot;\n&quot;</span></tt>, including quotes.</p>
+discover LF characters, use <tt class="docutils literal">&quot;\n&quot;</tt>, including quotes.</p>
 </div>
 <div class="section" id="what-happens-when-smart-case-is-enabled-during-a-replace">
-<h2><a class="toc-backref" href="#id36" name="what-happens-when-smart-case-is-enabled-during-a-replace">What happens when &quot;Smart Case&quot; is enabled during a replace?</a></h2>
+<h2><a class="toc-backref" href="#id37">What happens when &quot;Smart Case&quot; is enabled during a replace?</a></h2>
 <p>If the found string is all upper or lower case, it will be replaced by a
 string that is also all upper or lower case.</p>
 <p>Else if the length of the found string is the same length as the replacement
@@ -641,28 +949,28 @@ boxes.</p>
 its replacement will have the first letter be upper or lowercase respectively.</p>
 </div>
 <div class="section" id="string-escapes-in-regular-expressions-and-multiline-searches">
-<h2><a class="toc-backref" href="#id37" name="string-escapes-in-regular-expressions-and-multiline-searches">String escapes in regular expressions and multiline searches?</a></h2>
+<h2><a class="toc-backref" href="#id38">String escapes in regular expressions and multiline searches?</a></h2>
 <p>When using the 'Search' tab, you can use standard Python strings with escapes
 and quote marks just like when you use the find/replace bars with one minor
-difference; all searched data is normalized to have <tt class="docutils literal"><span class="pre">\n</span></tt> line endings
+difference; all searched data is normalized to have <tt class="docutils literal">\n</tt> line endings
 regardless of the input.  This means that if you want to find a colon followed
-by a line ending followed by a space, you would use <tt class="docutils literal"><span class="pre">&quot;:\n</span> <span class="pre">&quot;</span></tt>, including
+by a line ending followed by a space, you would use <tt class="docutils literal"><span class="pre">&quot;:\n</span> &quot;</tt>, including
 quotes.</p>
 <p>If you include line endings in your search string, then multiline searching
 will be automatically enabled during the search (but the box will remain
 checked or unchecked).</p>
 </div>
 <div class="section" id="how-do-i-use-the-todo-list">
-<h2><a class="toc-backref" href="#id38" name="how-do-i-use-the-todo-list">How do I use the 'Todo' list?</a></h2>
+<h2><a class="toc-backref" href="#id39">How do I use the 'Todo' list?</a></h2>
 <p>On a line by itself (any amount of leading spaces), place something that
 matches the following regular expression: <tt class="docutils literal"><span class="pre">([a-zA-Z0-9</span> <span class="pre">]+):(.*)</span></tt> and is
-immediately proceeded with a language-specific single-line comment (<tt class="docutils literal"><span class="pre">#</span></tt>,
-<tt class="docutils literal"><span class="pre">//</span></tt>, <tt class="docutils literal"><span class="pre">%</span></tt>, or <tt class="docutils literal"><span class="pre">&lt;!--</span></tt>).</p>
+immediately proceeded with a language-specific single-line comment (<tt class="docutils literal">#</tt>,
+<tt class="docutils literal">//</tt>, <tt class="docutils literal">%</tt>, or <tt class="docutils literal"><span class="pre">&lt;!--</span></tt>).</p>
 <p>The first group (after a .strip().lower() translation) will become category in
 the 'Category' column, the second group (after a .strip()) becomes the todo in
 the 'Todo' column, and the number of exclamation points will become the number
 in the '!' column.</p>
-<p>PyPE also tosses all entries with a 'Category' that is also a keyword
+<p>PyPE should also toss all entries with a 'Category' that is also a keyword
 (keyword.kwlist), or one of the following: http, ftp, mailto, news, gopher,
 and telnet.</p>
 <p>The following lines are all valid todos</p>
@@ -676,11 +984,11 @@ and telnet.</p>
 #I am not a valid todo...: because there is punctuation on the left
 </pre>
 <p>In PyPE 2.6.5 and later, for Python, C/C++, and TeX files, PyPE supports the
-use of <tt class="docutils literal"><span class="pre">#&gt;</span></tt> (or equivalents for non-XML/HTML languages) as a &quot;strict&quot; todo,
+use of <tt class="docutils literal">#&gt;</tt> (or equivalents for non-XML/HTML languages) as a &quot;strict&quot; todo,
 with the option to only recognize these &quot;strict&quot; todos.</p>
 </div>
 <div class="section" id="labels-transforms-insert-comment">
-<h2><a class="toc-backref" href="#id39" name="labels-transforms-insert-comment">Labels / Transforms -&gt; Insert Comment</a></h2>
+<h2><a class="toc-backref" href="#id40">Labels / Transforms -&gt; Insert Comment</a></h2>
 <p>When you use Transforms -&gt; Insert Comment, you create a comment of the form
 (for example in Python):</p>
 <pre class="literal-block">
@@ -697,9 +1005,9 @@ extraneous dashes and spaces from either end, inserting a single space and a
 double dash around the comment (for consistency and readability).</p>
 </div>
 <div class="section" id="what-are-the-known-issues-within-pype-s-parser">
-<h2><a class="toc-backref" href="#id40" name="what-are-the-known-issues-within-pype-s-parser">What are the known issues within PyPE's parser?</a></h2>
+<h2><a class="toc-backref" href="#id41">What are the known issues within PyPE's parser?</a></h2>
 <div class="section" id="the-c-c-parser">
-<h3><a class="toc-backref" href="#id41" name="the-c-c-parser">The C/C++ parser</a></h3>
+<h3><a class="toc-backref" href="#id42">The C/C++ parser</a></h3>
 <p>PyPE 2.6.1 and later added a C/C++ parser that uses a combination of regular
 expressions and some post-processing to extract function definition
 information.  Note that it can handle things like the following and their
@@ -713,7 +1021,7 @@ int count;
 \{ ...
 </pre>
 <p>Generally speaking, it searches for all matches of the following regular
-expressions for function-like examples of <tt class="docutils literal"><span class="pre">#define</span></tt> and functions
+expressions for function-like examples of <tt class="docutils literal">#define</tt> and functions
 respectively:</p>
 <pre class="literal-block">
 (#ys+i\(i(?:,s*i)*\))
@@ -736,7 +1044,7 @@ generally be sufficient for most navigation and/or file-specific autocomplete
 and calltips.</p>
 </div>
 <div class="section" id="the-python-parser">
-<h3><a class="toc-backref" href="#id42" name="the-python-parser">The Python parser</a></h3>
+<h3><a class="toc-backref" href="#id43">The Python parser</a></h3>
 <p>For Python source files, if given a syntactically correct Python source file,
 the Python parser should work without issue (as long as --nothread is not
 provided), though it may not be quite as fast as desired (where fast is &lt; .1
@@ -768,19 +1076,20 @@ def nada(inp):
 '''
 </pre>
 <p>This parser will not pull out doc strings or handle multi-line function
-definitions properly.</p>
+definitions properly (which can be difficult if not impossible when provided
+with a bad source file).</p>
 </div>
 <div class="section" id="tex-latex">
-<h3><a class="toc-backref" href="#id43" name="tex-latex">TeX/LaTeX</a></h3>
+<h3><a class="toc-backref" href="#id44">TeX/LaTeX</a></h3>
 <p>In TeX/LaTeX, PyPE extracts \(sub)*section and \label headings, todo items,
 and labels (defined below).</p>
 </div>
 <div class="section" id="html-xml">
-<h3><a class="toc-backref" href="#id44" name="html-xml">HTML/XML</a></h3>
+<h3><a class="toc-backref" href="#id45">HTML/XML</a></h3>
 <p>PyPE only extracts todo items and labels (defined below).</p>
 </div>
 <div class="section" id="label-parser">
-<h3><a class="toc-backref" href="#id45" name="label-parser">Label Parser</a></h3>
+<h3><a class="toc-backref" href="#id46">Label Parser</a></h3>
 <p>Knowing where to insert a label (in the trees) is tricky work, and we can only
 generally choose the right place to insert labels in one of the following two
 cases:</p>
@@ -835,11 +1144,11 @@ class foo:
 better to show too many labels in a particular context than too few.</p>
 </div>
 <div class="section" id="name-line-expanded-state">
-<h3><a class="toc-backref" href="#id46" name="name-line-expanded-state">Name/Line Expanded State</a></h3>
+<h3><a class="toc-backref" href="#id47">Name/Line Expanded State</a></h3>
 <p>PyPE will only be able to remember those items that were expanded, selected or
 first visible (to keep the scrollbar consistant) if the names hadn't been
-changed.  Say that you had an item named <tt class="docutils literal"><span class="pre">class</span> <span class="pre">foo:</span></tt> that was expanded
-prior to using Document -&gt; Refresh.  If you renamed it to <tt class="docutils literal"><span class="pre">class</span> <span class="pre">foo_bar:</span></tt>,
+changed.  Say that you had an item named <tt class="docutils literal">class foo:</tt> that was expanded
+prior to using Document -&gt; Refresh.  If you renamed it to <tt class="docutils literal">class foo_bar:</tt>,
 then PyPE wouldn't remember that it was expanded in the browsable source tree.</p>
 <p>Also, if you have two classes with the same name like the following:</p>
 <pre class="literal-block">
@@ -857,18 +1166,18 @@ the Name (or Line) tool.</p>
 </div>
 </div>
 <div class="section" id="how-do-you-get-usable-calltips">
-<h2><a class="toc-backref" href="#id47" name="how-do-you-get-usable-calltips">How do you get usable Calltips?</a></h2>
+<h2><a class="toc-backref" href="#id48">How do you get usable Calltips?</a></h2>
 <p>Hit F5.  This will also rebuild the browsable source tree, autocomplete
 listing, filter, and todo list.</p>
 </div>
 <div class="section" id="how-do-you-get-autocompletion">
-<h2><a class="toc-backref" href="#id48" name="how-do-you-get-autocompletion">How do you get autocompletion?</a></h2>
+<h2><a class="toc-backref" href="#id49">How do you get autocompletion?</a></h2>
 <p>Easy.  In the 'Document' menu, there is an entry for 'Show autocomplete'.
 Make sure there is a check by it, and you are set.  If you want to get a new
 or updated listing of functions, hit the F5 key on your keyboard.</p>
 </div>
 <div class="section" id="crlf-lf-cr-line-endings">
-<h2><a class="toc-backref" href="#id49" name="crlf-lf-cr-line-endings">CRLF/LF/CR line endings</a></h2>
+<h2><a class="toc-backref" href="#id50">CRLF/LF/CR line endings</a></h2>
 <p>PyPE will attempt to figure out what kind of file was opened, it does this by
 counting the number of different kinds of line endings.  Which ever line
 ending appears the most in an open file will set the line ending support for
@@ -882,7 +1191,7 @@ copying and pasting to/from the host operating system's native line endings.</p>
 'Document' menu.</p>
 </div>
 <div class="section" id="stcstyleeditor-py">
-<h2><a class="toc-backref" href="#id50" name="stcstyleeditor-py">STCStyleEditor.py</a></h2>
+<h2><a class="toc-backref" href="#id51">STCStyleEditor.py</a></h2>
 <p>As I didn't write this, I can offer basically no support for it.  It seems to
 work to edit python colorings, and if you edit some of the last 30 or so lines
 of it, you can actually use the editor to edit some of the other styles that
@@ -892,7 +1201,7 @@ stc-styles.rc.cfg that is included with the distribution of PyPE you received.
 As it is a known-good version, use it.</p>
 </div>
 <div class="section" id="expandable-collapsable-foldable-code">
-<h2><a class="toc-backref" href="#id51" name="expandable-collapsable-foldable-code">Expandable/collapsable/foldable code</a></h2>
+<h2><a class="toc-backref" href="#id52">Expandable/collapsable/foldable code</a></h2>
 <p>Since the beginning, there have been expandable and collapsable scopes thanks
 to wxStyledTextCtrl.  How to use them...
 Given the below...</p>
@@ -917,20 +1226,21 @@ scopes contained within.</p>
 Play around with them, you may like it.</p>
 </div>
 <div class="section" id="converting-between-tabs-and-spaces">
-<h2><a class="toc-backref" href="#id52" name="converting-between-tabs-and-spaces">Converting between tabs and spaces</a></h2>
+<h2><a class="toc-backref" href="#id53">Converting between tabs and spaces</a></h2>
 <p>So, you got tabs and you want spaces, or you have spaces and want to make them
 tabs.  As it is not a menu option, you're probably wondering &quot;how in the hell
 am I going to do this&quot;.  Well, if you read the above stuff about string
 escapes in the find/replace bar, it would be trivial.
 Both should INCLUDE the quotation marks.
-To convert from tabs to 8 spaces per tab; replace <tt class="docutils literal"><span class="pre">&quot;\t&quot;</span></tt> with <tt class="docutils literal"><span class="pre">&quot;</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">&quot;</span></tt>
-To convert from 8 spaces to one tab; replace <tt class="docutils literal"><span class="pre">&quot;</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">&quot;</span></tt> with <tt class="docutils literal"><span class="pre">&quot;\t&quot;</span></tt></p>
+To convert from tabs to 8 spaces per tab; replace <tt class="docutils literal">&quot;\t&quot;</tt> with <tt class="docutils literal">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;</tt>
+To convert from 8 spaces to one tab; replace <tt class="docutils literal">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;</tt> with <tt class="docutils literal">&quot;\t&quot;</tt></p>
 <p>Note that you don't need to use the double quotes for the spaces, but it
 allowed me to be explicit in this documentation.</p>
+<p>Alternatively, this is available via the &quot;Transforms&quot; menu.</p>
 </div>
 </div>
 <div class="section" id="how-do-i-program-my-own-macros">
-<h1><a class="toc-backref" href="#id53" name="how-do-i-program-my-own-macros">How do I program my own macros?</a></h1>
+<h1><a class="toc-backref" href="#id54">How do I program my own macros?</a></h1>
 <p>Users of PyPE 2.5.1 (a test release) and later will have the ability to
 record, edit, playback, and delete macros.  Most keyboard related tasks are
 recorded (typing, keyboard movement, selection, cut, copy, paste, etc.), as
@@ -956,36 +1266,36 @@ def macro(self):
     pass
 </pre>
 <dl class="docutils">
-<dt><tt class="docutils literal"><span class="pre">creation_date</span></tt></dt>
+<dt><tt class="docutils literal">creation_date</tt></dt>
 <dd>is merely for reference purposes</dd>
-<dt><tt class="docutils literal"><span class="pre">name</span></tt></dt>
+<dt><tt class="docutils literal">name</tt></dt>
 <dd>is the name you will see in the macro list.  If this value is
 missing, you will see the file name instead.</dd>
-<dt><tt class="docutils literal"><span class="pre">hotkeydisplay</span></tt></dt>
+<dt><tt class="docutils literal">hotkeydisplay</tt></dt>
 <dd>if you have created a hotkey for this macro, this represents how the
 hotkey would be displayed to PyPE.  To get usable values for
-<tt class="docutils literal"><span class="pre">hotkeydisplay</span></tt>, use the 'Create Hotkey' button.</dd>
-<dt><tt class="docutils literal"><span class="pre">hotkeyaccept</span></tt></dt>
+<tt class="docutils literal">hotkeydisplay</tt>, use the 'Create Hotkey' button.</dd>
+<dt><tt class="docutils literal">hotkeyaccept</tt></dt>
 <dd>if you have created a hotkey for this macro, this represents the
 actual underlying keyboard keypresses necessary to make the macro run.  To
-get usable values for <tt class="docutils literal"><span class="pre">hotkeyaccept</span></tt>, use the 'Create Hotkey' button.</dd>
-<dt><tt class="docutils literal"><span class="pre">def</span> <span class="pre">macro(self):</span></tt></dt>
+get usable values for <tt class="docutils literal">hotkeyaccept</tt>, use the 'Create Hotkey' button.</dd>
+<dt><tt class="docutils literal">def macro(self):</tt></dt>
 <dd>is the initial definition of the macro.  You can have any number of helper
-functions, extra data, etc., but the macro itself must be named <tt class="docutils literal"><span class="pre">macro</span></tt>,
+functions, extra data, etc., but the macro itself must be named <tt class="docutils literal">macro</tt>,
 and must take at least one argument, the first of which being the
-<tt class="docutils literal"><span class="pre">wxStyledTextCtrl</span></tt> instance that contains the current document.  You can
+<tt class="docutils literal">wxStyledTextCtrl</tt> instance that contains the current document.  You can
 also import any module that is available (which may be limited on systems
 using the Windows binary).</dd>
 </dl>
-<p>The <tt class="docutils literal"><span class="pre">self</span></tt> parameter will actually be my own custom subclass of the
-<tt class="docutils literal"><span class="pre">StyledTextCtrl</span></tt>.  You will never receive a shell or interpreter, and you
+<p>The <tt class="docutils literal">self</tt> parameter will actually be my own custom subclass of the
+<tt class="docutils literal">StyledTextCtrl</tt>.  You will never receive a shell or interpreter, and you
 will not be able to execute macros on shells or interpreters.</p>
-<p>Generally speaking, the <tt class="docutils literal"><span class="pre">wxStyledTextCtrl</span></tt> subclass has everything that the
+<p>Generally speaking, the <tt class="docutils literal">wxStyledTextCtrl</tt> subclass has everything that the
 normal control subclass has, with a few caveats.</p>
 <ol class="arabic">
-<li><p class="first"><tt class="docutils literal"><span class="pre">self.GetText()</span></tt> and <tt class="docutils literal"><span class="pre">self.SetText()</span></tt> will return and set the content
+<li><p class="first"><tt class="docutils literal">self.GetText()</tt> and <tt class="docutils literal">self.SetText()</tt> will return and set the content
 of the document, paying attention to encodings as necessary.  That is, if
-you perform <tt class="docutils literal"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">self.GetText()</span></tt> inside a macro on a document including
+you perform <tt class="docutils literal">y = self.GetText()</tt> inside a macro on a document including
 unicode characters, or a document defining one of the standard Python
 document encoding methods, you will receive the encoded version of your
 document.  Strictly ASCII documents or those without any encodings will
@@ -999,7 +1309,7 @@ def macro(self):
     content = wx.stc.StyledTextCtrl.GetText(self)
 </pre>
 </li>
-<li><p class="first"><tt class="docutils literal"><span class="pre">self.lines</span></tt> is a special property that gives you a line-based view of
+<li><p class="first"><tt class="docutils literal">self.lines</tt> is a special property that gives you a line-based view of
 the current document.:</p>
 <pre class="literal-block">
 line = self.lines[i]        # will return line &quot;i&quot; including whitespace
@@ -1033,26 +1343,26 @@ for i in xrange(*self.lines.selectedlinesi):
 #etcetera.
 </pre>
 </li>
-<li><p class="first"><tt class="docutils literal"><span class="pre">self.InterpretTrigger(text)</span></tt> will interpret the text you provide as it
+<li><p class="first"><tt class="docutils literal">self.InterpretTrigger(text)</tt> will interpret the text you provide as it
 would interpret a trigger, with a small change.  That is,:</p>
 <pre class="literal-block">
 self.InterpretTrigger('def foo(%C):\npass')
 </pre>
-<p>will produce the following, with the cursor where the <tt class="docutils literal"><span class="pre">&#64;</span></tt> is, without
-the <tt class="docutils literal"><span class="pre">&#64;</span></tt> sign.:</p>
+<p>will produce the following, with the cursor where the <tt class="docutils literal">&#64;</tt> is, without
+the <tt class="docutils literal">&#64;</tt> sign.:</p>
 <pre class="literal-block">
 def foo(&#64;):
     pass
 </pre>
-<p>If you want your <tt class="docutils literal"><span class="pre">'\n'</span></tt> line endings to not include auto-indenting (as
-is the default for normal triggers), use <tt class="docutils literal"><span class="pre">self.InterpretTrigger(text,</span> <span class="pre">1)</span></tt>.</p>
+<p>If you want your <tt class="docutils literal">'\n'</tt> line endings to not include auto-indenting (as
+is the default for normal triggers), use <tt class="docutils literal">self.InterpretTrigger(text, 1)</tt>.</p>
 </li>
-<li><p class="first"><tt class="docutils literal"><span class="pre">self._autoindent(0)</span></tt> will perform the equivalent of
+<li><p class="first"><tt class="docutils literal">self._autoindent(0)</tt> will perform the equivalent of
 <tt class="docutils literal"><span class="pre">self.InterpretTrigger('\n')</span></tt>.</p>
 </li>
 </ol>
 <div class="section" id="an-example-nontrivial-macro">
-<h2><a class="toc-backref" href="#id54" name="an-example-nontrivial-macro">An example nontrivial macro</a></h2>
+<h2><a class="toc-backref" href="#id55">An example nontrivial macro</a></h2>
 <p>When I was writing macro support, I would have found macros to be quite
 convenient for developing macros.  What do I mean?  Let us say that I wanted
 to turn a line that read (from main_window_callback.c in the gPHPedit sources):</p>
@@ -1083,12 +1393,12 @@ def macro(self):
 but that shouldn't be terribly difficult.</p>
 </div>
 <div class="section" id="using-macros-as-code-snippets">
-<h2><a class="toc-backref" href="#id55" name="using-macros-as-code-snippets">Using macros as code snippets</a></h2>
+<h2><a class="toc-backref" href="#id56">Using macros as code snippets</a></h2>
 <ol class="arabic simple">
 <li>Create a macro.</li>
 <li>Paste the content of your snippet into a global variable in the macro and
-call it something like <tt class="docutils literal"><span class="pre">snippet</span></tt>.</li>
-<li>Use <tt class="docutils literal"><span class="pre">self.InterpretTrigger(snippet)</span></tt>.</li>
+call it something like <tt class="docutils literal">snippet</tt>.</li>
+<li>Use <tt class="docutils literal">self.InterpretTrigger(snippet)</tt>.</li>
 </ol>
 <p>That is, let us say that you wanted a snippet that inserted the following
 content:</p>
@@ -1110,7 +1420,7 @@ def macro(self):
 </pre>
 </div>
 <div class="section" id="sample-macros-included-with-pype">
-<h2><a class="toc-backref" href="#id56" name="sample-macros-included-with-pype">Sample Macros included with PyPE</a></h2>
+<h2><a class="toc-backref" href="#id57">Sample Macros included with PyPE</a></h2>
 <p>PyPE includes a handful of sample macros to give you some idea of what works
 and what doesn't.  The most important ones you should look at are the various
 Timeout macros.  They will show you what things will and won't stop after the
@@ -1119,16 +1429,16 @@ trying to kill PyPE because it stopped responding.  The general rule of thumb:
 don't perform any system calls that could take a long time to finish.</p>
 </div>
 <div class="section" id="non-white-background-colors">
-<h2><a class="toc-backref" href="#id57" name="non-white-background-colors">Non-white background colors</a></h2>
+<h2><a class="toc-backref" href="#id58">Non-white background colors</a></h2>
 <p>In PyPE 2.8.6, the stylesetter now has support for non-white background
 colors.  To set a non-white background color, change the 'backcol' value in
 the proper common.defs.* in your 'stc-styles.rc.cfg'.</p>
 </div>
 </div>
 <div class="section" id="faq">
-<h1><a class="toc-backref" href="#id58" name="faq">FAQ</a></h1>
+<h1><a class="toc-backref" href="#id59">FAQ</a></h1>
 <div class="section" id="how-do-you-come-up-with-new-feature-ideas">
-<h2><a class="toc-backref" href="#id59" name="how-do-you-come-up-with-new-feature-ideas">How do you come up with new feature ideas?</a></h2>
+<h2><a class="toc-backref" href="#id60">How do you come up with new feature ideas?</a></h2>
 <p>Every once and a while, I'll be editing with PyPE, and I'll say, &quot;hey, it
 would be neat if I could do X with PyPE&quot;.  This is rare, though it has
 produced things like the dragable document list, spell check, customizable
@@ -1162,7 +1472,7 @@ hope that others find PyPE as natural to use as I do, but if not, then I
 welcome your feedback.</p>
 </div>
 <div class="section" id="what-s-the-deal-with-the-version-numbering-scheme">
-<h2><a class="toc-backref" href="#id60" name="what-s-the-deal-with-the-version-numbering-scheme">What's the deal with the version numbering scheme?</a></h2>
+<h2><a class="toc-backref" href="#id61">What's the deal with the version numbering scheme?</a></h2>
 <p>Early in development, PyPE raised version numbers very quickly.  From 1.0 to
 1.5, not much more than 2 months passed.  In that time, most of the major
 initial architectural changes that were to happen, happened.  This is not the
@@ -1190,7 +1500,7 @@ PyPE 2.0, the rest was either architectural (ick), or questionable as to
 whether or not anyone would even want to use the feature (even me).</p>
 </div>
 <div class="section" id="how-did-pype-come-about">
-<h2><a class="toc-backref" href="#id61" name="how-did-pype-come-about">How did PyPE come about?</a></h2>
+<h2><a class="toc-backref" href="#id62">How did PyPE come about?</a></h2>
 <p>The beginnings of PyPE were written from 10:30PM on the 2nd of July through
 10:30PM on the 3rd of July, 2003.  Additional features were put together on
 the 4th of July along with some bug fixing and more testing for version 1.0.
@@ -1214,15 +1524,14 @@ Hotkeys.</p>
 </div>
 </div>
 <div class="section" id="thank-yous">
-<h1><a class="toc-backref" href="#id62" name="thank-yous">Thank Yous</a></h1>
+<h1><a class="toc-backref" href="#id63">Thank Yous</a></h1>
 <p>Certainly there are some people I should thank, because without them, the
 piece of software you are using right now, just wouldn't be possible.</p>
 <p>Guido van Rossum - without Guido, not only would I not have Python, I also
 wouldn't have had some of the great inspiration that IDLE has offered.  IDLE
 is a wonderful editor, has some excellent ideas in terms of functionality, but
-it unfortunately does not offer the extended functionality I want, and it
-hurts my brain to use tk, so I cannot add it myself.  Guido, my hat goes off
-to you.</p>
+unfortunately does not offer the extended functionality I want, and it hurts
+my brain to use tk, so I cannot add it myself.</p>
 <p>The people writing wxWidgets (previously named wxWindows) and wxPython -
 without you, this also would not have been possible.  You have made the most
 self-consistent GUI libraries that I have ever used, made them easy to use,
@@ -1237,9 +1546,6 @@ widget that just works?  Who would have figured?</p>
 <p>To everyone who I have already thanked: thank you for making PyPE an almost
 trivial task.  It would have been impossible to go so far so fast by hand in
 any other language using any other GUI toolkit or bindings.</p>
-<p>And my wife - because without her, I would likely be a pathetic shell of a
-man...or at least single, bored, and uncouth.  Well, I'm probably still
-uncouth, but there's only so much a good woman can fix.</p>
 </div>
 </div>
 </body>
