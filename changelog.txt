@@ -1,8 +1,18 @@
+#-------------------------------- PyPE 2.8.7 ---------------------------------
+(fixed) some bugs related to the parsers module movement.
+(fixed) ordering of user profile path discovery to not break when confronted
+with insane 'HOME' environment variable on Windows (will use USERPROFILE or
+HOMEDRIVE/HOMEPATH first).
+(fixed) unrepr mechansim can now handle negative value storage for disabled
+realtime options, etc.
+
+
 #-------------------------------- PyPE 2.8.6 ---------------------------------
 (fixed) a bug with "Wrap Try/Except" as per emailed bug report from Ian York.
 (added) ability to choose what port PyPE will listen on via --port= .
 (fixed) workspaces in wxPython 2.8+, patch thanks to Craig Mahaney.
-(added) explicit exclude dirs for find in files, patch thanks to CraigMahaney.
+(added) explicit exclude dirs for find in files, patch thanks to Craig
+Mahaney.
 (added) paste and down mechanism to paste and move the cursor down, patch
 thanks to Craig Mahaney.
 (added) delete right mechanism to delete everything from the cursor to the end

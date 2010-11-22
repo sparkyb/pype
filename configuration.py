@@ -95,7 +95,13 @@ default_homedir = os.path.dirname(os.path.abspath(__file__))
 if hasattr(sys, 'frozen'):
     default_homedir = os.path.split(default_homedir)[0]
 
-if hasattr(_pype, '_standalone'):
+sa = 0
+try:
+    sa = hasattr(_pype, '_standalone')
+except:
+    pass
+
+if sa:
     homedir = os.path.join(default_homedir, ".pype")
 else:
     try:
@@ -105,19 +111,20 @@ else:
         homedir = os.path.join(thd, ".pype")
     except:
         try:
-            #*nix fallback
-            homedir = os.path.join(os.environ['HOME'], ".pype")
+            #windows NT,2k,XP,etc. fallback
+            homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
         except:
             try:
-                #windows NT,2k,XP,etc. fallback
-                homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
+                #windows NT,2k,XP,etc. fallback #2
+                homedir = os.path.join(os.environ['HOMEDRIVE'], os.environ['HOMEPATH'], ".pype")
             except:
                 try:
-                    #windows NT,2k,XP,etc. fallback #2
-                    homedir = os.path.join(os.environ['HOMEDRIVE'], os.environ['HOMEPATH'], ".pype")
+                    #*nix fallback
+                    homedir = os.path.join(os.environ['HOME'], ".pype")
                 except:
                     #What os are people using?
                     homedir = os.path.join(default_homedir, ".pype")
+
 try:
     # create the config directory if it
     # doesn't already exist
@@ -213,6 +220,7 @@ Y\xee\xcd\xcf\xa9\xc1\xe88\x9b\xa5y\xb7O\xd5Xe!?\t\xdf4\x8d\xec\xd9#Z\\\xf0\
 # http://www.cherrypy.org/browser/branches/ticket-132/cherrypy/lib/unrepr.py?rev=194
 # JC - 7/18/2007 - Added support for True/False, added StringBuilder variant
 #    for string-only unrepr operations.
+# JC - 9/14/2007 - Added support for negative values.
 import compiler
 
 def getObj(s):
@@ -265,6 +273,8 @@ class Builder(_Builder):
         if not isinstance(imag, complex) or imag.real != 0.0:
             raise UnknownType('Add')
         return real+imag
+    def build_UnarySub(self, o):
+        return -self.build_Const(*o.getChildren())
 
 def unrepr(s):
     return Builder().build(getObj(s))

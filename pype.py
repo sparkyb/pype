@@ -5072,7 +5072,7 @@ class PythonSTC(stc.StyledTextCtrl):
                 lsis = lsi.strip()
                 lsil = lsi.lower()
                 c = 0
-                for i in parser.no_ends:
+                for i in parsers.no_ends:
                     if lsil.startswith(i):
                         c = 1
                         break
@@ -5370,7 +5370,7 @@ class PythonSTC(stc.StyledTextCtrl):
         try:
             t = time.time()
             ## print "checking syntax!"
-            parser.suite(content)
+            parsers.parser.suite(content)
         except SyntaxError, e:
             ## print "found error!", vars(e)
             #highlight the error
