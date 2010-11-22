@@ -152,7 +152,7 @@ def initSTC(stc, stylefile, language, custom=''):
         
     stc.Colourise(0, stc.GetTextLength())
 
-#from STCStyleEditor.py
+# borrowed from STCStyleEditor.py
 
 def strToCol(strCol):
     assert len(strCol) == 7 and strCol[0] == '#', 'Not a valid colour string'
