@@ -1,0 +1,15 @@
+(PyPE 1.0.1)
+(fixed) Thanks to a message from Lunar Linux guru Jeff Hodges, I was turned on
+to Pychecker.sourceforge.net and have discovered two previously unknown
+unpassed arguments to functions.  While pychecker is useful, it returns alot
+of variable not used errors.  I'll use it before every .n version release
+after I do a couple more feature additions.
+(fixed) Also thanks to Jeff Hodges, I discovered a bug in 1.0 that will tend
+to produce line endings that are \r\r\n...which is wrong, for ANY system.  It
+is now fixed.  It had to do with reading and writing files in ascii mode, not
+in binary mode.  Apparently it makes a difference in terms of line endings.
+Who knew?
+
+
+(PyPE 1.0)
+Initial version

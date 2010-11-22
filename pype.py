@@ -19,8 +19,9 @@ from wxPython.wx import *
 from wxPython.stc import *
 import keyword, traceback
 import cStringIO
-from configuration import *
 from wxPython.lib.dialogs import wxScrolledMessageDialog
+#--------------------------- configuration import ----------------------------
+from configuration import *
 #--------- The two most useful links for constructing this editor... ---------
 # http://personalpages.tds.net/~edream/out2.htm
 # http://www.pyframe.com/wxdocs/stc/selnpos.html
@@ -397,8 +398,10 @@ class MainWindow(wxFrame):
         if win.dirname:
             try:
                 ofn = os.path.join(win.dirname, win.filename)
-                fil = open(ofn, 'w')
-                fil.write(win.GetText())
+                fil = open(ofn, 'wb')
+                txt = win.GetText()
+                #print repr(eol), repr(win.format), txt.count('\r\n'), txt.count('\n'), txt.count('\r'), txt.count('\r\r')
+                fil.write(txt)
                 fil.close()
                 self.SetStatusText("Correctly saved %s"%ofn)
                 win.MakeClean()
@@ -418,7 +421,7 @@ class MainWindow(wxFrame):
         except:
             return e.Skip()
         
-        dlg = wxFileDialog(self, "Save file as...", os.getcwd(), "", wildcard, wxOPEN)#| wxMULTIPLE)
+        dlg = wxFileDialog(self, "Save file as...", os.getcwd(), "", wildcard, wxOPEN)
         rslt = dlg.ShowModal()
         if rslt == wxID_OK:
             fn=dlg.GetFilename()
@@ -432,7 +435,6 @@ class MainWindow(wxFrame):
             win.dirname = dn
             self.makeOpen(fn, dn)
             self.OnSave(e)
-            #self.control.SetPageText(wnum, fn)
             win.MakeClean()
         else:
             raise "cancelled"
@@ -475,7 +477,7 @@ class MainWindow(wxFrame):
         nwin.dirname = dir
         nwin.changeStyle(stylefile, self.style(fn))
         if dir:
-            f=open(os.path.join(nwin.dirname,nwin.filename),'r')
+            f=open(os.path.join(nwin.dirname,nwin.filename),'rb')
             txt = f.read()
             f.close()
             nwin.format = detectFileFormat(txt)
@@ -523,7 +525,7 @@ class MainWindow(wxFrame):
         try:
             win = self.control.GetPage(wnum)
         except:
-            return e.Skip()
+            return
         getattr(win, funct_name)()
 
     def OnUndo(self, e):
@@ -580,7 +582,6 @@ class MainWindow(wxFrame):
             a = col_line-3-k
             b = a*'-'
             st = '%s%s %s %s%s'%('#', b[:a/2], valu, b[a/2:], win.format)
-            incr = -1
             lin = win.GetCurrentLine()
             if lin>0:
                 win.InsertText(win.GetLineEndPosition(lin-1)+1, st)
@@ -631,7 +632,7 @@ class MainWindow(wxFrame):
     def OnLeft(self, e):
         self.next(-1)
     def OnRight(self, e):
-        self.next(+1)
+        self.next(1)
     def MoveLeft(self, e):
         wnum = self.control.GetSelection()
         pagecount = self.control.GetPageCount()
@@ -640,7 +641,7 @@ class MainWindow(wxFrame):
             self.control.swapPages(l, r, 1)
             self.control.SetSelection(l)
         else:
-            event.Skip()
+            e.Skip()
     def MoveRight(self, e):
         wnum = self.control.GetSelection()
         pagecount = self.control.GetPageCount()
@@ -668,11 +669,10 @@ class MainWindow(wxFrame):
         
         If you do not also receive a copy of gpl.txt with your version of this
         software, please inform the me of the violation at the web page near the top
-        of this document.
-"""
+        of this document."""
         self.dialog(txt.replace('        ', ''), "About...")
     def OnHelp(self, e):
-        a = open(os.path.join(runpath, 'readme.txt'), 'r')
+        a = open(os.path.join(runpath, 'readme.txt'), 'rb')
         txt = a.read()
         a.close()
         dlg = wxScrolledMessageDialog(self, txt, "Help!")
@@ -787,8 +787,7 @@ class MainWindow(wxFrame):
                 for i in range(len(kw)):
                     if kw[i] in keyword.kwlist:
                         kw[i] = kw[i]# + "?1"
-    
-                self.AutoCompShow(0, " ".join(kw))
+                    self.AutoCompShow(0, " ".join(kw))
             else:
                 event.Skip()
         elif event.AltDown():
@@ -815,7 +814,6 @@ class MainWindow(wxFrame):
                     #get information about the current cursor position
                     ln = win.GetCurrentLine()
                     pos = win.GetCurrentPos()
-                    line = win.GetLine(ln)
                     col = win.GetColumn(pos)
                     
                     #get info about the current line's indentation
@@ -829,12 +827,18 @@ class MainWindow(wxFrame):
                         win.ReplaceSelection(win.format+ind*' ')
                     else:
                         win.ReplaceSelection(win.format)
+                    chrs = ''
+                    for i in xrange(3):
+                        chrs += chr(win.GetCharAt(pos+i))
+                    print repr(win.format), repr(chrs)
                     #win.SetLineIndentation(ln, ind)
                     return
+                else:
+                    return event.skip()
             elif key == 342:
                 return self.OnHelp(event)
             else:
-                event.Skip()
+                return event.Skip()
 
 #------------- Ahh, Styled Text Control, you make this possible. -------------
 class PythonSTC(wxStyledTextCtrl):
@@ -1165,7 +1169,7 @@ class MyNB(wxNotebook):
 
 def main():
     app = wxPySimpleApp()
-    app.frame = MainWindow(None, -1, "PyPE 1.0")
+    app.frame = MainWindow(None, -1, "PyPE 1.0.1")
     app.frame.Show(1)
     app.MainLoop()
 

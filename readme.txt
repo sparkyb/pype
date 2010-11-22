@@ -74,7 +74,6 @@ As well, I've not implemented the ability to search up in the find dialog.
 I may in future versions.  No matter what you have selected, it will always
 search forward (and even wrap around if you keep hitting 'find next').
 
-
 Converting between tabs and spaces:
 So, you got tabs and you want spaces, or you have spaces and want to make them
 tabs.  As it is not a menu option, you're probably wondering "how in the hell
