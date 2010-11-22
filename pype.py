@@ -42,7 +42,7 @@ if __name__ == '__main__':
             sys.exit(0)
 
 import os
-import keyword, traceback, cStringIO, imp
+import keyword, traceback, cStringIO, imp, zlib, fnmatch
 import exceptions, time, pprint
 from wxPython.wx import *
 from wxPython.stc import *
@@ -59,7 +59,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.7.3"
+    VERSION = "1.8"
     VREQ = '2.4.2.4'
 
     import string
@@ -76,6 +76,15 @@ if 1:
         menu.Append(id, name, desc, kind)
         EVT_MENU(root, id, funct)
 
+    def getIcon():
+        data = getData()
+        stream = cStringIO.StringIO(data)
+        image = wxImageFromStream(stream)
+        bitmap = wxBitmapFromImage(image)
+        icon = wxEmptyIcon()
+        icon.CopyFromBitmap(bitmap)
+        return icon
+
     ID_TIMER = wxNewId()
     
     #required ids
@@ -88,13 +97,21 @@ if 1:
         TX_S = wxNewId()
         lexers = dict(zip([PY_S, HT_S, CC_S, XM_S, TX_S], ['python', 'html', 'cpp', 'xml', 'text']))
         lexers2 = dict(zip([wxSTC_LEX_PYTHON, wxSTC_LEX_HTML, wxSTC_LEX_CPP, wxSTC_LEX_XML, wxSTC_LEX_NULL], [PY_S, HT_S, CC_S, XM_S, TX_S]))
+
+        PY_DS = wxNewId()
+        HT_DS = wxNewId()
+        CC_DS = wxNewId()
+        XM_DS = wxNewId()
+        TX_DS = wxNewId()
+        lexers.update(dict(zip([PY_DS, HT_DS, CC_DS, XM_DS, TX_DS], ['python', 'html', 'cpp', 'xml', 'text'])))
+        lexers3 = dict(zip(['python', 'html', 'cpp', 'xml', 'text'], [PY_DS, HT_DS, CC_DS, XM_DS, TX_DS]))
+
     
         #checkbox ids
         SNIPT = wxNewId()
         AUTO = wxNewId()
         NUM = wxNewId()
         MARGIN = wxNewId()
-        FOLD = wxNewId()
         USETABS = wxNewId()
         INDENTGUIDE = wxNewId()
         WRAPL = wxNewId()
@@ -178,12 +195,14 @@ if 1:
                      'helv' : 'Courier', 'other': 'Courier', 'size' : 10,
                      'size2': 10 }
         del cn
+
 #---------------------- Frame that contains everything -----------------------
 class MainWindow(wxFrame):
     def __init__(self,parent,id,title,fnames):
         wxFrame.__init__(self,parent,id, title, size = ( 800, 600 ),
                          style=wxDEFAULT_FRAME_STYLE|wxNO_FULL_REPAINT_ON_RESIZE)
 
+        self.SetIcon(getIcon())
         #recent menu relocated to load configuration early on.
         recentmenu = wxMenu()
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
@@ -195,6 +214,7 @@ class MainWindow(wxFrame):
         self.restart = 0
         self.restartt = 0
         EVT_MENU_RANGE(self, wxID_FILE1, wxID_FILE9, self.OnFileHistory)
+        self.lastused = lastused(64, LASTUSED)
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
         self.poller = wxTimer(self, ID_TIMER)
         self.toparse = []
@@ -211,10 +231,10 @@ class MainWindow(wxFrame):
         if VS[-1] == 'u':
             #to display encoding in unicode supporting platforms
             self.sb.SetFieldsCount(3)
-            self.sb.SetStatusWidths([-1, 75, 60])
+            self.sb.SetStatusWidths([-1, 95, 60])
         else:
             self.sb.SetFieldsCount(2)
-            self.sb.SetStatusWidths([-1, 75])
+            self.sb.SetStatusWidths([-1, 95])
         self.SetStatusBar(self.sb)
 
         #support for the optional snippet bar.
@@ -268,8 +288,10 @@ class MainWindow(wxFrame):
         menuAdd(self, editmenu, "Dedent Region\tCtrl+[", "Dedent region %i spaces%indent", self.OnDedent, wxNewId())
         editmenu.AppendSeparator()
         menuAdd(self, editmenu, "Find\tCtrl+F",         "Find text in a file", self.OnShowFind, wxNewId())
+        menuAdd(self, editmenu, "Find In Files",        "Find a string or regular expression in a group of files", self.OnFindInFiles, wxNewId())
         menuAdd(self, editmenu, "Replace\tCtrl+R",      "Replace text in a file", self.OnShowFindReplace, wxNewId())
         menuAdd(self, editmenu, "Wrap Selected Text\tAlt+W", "Wrap selected text to a specified width", self.OnWrap, wxNewId())
+
         editmenu.AppendSeparator()
         if self.config['usesnippets']:
             menuAdd(self, editmenu, "Insert Snippet\tCtrl+return", "Insert the currently selected snippet into the document", self.snippet.OnListBoxDClick, wxNewId())
@@ -312,6 +334,14 @@ class MainWindow(wxFrame):
         menuAdd(self, stylemenu, "C/C++",       "Highlight for C/C++ syntax", self.OnStyleChange, CC_S, typ)
         menuAdd(self, stylemenu, "Text",        "No Syntax Highlighting", self.OnStyleChange, TX_S, typ)
 
+#---------------------------- Default Style Menu -----------------------------
+        stylemenu2= wxMenu()
+        menuAdd(self, stylemenu2, 'Python', '', self.OnDefaultStyleChange, PY_DS, typ)
+        menuAdd(self, stylemenu2, 'HTML', '', self.OnDefaultStyleChange, HT_DS, typ)
+        menuAdd(self, stylemenu2, 'XML', '', self.OnDefaultStyleChange, XM_DS, typ)
+        menuAdd(self, stylemenu2, 'C/C++', '', self.OnDefaultStyleChange, CC_DS, typ)
+        menuAdd(self, stylemenu2, 'Text', '', self.OnDefaultStyleChange, TX_DS, typ)
+
 #------------------------------ Encodings Menu -------------------------------
 
         if VS[-1] == 'u':
@@ -332,13 +362,15 @@ class MainWindow(wxFrame):
         menuAdd(self, longlinemenu, "Background", "Long lines will have a different background color beyond the column limit", self.OnSetLongLineMode, LL_BACK, typ)
         menuAdd(self, longlinemenu, "Line", "Long lines will have a vertical line at the column limit", self.OnSetLongLineMode, LL_LINE, typ)
         menuAdd(self, longlinemenu, "None", "Show no long line indicator", self.OnSetLongLineMode, LL_NONE, typ)
-        
+
 #------------------------------- Document menu -------------------------------
         setmenu= wxMenu()
         menuAdd(self, setmenu, "Use Snippets (req restart)", "Enable or disable the use of snippets, requires restart for change to take effect", self.OnSnipToggle, SNIPT, wxITEM_CHECK)
         menuAdd(self, setmenu, "Use Todo (req restart)", "Enable or disable the use of todo, requires restart for change to take effect", self.OnTodoToggle, TODOT, wxITEM_CHECK)
         setmenu.AppendSeparator()
-        setmenu.AppendMenu(wxNewId(), "Syntax Highlighting", stylemenu, "Change text display style")
+        setmenu.AppendMenu(wxNewId(), "Syntax Highlighting", stylemenu, "Change the syntax highlighting for the currently open document")
+        setmenu.AppendMenu(wxNewId(), "Default Highlighting", stylemenu2, "Set the default syntax highlighting for new or unknown documents")
+
         if VS[-1] == 'u':
             setmenu.AppendMenu(wxNewId(), "Encodings", encmenu, "Change text encoding")
         setmenu.AppendMenu(wxNewId(), "Line Ending", endingmenu, "Change the line endings on the current document")
@@ -346,18 +378,17 @@ class MainWindow(wxFrame):
         menuAdd(self, setmenu, "Show Autocomplete", "Show the autocomplete dropdown while typing", self.OnAutoCompleteToggle, AUTO, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show line numbers", "Show or hide the line numbers on the current document", self.OnNumberToggle, NUM, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show margin", "Show or hide the bookmark signifier margin on the current document", self.OnMarginToggle, MARGIN, wxITEM_CHECK)
-        menuAdd(self, setmenu, "Show fold margin", "Show or hide the fold margin", self.OnFoldToggle, FOLD, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show Indentation Guide", "Show or hide gray indentation guides in indentation", self.OnIndentGuideToggle, INDENTGUIDE, wxITEM_CHECK)
         setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Show/hide tree\tCtrl+Shift+G", "Show/hide the hierarchical source tree for the currently open document", self.OnTree, wxNewId())
         menuAdd(self, setmenu, "Hide all trees", "Hide the browsable source tree for all open documents", self.OnTreeHide, wxNewId())
         menuAdd(self, setmenu, "Refresh\tF5", "Refresh the browsable source tree, autocomplete listing, and the tooltips (always accurate, but sometimes slow)", self.OnRefresh, wxNewId())
         setmenu.AppendSeparator()
+        menuAdd(self, setmenu, "Sort Tree by Name", "If checked, will sort the items in the browsable source tree by name, otherwise by line number", self.OnTreeSortToggle, SORTBY, wxITEM_CHECK)
         menuAdd(self, setmenu, "Expand all", "Expand all folded code through the entire document", self.OnExpandAll, wxNewId())
         menuAdd(self, setmenu, "Fold all", "Fold all expanded code through the entire document", self.OnFoldAll, wxNewId())
         menuAdd(self, setmenu, "Use Tabs", "New indentation will include tabs", self.OnSetTabToggle, USETABS, wxITEM_CHECK)
         menuAdd(self, setmenu, "Wrap Long Lines", "Visually continue long lines to the next line", self.OnWrapL, WRAPL, wxITEM_CHECK)
-        menuAdd(self, setmenu, "Sort Tree by Name", "If checked, will sort the items in the browsable source tree by name, otherwise by line number", self.OnTreeSortToggle, SORTBY, wxITEM_CHECK)
         setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Indent Width", "Set the number of spaces per indentation level", self.OnSetIndent, wxNewId())
         menuAdd(self, setmenu, "Set Tab Width", "Set the visual width of tabs in the current open document", self.OnSetTabWidth, wxNewId())
@@ -439,6 +470,7 @@ class MainWindow(wxFrame):
         self.menubar.Check(USETABS, use_tabs)
         self.menubar.Check(INDENTGUIDE, indent_guide)
         self.menubar.Check(SORTBY, sortmode)
+        self.menubar.Check(lexers3[DEFAULTLEXER], 1)
 
 #---------------- A nice lookup table for control keypresses -----------------
 #-------------- it saves the trouble of a many if calls during ---------------
@@ -557,11 +589,8 @@ class MainWindow(wxFrame):
         if not os.path.exists(self.configPath):
             os.mkdir(self.configPath)
         path = os.path.join(self.configPath, 'history.txt')
-##        self.config = self.readAndEvalFile(path)
         try:    self.config = self.readAndEvalFile(path)
-        except exceptions.Exception, e:
-            print "failed to load configuration", e
-            self.config = {}
+        except: self.config = {}
         if 'history' in self.config:
             history = self.config['history']
             history.reverse()
@@ -569,13 +598,19 @@ class MainWindow(wxFrame):
                 self.fileHistory.AddFileToHistory(h)
         if 'lastpath' in self.config:
             self.lastpath = self.config['lastpath']
+
         for (nam, dflt) in [('modulepaths', []),
                             ('usesnippets', 0),
                             ('usetodo', 0),
                             ('paths', {}),
                             ('display2code', {}),
                             ('displayorder', []),
-                            ('shellcommands', [])]:
+                            ('shellcommands', []),
+                            ('LASTUSED', []),
+                            ('LASTOPEN', {}),
+                            ('DEFAULTLEXER', 'python'),
+                            ('splittersize', 40),
+                            ('FIF_STATE', ([], [], [], 0, 0, 0))]:
             if not (nam in self.config):
                 self.config[nam] = dflt
             globals()[nam] = self.config[nam]
@@ -592,10 +627,12 @@ class MainWindow(wxFrame):
              'indent_guide':0,
              'showautocomp':0,
                  'wrapmode':wxSTC_WRAP_NONE,
-                 'sortmode':1}
-        globals().update(dct)
-        globals().update(self.config.setdefault('DOCUMENT_DEFAULTS', {}))
+                 'sortmode':1,
+            'SAVEDPOSITION':splittersize}
         
+        globals().update(dct)
+        globals().update(self.config.setdefault('DOCUMENT_DEFAULTS', dct))
+
         pathmarks.update(paths)
         
     def saveHistory(self):
@@ -621,8 +658,7 @@ class MainWindow(wxFrame):
             self.exceptDialog("Could not save preferences to %s"%path)
 
     def readAndEvalFile(self, filename):
-        #filename = os.path.normpath(filename)
-        f = open(filename, 'r')
+        f = open(filename)
         txt = f.read().replace('\r\n','\n')
         f.close()
         return eval(txt)
@@ -781,7 +817,7 @@ class MainWindow(wxFrame):
 
     def OnOpenPrevDocs(self, e):
         if "lastopen" in self.config:
-            self.OnDrop(self.config["lastopen"], 1)
+            self.OnDrop(self.config['lastopen'], 1)                
     def AddSearchPath(self, e):
         dlg = wxDirDialog(self, "Choose a path", "", style=wxDD_DEFAULT_STYLE|wxDD_NEW_DIR_BUTTON)
         if dlg.ShowModal() == wxID_OK:
@@ -792,7 +828,7 @@ class MainWindow(wxFrame):
     def newTab(self, d, fn, switch=0):
         if 'lastpath' in self.config:
             del self.config['lastpath']
-        ctrlwidth, ctrlh = self.control.GetSizeTuple()
+        #ctrlwidth, ctrlh = self.control.GetSizeTuple()
 
         split = wxSplitterWindow(self.control, wxNewId())
         split.parent = self
@@ -805,14 +841,14 @@ class MainWindow(wxFrame):
         
         if usetodo:
             spl = wxSplitterWindow(split, wxNewId())
-            nwin.tree = hierCodeTreePanel(self, spl, sortmode)
+            nwin.tree = hierCodeTreePanel(self, spl)
             nwin.todo = VirtualTodo(spl, self, nwin)
             
             spl.SetMinimumPaneSize(3)
             spl.SplitHorizontally(nwin.tree, nwin.todo)
             
         else:
-            nwin.tree = hierCodeTreePanel(self, split, sortmode)
+            nwin.tree = hierCodeTreePanel(self, split)
 
             nwin.todo = None
             spl = nwin.tree
@@ -820,6 +856,7 @@ class MainWindow(wxFrame):
         split.SetMinimumPaneSize(3)
         split.SplitVertically(nwin, spl)
         
+        state = self.config.get('DOCUMENT_DEFAULTS', {})
         if d:
             FN = self.getAbsolute(nwin.filename, nwin.dirname)
             f=open(FN,'rb')
@@ -828,6 +865,13 @@ class MainWindow(wxFrame):
             nwin.mod = os.stat(FN)[8]
             nwin.format = detectLineEndings(txt)
             nwin.SetText(txt)
+            
+            if FN in self.config['LASTOPEN']:
+                state = self.config['LASTOPEN'][FN]
+            elif FN in self.lastused:
+                state = self.lastused[FN]
+                del self.lastused[FN]
+
         else:
             FN = ''
             nwin.mod = None
@@ -837,22 +881,12 @@ class MainWindow(wxFrame):
         if not ((d == '') and (fn == ' ')):
             self.fileHistory.AddFileToHistory(FN)
         
-        BM = self.config.get("lastopenbm", {}).get(FN, [])
-        for bml in BM:
-            nwin.MarkerAdd(bml, BOOKMARKNUMBER)
-        
-        EX = self.config.get("lastopenex", {}).get(FN, [])
-        for exl in EX:
-            a = nwin.GetLastChild(exl, -1)
-            nwin.HideLines(exl+1,a)
-            nwin.SetFoldExpanded(exl, 0)
+        nwin.SetSaveState(state)
             
         f = nwin.filename
         if f == ' ':
             f = '<untitled>'
 
-        nwin.SAVEDPOSITION = 40
-        nwin.showautocomp = showautocomp
         self.control.AddPage(split, f, switch)
         self.OnRefresh(None, nwin)
         return nwin.enc
@@ -900,6 +934,8 @@ class MainWindow(wxFrame):
         if win.dirty:
             self.sharedsave(win)
         if self.isOpen(win.filename, win.dirname):
+            fn = self.getAbsolute(win.filename, win.dirname)
+            self.lastused[fn] = win.GetSaveState()
             self.closeOpen(win.filename, win.dirname)
             self.SetStatusText("Closed %s"%self.getAbsolute(win.filename, win.dirname))
         else:
@@ -910,7 +946,6 @@ class MainWindow(wxFrame):
         if self.closing:
             return e.Skip()
         self.closing = 1
-        sav = []
         sel = self.control.GetSelection()
         cnt = self.control.GetPageCount()
         try:
@@ -919,34 +954,23 @@ class MainWindow(wxFrame):
                 win = self.control.GetPage(i).GetWindow1()
                 if win.dirty:
                     self.sharedsave(win)
-                if win.dirname:
-                    sav.append(self.getAbsolute(win.filename, win.dirname))
         except cancelled:
             self.closing = 0
             try:    return e.Veto()
             except: return e.Skip()
-        bm = {}
-        ex = {}
+
+        LASTOPEN = {}
+        sav = []
         for win in self.control:
             if win.dirname:
-                cur = []
-                exp = []
-                for line in xrange(win.GetLineCount()):
-                    if win.MarkerGet(line) & BOOKMARKMASK:
-                        cur.append(line)
-                    
-                    if (win.GetFoldLevel(line) & wxSTC_FOLDLEVELHEADERFLAG) and\
-                       (not win.GetFoldExpanded(line)):
-                        exp.append(line)
-                exp.reverse()
-                FN = self.getAbsolute(win.filename, win.dirname)
-                bm[FN] = cur
-                ex[FN] = exp
-        if bm:
-            self.config["lastopenbm"] = bm
-        self.config["lastopenex"] = ex
+                fn = self.getAbsolute(win.filename, win.dirname)
+                LASTOPEN[fn] = win.GetSaveState()
+        
+        #saving document state
         self.config["lastopen"] = sav
-        print sav
+        self.config["LASTOPEN"] = LASTOPEN
+        self.config["LASTUSED"] = [i for i in self.lastused.iteritems()]
+
         self.saveHistory()
         if sel > -1:
             self.control.SetSelection(sel)
@@ -1102,6 +1126,9 @@ class MainWindow(wxFrame):
         win.EndUndoAction()
 
 #--------------------- Find and replace dialogs and code ---------------------
+    def OnFindInFiles(self, e):
+        findinfiles(self, self).Show()
+
     def getNumWin(self, e=None):
         num = self.control.GetSelection()
         if num >= 0:
@@ -1287,7 +1314,7 @@ class MainWindow(wxFrame):
             split.SetSashPosition(max(width-200, int(width/2)))
         else:
             split.SetSashPosition(width-split.GetMinimumPaneSize())
-        self.SetPos(None)
+        win.SAVEDPOSITION = split.GetSashPosition()-self.control.GetClientSize()[0]
 
     def OnTreeHide(self, e):
         width = self.control.GetClientSize()[0]-10
@@ -1312,8 +1339,7 @@ class MainWindow(wxFrame):
             w.SAVEDPOSITION = abs(sp)
         else:
             w.SAVEDPOSITION = width-sp
-        if e:
-            e.Skip()
+        e.Skip()
 
     def startnext(self):
         look = INF
@@ -1466,10 +1492,15 @@ class MainWindow(wxFrame):
     def OnStyleChange(self,e):
         wnum, win = self.getNumWin(e)
         win.changeStyle(stylefile, lexers[e.GetId()])
-        
+
+    def OnDefaultStyleChange(self, e):
+        dl = lexers[e.GetId()]
+        self.config['DEFAULTLEXER'] = dl
+        globals()['DEFAULTLEXER'] = dl
+
     def style(self, fn):
         ext = fn.split('.')[-1].lower()
-        return extns.get(ext, 'text')
+        return extns.get(ext, DEFAULTLEXER)
     
     def OnEncChange(self, e):
         num, win = self.getNumWin(e)
@@ -1506,10 +1537,6 @@ class MainWindow(wxFrame):
     def OnMarginToggle(self, e):
         n, win = self.getNumWin(e)
         win.SetMarginWidth(1, (win.GetMarginWidth(1)+16)%32)
-    
-    def OnFoldToggle(self, e):
-        n, win = self.getNumWin(e)
-        w.SetMarginWidth(2, (win.GetMarginWidth(2)+12)%24)
 
     def OnIndentGuideToggle(self, e):
         n, win = self.getNumWin(e)
@@ -1639,19 +1666,10 @@ class MainWindow(wxFrame):
 
     def OnSaveSettings(self, e):
         n, win = self.getNumWin()
-        
-        dct =       {'use_tabs':win.GetUseTabs(),
-               'spaces_per_tab':win.GetTabWidth(),
-                       'indent':win.GetIndent(),
-                     'collapse':bool(win.GetMarginWidth(2)),
-                'marker_margin':bool(win.GetMarginWidth(1)),
-                  'line_margin':bool(win.GetMarginWidth(0)),
-                     'col_line':win.GetEdgeColumn(),
-                     'col_mode':win.GetEdgeMode(),
-                 'indent_guide':win.GetIndentationGuides(),
-                 'showautocomp':win.showautocomp,
-                     'wrapmode':win.GetWrapMode(),
-                     'sortmode':win.tree.tree.SORTTREE}
+        dct = win.GetSaveState()
+        del dct['BM']
+        del dct['FOLD']
+
         globals().update(dct)
         self.config['DOCUMENT_DEFAULTS'] = dct
 
@@ -2080,10 +2098,7 @@ class PythonSTC(wxStyledTextCtrl):
         self.SetMarginType(2, wxSTC_MARGIN_SYMBOL)
         self.SetMarginMask(2, wxSTC_MASK_FOLDERS)
         self.SetMarginSensitive(2, True)
-        if collapse:
-            self.SetMarginWidth(2, 12)
-        else:
-            self.SetMarginWidth(2, 0)
+        self.SetMarginWidth(2, 12)
 
         if collapse_style: # simple folder marks, like the old version
             self.MarkerDefine(wxSTC_MARKNUM_FOLDER, wxSTC_MARK_BOXPLUS, "navy", "white")
@@ -2181,6 +2196,59 @@ class PythonSTC(wxStyledTextCtrl):
         self.root.SetStatusText("L%i C%i"%(lin, col), 1)
         if e:
             e.Skip()
+
+#------------------------- persistant document state -------------------------
+    def GetSaveState(self):
+        BM = []
+        FOLD = []
+        ret =  {'BM':BM,
+                'FOLD':FOLD,
+                'use_tabs':self.GetUseTabs(),
+                'spaces_per_tab':self.GetTabWidth(),
+                'indent':self.GetIndent(),
+                'marker_margin':bool(self.GetMarginWidth(1)),
+                'line_margin':bool(self.GetMarginWidth(0)),
+                'col_line':self.GetEdgeColumn(),
+                'col_mode':self.GetEdgeMode(),
+                'indent_guide':self.GetIndentationGuides(),
+                'showautocomp':self.showautocomp,
+                'wrapmode':self.GetWrapMode(),
+                'sortmode':self.tree.tree.SORTTREE,
+                'SAVEDPOSITION':self.SAVEDPOSITION
+               }
+        for line in xrange(self.GetLineCount()):
+            if self.MarkerGet(line) & BOOKMARKMASK:
+                BM.append(line)
+            
+            if (self.GetFoldLevel(line) & wxSTC_FOLDLEVELHEADERFLAG) and\
+            (not self.GetFoldExpanded(line)):
+                FOLD.append(line)
+        FOLD.reverse()
+        return ret
+
+    def SetSaveState(self, saved):
+        self.SetUseTabs(saved.get('use_tabs', use_tabs))
+        self.SetTabWidth(saved.get('space_per_tab', spaces_per_tab))
+        self.SetIndent(saved.get('indent', indent))
+        self.SetMarginWidth(0, 40*saved.get('line_margin', line_margin))
+        self.SetMarginWidth(1, 16*saved.get('marker_margin', marker_margin))
+        self.SetEdgeColumn(saved.get('col_line', col_line))
+        self.SetEdgeMode(saved.get('col_mode', col_mode))
+        self.SetIndentationGuides(saved.get('indent_guide', indent_guide))
+        self.showautocomp = saved.get('showautocomp', showautocomp)
+        if self.GetWrapMode() != saved.get('wrapmode', wrapmode):
+            self.root.WrapToggle(self)
+        self.tree.tree.SORTTREE = saved.get('sortmode', sortmode)
+        self.SAVEDPOSITION = saved.get('SAVEDPOSITION', SAVEDPOSITION)
+        
+        for bml in saved.get('BM', []):
+            self.MarkerAdd(bml, BOOKMARKNUMBER)
+        
+        for exl in saved.get('FOLD', []):
+            a = self.GetLastChild(exl, -1)
+            self.HideLines(exl+1,a)
+            self.SetFoldExpanded(exl, 0)
+
 #-------------------- fix for SetText for the 'dirty bit' --------------------
     def SetText(self, txt, emptyundo=1):
         self.SetEOLMode(fmt_mode[self.format])
@@ -2290,7 +2358,7 @@ class PythonSTC(wxStyledTextCtrl):
 #----------------- Defaults, in case the other code was bad. -----------------
             #for some default font styles
 
-            self.SetLexer(wxSTC_LEX_NONE)
+            self.SetLexer(wxSTC_LEX_NULL)
     
             ### Python styles
             ##
@@ -2487,7 +2555,7 @@ class MyNB(wxNotebook):
             if self.root.HAS_RADIO:
                 self.root.menubar.Check(lexers2[win.GetLexer()], 1)
                 self.root.menubar.Check(LL_RMAPPING[win.GetEdgeMode()], 1)
-            for m,id in ((0, NUM), (1, MARGIN), (2, FOLD)):
+            for m,id in ((0, NUM), (1, MARGIN)):
                 self.root.menubar.Check(id, bool(win.GetMarginWidth(m)))
             self.root.menubar.Check(INDENTGUIDE, win.GetIndentationGuides())
             self.root.menubar.Check(USETABS, win.GetUseTabs())
@@ -2818,7 +2886,7 @@ class RunShell(wxMenu):
             use = self.makeuse(dn, fn)
             use2 = self.makeuse(path, command)
             path = use2['path']
-            command = use2['full']
+            #command = use2['full']
             #os.spawnv(os.P_NOWAIT, spawnargs[0], spawnargs + ['--exec', path or '*', command])
             if sys.platform=='win32':
                 os.system("start %s --exec %s %s"%(runme, path or '*', command)%use)
@@ -2848,7 +2916,7 @@ class RunShell(wxMenu):
 
 class hierCodeTreePanel(wxPanel):
     class TreeCtrl(wxTreeCtrl):
-        def __init__(self, parent, tid, sorttree):
+        def __init__(self, parent, tid):
             wxTreeCtrl.__init__(self, parent, tid, style=wxTR_DEFAULT_STYLE|wxTR_HAS_BUTTONS|wxTR_HIDE_ROOT)
             
             isz = (16,16)
@@ -2860,7 +2928,6 @@ class hierCodeTreePanel(wxPanel):
                 il.Add(i)
             self.SetImageList(il)
             self.il = il
-            self.SORTTREE = sorttree
 
         def OnCompareItems(self, item1, item2):
             if self.SORTTREE:
@@ -2889,7 +2956,7 @@ class hierCodeTreePanel(wxPanel):
                         lst[txt] = [ch]
             return lst
 
-    def __init__(self, root, parent, sorttree):
+    def __init__(self, root, parent):
         # Use the WANTS_CHARS style so the panel doesn't eat the Return key.
         wxPanel.__init__(self, parent, -1, style=wxWANTS_CHARS)
         EVT_SIZE(self, self.OnSize)
@@ -2898,7 +2965,7 @@ class hierCodeTreePanel(wxPanel):
 
         tID = wxNewId()
 
-        self.tree = self.TreeCtrl(self, tID, sorttree)
+        self.tree = self.TreeCtrl(self, tID)
         self.tree.troot = self.tree.AddRoot("Unseen Root")
 
         #self.tree.Expand(self.root)
@@ -3028,6 +3095,335 @@ class VirtualTodo(wxPanel):
         w,h = self.GetClientSizeTuple()
         self.vtd.SetDimensions(0, 0, w, h)
 
+
+class lastused:
+    #Implementation of a length-limited O(1) LRU cache
+    class Node:
+        def __init__(self, prev, me):
+            self.prev = prev
+            self.me = me
+            self.next = None
+    def __init__(self, count, lst=[]):
+        self.count = max(min(64, count), 0)
+        self.d = {}
+        self.first = None
+        self.last = None
+        for key, value in lst:
+            self[key] = value
+    def __contains__(self, obj):
+        return obj in self.d
+    def __getitem__(self, obj):
+        return self.d[obj].me[1]
+    def __setitem__(self, obj, val):
+        if obj in self.d:
+            del self[obj]
+        nobj = self.Node(self.last, (obj, val))
+        if self.first is None:
+            self.first = nobj
+        if self.last:
+            self.last.next = nobj
+        self.last = nobj
+        self.d[obj] = nobj
+        if len(self.d) > self.count:
+            if self.first == self.last:
+                self.first = None
+                self.last = None
+                return
+            a = self.first
+            a.next.prev = None
+            self.first = a
+            a.next = None
+            del self.d[a[0]]
+            del a
+    def __delitem__(self, obj):
+        nobj = self.d[obj]
+        if nobj.prev:
+            nobj.prev.next = nobj.next
+        else:
+            self.first = nobj.next
+        if nobj.next:
+            nobj.next.prev = nobj.prev
+        else:
+            self.last = nobj.prev
+        del self.d[obj]
+    def __iter__(self):
+        cur = self.first
+        while cur != None:
+            cur2 = cur.next
+            yield cur.me[1]
+            cur = cur2
+        raise StopIteration
+    def iteritems(self):
+        cur = self.first
+        while cur != None:
+            cur2 = cur.next
+            yield cur.me
+            cur = cur2
+        raise StopIteration
+    def iterkeys(self):
+        return iter(self.d)
+    def itervalues(self):
+        for i,j in self.iteritems():
+            yield j
+    def keys(self):
+        return self.d.keys()
+
+        
+
+
+class findinfiles(wxDialog):
+    def __init__(self, parent, choices):
+        wxDialog.__init__(self, parent, -1, "Find in files...", size=(640,480),
+                          style=wxRESIZE_BORDER|wxDEFAULT_DIALOG_STYLE)
+        
+        self.parent = parent
+        self.root = parent
+        
+        self.running = 0
+        self.stopping = 0
+        
+        def static(text, style=wxALIGN_LEFT, self=self):
+            return wxStaticText(self, -1, text, style=style)
+
+        def checkb(text, val=0, style=wxNO_BORDER):
+            a = wxCheckBox(self, -1, text, style=style)
+            a.SetValue(val)
+            return a
+        
+        def combobox(ch, d=''):
+            a = wxComboBox(self, -1, choices=ch, style=wxCB_DROPDOWN)
+            if ch: a.SetSelection(0)
+            elif d: a.SetValue(d)
+            return a
+        
+        sizer = RowColSizer()
+        
+        def sAdd(obj, pos, size=(1,1), flag=wxALIGN_CENTER_VERTICAL|wxEXPAND|wxALL, sizer=sizer):
+            sizer.Add(obj, pos=pos, size=size, flag=flag, border=3)
+        
+        sizer.AddGrowableCol(2)
+        sizer.AddGrowableRow(5)
+        
+        sAdd(static("Multiple directories or extensions "\
+                    "should be separated by semicolons   ;"),
+                    (0, 1), (1,3))
+        
+        fc = self.root.config['FIF_STATE']
+        
+        sAdd(static("Search for:"), (1,1))
+        self.search = combobox(fc[0])
+        sAdd(self.search, (1,2), (1,2))
+
+        sAdd(static("Directories:"), (2,1))
+        self.sdirs = combobox(fc[1])
+        sAdd(self.sdirs, (2,2))
+        b = wxButton(self, wxNewId(), "Add Path")
+        sAdd(b, (2,3))
+        EVT_BUTTON(self, b.GetId(), self.OnDirButtonClick)
+        
+        sAdd(static("Extensions:"), (3,1))
+        self.extns = combobox(fc[2], "*.*")
+        sAdd(self.extns, (3,2), (1,2))
+        
+
+        self.cs = checkb("Case sensitive", fc[3])
+        self.ss = checkb("Search Subdirectories", fc[4])
+        self.re = checkb("Regular Expression", fc[5])
+        hsize = wxBoxSizer(wxHORIZONTAL)
+        hsize.Add(self.cs, 5, wxEXPAND)
+        hsize.Add(self.ss, 6, wxEXPAND)
+        hsize.Add(self.re, 6, wxEXPAND)
+        sAdd(hsize, (4,1), (1,3))
+
+        self.results = wxListBox(self, wxNewId(), style=wxLB_SINGLE|wxLB_NEEDED_SB)
+        EVT_LISTBOX_DCLICK(self, self.results.GetId(), self.OpenFound)
+        sAdd(self.results, (5,1), (1,3))
+        
+        sAdd(static('Status:'), (6, 1))
+        self.status = wxTextCtrl(self, -1)
+        self.status.SetValue("Ready.")
+        sAdd(self.status, (6, 2))
+        
+        self.b = wxButton(self, wxNewId(), "Start Search")
+        sAdd(self.b, (6,3))
+        EVT_BUTTON(self, self.b.GetId(), self.OnFindButtonClick)
+        
+        self.SetSizer(sizer)
+        self.SetAutoLayout(True)
+
+    def OpenFound(self, e):
+        selected = self.results.GetSelection()
+        if selected < 0:
+            return
+        cur = selected
+        while (cur > 0) and (self.results.GetString(cur)[0] == ' '):
+            cur -= 1
+        fn = self.results.GetString(cur)
+        line = 1
+        a = self.results.GetString(selected) 
+        if a[0] == ' ':
+            line = int(a.split(':', 1)[0])
+        
+        self.root.OnDrop([fn], 1)
+        a = self.root.control.GetSelection()
+        if a > -1:
+            stc = self.root.control.GetPage(a).GetWindow1()
+            stc.GotoLine(line)
+
+    def OnDirButtonClick(self, e):
+        dlg = wxDirDialog(self, "Choose a directory", style=wxDD_DEFAULT_STYLE)
+        a = dlg.ShowModal()
+        if a == wxID_OK:
+            a = self.sdirs.GetValue()
+            if a:
+                self.sdirs.SetValue(a+';'+dlg.GetPath())
+            else:
+                self.sdirs.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
+    def OnFindButtonClick(self, e):
+        if self.stopping:
+            return
+        buttonlabels = ["Start Search", "Stop Search"]
+        self.running = (self.running+1)%2
+        self.b.SetLabel(buttonlabels[self.running])
+        if not self.running:
+            self.stopping = 1
+            self.status.SetValue("Stopping...please wait.")
+            return
+        wxYield()
+
+        def getlist(c):
+            cc = c.GetCount()
+            e = [c.GetString(i) for i in xrange(cc)]
+            a = c.GetValue()
+            if a in e:
+                e.remove(a)
+            e = [a] + e
+            e = e[:10]
+            if len(e) > cc:
+                c.Append(e[-1])
+            for i in xrange(len(e)):
+                c.SetString(i, e[i])
+            c.SetSelection(0)
+            return e
+
+        FIFS = (getlist(self.search),
+              getlist(self.sdirs),
+              getlist(self.extns),
+              self.cs.IsChecked(),
+              self.ss.IsChecked(),
+              self.re.IsChecked())
+        self.root.config['FIF_STATE'] = FIFS
+
+        search = self.search.GetValue()
+        paths = self.sdirs.GetValue().split(';')
+        extns = self.extns.GetValue().split(';') or ['*.*']
+        case = self.cs.IsChecked()
+        subd = self.ss.IsChecked()
+        
+        sfunct = self.searchST
+        if self.re.IsChecked():
+            sfunct = self.searchRE
+            if case:
+                search = re.compile(search)
+            else:
+                search = re.compile(search, re.IGNORECASE)
+
+        results = self.results
+        results.Clear()
+
+        def file_iterator(path, subdirs, extns):
+            try:    lst = os.listdir(path)
+            except: return
+            d = []
+            for file in lst:
+                a = os.path.join(path, file)
+                if os.path.isfile(a):
+                    for extn in extns:
+                        if fnmatch.fnmatch(file, extn):
+                            yield a
+                            break
+                elif subdirs and os.path.isdir(a):
+                    d.append(a)
+            if not subdirs:
+                return
+            for p in d:
+                for f in file_iterator(p, subdirs, extns):
+                    yield f
+
+        filecount = 0
+        filefcount = 0
+        foundcount = 0
+        ss = "Found %i instances in %i files out of %i files checked."
+        for path in paths:
+            wxYield()
+            if not self.running:
+                break
+            for filename in file_iterator(path, subd, extns):
+                wxYield()
+                filecount += 1
+                if self.running:
+                    r = sfunct(filename, search, case)
+                    if r:
+                        try:
+                            for a in r:
+                                results.Append(a)
+                        except:
+                            #for platforms with limited sized
+                            #wxListBox controls
+                            pass
+                        filefcount += 1
+                        foundcount += len(r)-1
+                    self.status.SetValue((ss%(foundcount, filefcount, filecount)) + '...searching...')
+                else:
+                    break
+        if self.running:
+            self.running = 0
+            ex = '...done.'
+        else:
+            ex = '...cancelled.'
+        self.b.SetLabel("Start Search")
+        self.status.SetValue((ss%(foundcount, filefcount, filecount)) + ex)
+        self.stopping = 0
+
+    def searchST(self, filename, pattern, casesensitive):
+        try:
+            lines = open(filename, 'r').readlines()
+        except:
+            lines = []
+        found = []
+        if not casesensitive:
+            pattern = pattern.lower()
+        for i in range(len(lines)):
+            try:
+                if not casesensitive:
+                    line = lines[i].lower()
+                else:
+                    line = lines[i]
+                if line.find(pattern) > -1:
+                    if not found:
+                        found.append(filename)
+                    found.append('  '+`i+1` + ': '+lines[i].rstrip())
+            except: pass
+            wxYield()
+        return found
+
+    def searchRE(self, filename, pattern, toss):
+        try:
+            lines = open(filename, 'r').readlines()
+        except:
+            lines = []
+        found = []
+        for i in range(len(lines)):
+            try:
+                line = lines[i]
+                if pattern.search(line) is not None:
+                    if not found:
+                        found.append(filename)
+                    found.append('  '+`i+1` + ': '+line.rstrip())
+            except: pass
+        return found
 
 #--------------------------- And the main...*sigh* ---------------------------
 import wx

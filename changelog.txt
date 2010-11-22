@@ -1,5 +1,35 @@
+(PyPE 1.8)
+(information) the bug that was fixed in PyPE 1.7.3 removed every file in the
+path '<user profile>/.pype', including the history.txt that kept user profile
+information.  During the update, sourceforge went down for maintenance, and I
+was expected at a friend's party.  It was eventually uploaded
+(added) Every per-document setting that can be set, will be perserved if PyPE
+was closed with the document open.
+(added) The 64 most recently closed documents will have their state
+information saved, just like if PyPE was closed with them open.  These 64
+documents are in addition to those with states saved when PyPE closes.
+(removed) the ability to hide the fold margin (which had a bug in it since its
+introduction anyways).  Hiding the fold margin when code is folded can lead to
+data corruption.  If one hits 'return' on a folded line, all hidden lines that
+are hidden through the result of the fold are deleted.  If the margin were
+hidden, then it would be impossible to either fold or unfold, so I just got
+rid of the ability to hide the margin.
+(fixed) shell commands can now have arguments.  This has likely been a long
+standing bug.
+(changed) made the default syntax highlighting for a new document to be set by
+the user, defaulting to python.
+(fixed) PyPE has a new icon and is set up to use the new icon in the titlebar
+and taskbar (on platforms where this makes sense).
+(added) Find in files dialog as requested by user francescoa at sourceforge.
+(added) Save information about the last 10 unique values in each entry in the
+find in files dialog.
+(fixed) bug
+https://sourceforge.net/tracker/index.php?func=detail&aid=856727&group_id=85104&atid=574958
+
+
 (PyPE 1.7.3)
 (fixed) a stupid bug that was caused by fixing a stupid bug.
+
 
 (PyPE 1.7.2)
 (fixed) I forgot to remove a debug line that keeps copies of every document
@@ -8,8 +38,6 @@ that gets parsed in a user's profile.
 of the line.
 (fixed) a bug that wasn't causing any harm, but was slowing down the loading
 of PyPE.
-(fixed) a problem with the sash not saving its location when using the
-show/hide tree menu option.
 
 
 (PyPE 1.7.1)
