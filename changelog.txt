@@ -1,3 +1,18 @@
+(PyPE 1.6.1)
+(fixed) small overflow error when creating unique temporary file for parsing.
+Unnoticed due to testing with python 2.3 which automatically casts overflowed
+ints to longs.
+(added) modifying word wrapping support.  Python 2.3 and Windows binary users
+of PyPE will use the textwrap module that is included with Python 2.3,
+everyone else gets the featureless 'wrap on newline or spaces' line wrapper.
+The included gpl.txt has now been wrapped using this feature.  Check the edit
+menu.
+(added) non-modifying word wrapping support.  Went looking through the STC
+documentation and found support for it.  Check the edit menu.
+(added) some small pieces that will allow future state information to be
+displayed in a field within the statusbar.
+
+
 (PyPE 1.6)
 (please note) I am going on vacation from September 3 to September 14.  Any
 bug reports will be silently ignored until at least the 15th.  If you have

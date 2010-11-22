@@ -55,26 +55,80 @@ from wxPython.lib.filebrowsebutton import FileBrowseButton, DirBrowseButton
 #--------------------------- configuration import ----------------------------
 from configuration import *
 #--------- The two most useful links for constructing this editor... ---------
+# http://www.pyframe.com/wxdocs/stc/index.html
 # http://personalpages.tds.net/~edream/out2.htm
-# http://www.pyframe.com/wxdocs/stc/selnpos.html
 
 #---------------------------- Event Declarations -----------------------------
 if 1:
     #under an if so that I can collapse the declarations
-    VERSION = "1.6"
+    VERSION = "1.6.1"
     VREQ = '2.4.1.2'
 
     import string
     STRINGPRINTABLE = string.printable[:]
     STRINGPRINTABLE = dict(zip(map(ord, STRINGPRINTABLE), len(STRINGPRINTABLE)*[None]))
     del string
-    ST = str(int(time.time()*100))
+    ST = str(long(time.time()*100))
     OUTF = "%s/.%s.tmp"%(homedir, ST)
-    INF = "%s/.%s.tmp.out"%(homedir, ST)
+    INF = OUTF+".out"
 
     class cancelled(exceptions.Exception):
         pass
     
+    def get_paragraphs(text, l_sep):
+        in_lines = text.split(l_sep)
+        lines = []
+        cur = []
+        for line in in_lines:
+            cur.append(line)
+            if line:
+                if line[-1] != ' ':
+                    cur.append(' ')
+            else:
+                if cur:
+                    lines.append(cur)
+                    cur = []
+                lines.append([])
+        if cur:
+            lines.append(cur)
+        return [''.join(i) for i in lines]
+
+    def wrap_paragraph(text, width):
+        words = text.split(' ')
+        lines = []
+        cur = []
+        l = 0
+        for word in words:
+            lw = len(word)
+            if not lw:
+                cur.append(word)
+            elif (l + len(cur) + len(word)) <= width:
+                cur.append(word)
+                l += lw
+            else:
+                if cur[-1]:
+                    cur.append('')
+                lines.append(cur)
+                cur = [word]
+                l = lw
+        if cur:
+            lines.append(cur)
+        return '\n'.join([' '.join(i) for i in lines])
+
+    try:
+        import textwrap
+        def wrap_lines(text, width, lend):
+            paragraphs = get_paragraphs(text, lend)
+            paragraphs = map(textwrap.wrap, paragraphs)
+            paragraphs = [i.replace('\n', lend) for i in paragraphs]
+            return lend.join(paragraphs)
+
+    except:
+        def wrap_lines(text, width, lend):
+            paragraphs = get_paragraphs(text, lend)
+            retr = lend.join([wrap_paragraph(i, width) for i in paragraphs])
+            return retr
+
     ID_TIMER = wxNewId()
     
     #file menu ids
@@ -103,6 +157,8 @@ if 1:
     IC = wxNewId()
     CS = wxNewId()
     US = wxNewId()
+    WRAP = wxNewId()
+    WRAPL = wxNewId()
     
     #style menu ids
     PY_S = wxNewId()
@@ -201,7 +257,10 @@ class MainWindow(wxFrame):
         self.parsing = None
         EVT_TIMER(self, ID_TIMER, self.OnRefreshDone)
 
-        self.CreateStatusBar() # A Statusbar in the bottom of the window
+        self.sb = wxStatusBar(self, -1)
+        #self.sb.SetFieldsCount(2)
+        #self.sb.SetStatusWidths([-1, 50])
+        self.SetStatusBar(self.sb)
 
         #support for the optional snippet bar.
         if self.config['usesnippets']:
@@ -269,6 +328,8 @@ class MainWindow(wxFrame):
                 "Dedent Region\tCtrl+[",
                 "Find\tCtrl+F",
                 "Replace\tCtrl+R",
+                "Wrap Selected Text\tAlt+W",
+                "Wrap Long Lines",
                 "Insert Comment\tCtrl+I",
                 "Comment Selection\tAlt+3",
                 "Uncomment Selection\tAlt+4"]
@@ -282,6 +343,8 @@ class MainWindow(wxFrame):
                 "Dedent region %i spaces"%indent,
                 "Find text in a file",
                 "Replace text in a file",
+                "Wrap selected text to a specified width",
+                "Visually continue long lines to the next line",
                 "Insert a centered comment",
                 "Comment selected lines",
                 "Uncomment selected lines"]
@@ -295,11 +358,13 @@ class MainWindow(wxFrame):
                   self.OnDedent,
                   self.OnShowFind,
                   self.OnShowFindReplace,
+                  self.OnWrap,
+                  self.OnWrapL,
                   self.OnInsertComment,
                   self.OnCommentSelection,
                   self.OnUncommentSelection]
-        lkp = dict(zip([UD, RD, SA, CU, CO, PA, IR, DR, FI, RE, IC, CS, US], zip(name, help, functs)))
-        self.updateMenu(editmenu, [UD, RD, 0, SA, CU, CO, PA, 0, IR, DR, 0, FI, RE, 0, 0, IC, CS, US], lkp)
+        lkp = dict(zip([UD, RD, SA, CU, CO, PA, IR, DR, FI, RE, WRAP, WRAPL, IC, CS, US], zip(name, help, functs)))
+        self.updateMenu(editmenu, [UD, RD, 0, SA, CU, CO, PA, 0, IR, DR, 0, FI, RE, WRAP, WRAPL, 0, 0, IC, CS, US], lkp)
         if self.config['usesnippets']:
             editmenu.Insert(15, ISNIP, "Insert Snippet\tCtrl+return",
                             "Insert the currently selected snippet into the document")
@@ -831,6 +896,42 @@ class MainWindow(wxFrame):
         self.OneCmd('Copy',e)
     def OnPaste(self, e):
         self.OneCmd('Paste',e)
+    def OnWrap(self, e):
+        wnum, win = self.getNumWin(e)
+        
+        dlg = wxTextEntryDialog(self, '', 'Wrap to how many columns?', str(col_line))
+        resp = dlg.ShowModal()
+        valu = dlg.GetValue()
+        dlg.Destroy()
+        try:
+            if resp != wxID_OK:
+                raise
+            valu = int(valu)
+        except:
+            return
+        win.MakeDirty()
+        x,y = win.GetSelection()
+        if x==y:
+            return
+        lnstart = win.LineFromPosition(x)
+        lnend = win.LineFromPosition(y-1)
+        lines = []
+        for ln in xrange(lnstart, lnend+1):
+            lines.append(win.GetLine(ln))
+        x = win.GetLineEndPosition(lnstart)-len(lines[0])
+        y = win.GetLineEndPosition(lnend)
+        #win.SetSelection(x, y)
+        win.ReplaceSelection(wrap_lines(''.join(lines), valu, win.format))
+    def OnWrapL(self,e):
+        wnum, win = self.getNumWin(e)
+        if win.GetWrapMode() == wxSTC_WRAP_NONE:
+            win.SetWrapMode(wxSTC_WRAP_WORD)
+            win.SetEdgeColumn(1000)
+            #self.SetStatusText("WRAP", 1)
+        else:
+            win.SetWrapMode(wxSTC_WRAP_NONE)
+            win.SetEdgeColumn(col_line)
+            #self.SetStatusText("", 1)
     def Dent(self, win, incr):
         win.MakeDirty()
         x,y = win.GetSelection()
@@ -1051,7 +1152,6 @@ class MainWindow(wxFrame):
     def style(self, fn):
         ext = fn.split('.')[-1].lower()
         return extns.get(ext, 'python')
-
 #---------------------------- View Menu Commands -----------------------------
 
     def OnZoom(self, e):
@@ -1932,6 +2032,10 @@ class MyNB(wxNotebook):
             win = self.GetPage(new).GetWindow1()
             if win.dirname:
                 os.chdir(win.dirname)
+            #if win.GetWrapMode() == wxSTC_WRAP_NONE:
+            #    self.parent.SetStatusText("", 1)
+            #else:
+            #    self.parent.SetStatusText("WRAP",1)
         event.Skip()
 
 #----------------- This deals with the tab swapping support. -----------------
