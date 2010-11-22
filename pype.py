@@ -31,7 +31,6 @@ if __name__ == '__main__':
                         args.append(arg.replace(' ', '\\ '))
                 else:
                     args.append(arg)
-            #print repr(args)
             if sys.platform=='win32':
                 if ins:
                     args[0:0] = ['""']
@@ -60,7 +59,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.7"
+    VERSION = "1.7.1"
     VREQ = '2.4.2.4'
 
     import string
@@ -290,9 +289,6 @@ class MainWindow(wxFrame):
         menuAdd(self, viewmenu, "Zoom In\tCtrl+<plus>", "Make the text in the editing component bigger", self.OnZoom, ZI)
         menuAdd(self, viewmenu, "Zoom Out\tCtrl+<minus>", "Make the text in the editing component smaller", self.OnZoom, wxNewId())
         viewmenu.AppendSeparator()
-        menuAdd(self, viewmenu, "Refresh\tF5", "Refresh the browsable source tree, autocomplete listing, and the tooltips (always accurate, but sometimes slow)", self.OnRefresh, wxNewId())
-        menuAdd(self, viewmenu, "Show/hide tree\tCtrl+Shift+G", "Show/hide the hierarchical source tree for the currently open document", self.OnTree, wxNewId())
-        menuAdd(self, viewmenu, "Hide all trees", "Hide the browsable source tree for all open documents", self.OnTreeHide, wxNewId())
         menuAdd(self, viewmenu, "Go to line number\tAlt+G", "Advance to the given line in the currently open document", self.OnGoto, wxNewId())
         viewmenu.AppendSeparator()
         menuAdd(self, viewmenu, "Toggle Bookmark\tCtrl+M", "Create/remove bookmark for this line", self.OnToggleBookmark, wxNewId())
@@ -306,6 +302,7 @@ class MainWindow(wxFrame):
             menuAdd(self, stylemenu, "Python",      "Highlight for Python syntax", self.OnStyleChange, PY_S, typ)
             self.HAS_RADIO = 1
         except:
+            #to handle the cases when a platform lacks radio items in menus
             typ = wxITEM_NORMAL
             menuAdd(self, stylemenu, "Python",      "Highlight for Python syntax", self.OnStyleChange, PY_S, typ)
             self.HAS_RADIO = 0
@@ -336,13 +333,10 @@ class MainWindow(wxFrame):
         menuAdd(self, longlinemenu, "Line", "Long lines will have a vertical line at the column limit", self.OnSetLongLineMode, LL_LINE, typ)
         menuAdd(self, longlinemenu, "None", "Show no long line indicator", self.OnSetLongLineMode, LL_NONE, typ)
         
-#--------------------------------- Set Menu ----------------------------------
+#------------------------------- Document menu -------------------------------
         setmenu= wxMenu()
-        #MenuAdd(self, setmenu, "Global configuration...", "Set configuration that is shared among all documents.", self.OnGlobalSettings, wxNewId())
-        #MenuAdd(self, setmenu, "This document...", "Set configuration that is only valid for the currently open document.", self.OnDocumentSettings, wxNewId())
-        #setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Use Snippets (req restart)", "Enable or disable the use of snippets, requires restart for change to take effect", self.OnSnipToggle, SNIPT, wxITEM_CHECK)
-        menuAdd(self, setmenu, "Use Todo (req restart)", "Enable or disable the use of the todo list, requires restart for change to take effect", self.OnTodoToggle, TODOT, wxITEM_CHECK)
+        menuAdd(self, setmenu, "Use Todo (req restart)", "Enable or disable the use of todo, requires restart for change to take effect", self.OnTodoToggle, TODOT, wxITEM_CHECK)
         setmenu.AppendSeparator()
         setmenu.AppendMenu(wxNewId(), "Syntax Highlighting", stylemenu, "Change text display style")
         if VS[-1] == 'u':
@@ -355,6 +349,10 @@ class MainWindow(wxFrame):
         menuAdd(self, setmenu, "Show fold margin", "Show or hide the fold margin", self.OnFoldToggle, FOLD, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show Indentation Guide", "Show or hide gray indentation guides in indentation", self.OnIndentGuideToggle, INDENTGUIDE, wxITEM_CHECK)
         setmenu.AppendSeparator()
+        menuAdd(self, setmenu, "Show/hide tree\tCtrl+Shift+G", "Show/hide the hierarchical source tree for the currently open document", self.OnTree, wxNewId())
+        menuAdd(self, setmenu, "Hide all trees", "Hide the browsable source tree for all open documents", self.OnTreeHide, wxNewId())
+        menuAdd(self, setmenu, "Refresh\tF5", "Refresh the browsable source tree, autocomplete listing, and the tooltips (always accurate, but sometimes slow)", self.OnRefresh, wxNewId())
+        setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Expand all", "Expand all folded code through the entire document", self.OnExpandAll, wxNewId())
         menuAdd(self, setmenu, "Fold all", "Fold all expanded code through the entire document", self.OnFoldAll, wxNewId())
         menuAdd(self, setmenu, "Use Tabs", "New indentation will include tabs", self.OnSetTabToggle, USETABS, wxITEM_CHECK)
@@ -366,8 +364,7 @@ class MainWindow(wxFrame):
         menuAdd(self, setmenu, "Set Long Line Column", "Set the column number for the long line indicator", self.OnSetLongLinePosition, wxNewId())
         setmenu.AppendMenu(wxNewId(), "Set Long Line Indicator", longlinemenu, "Change the mode that signifies long lines")
         setmenu.AppendSeparator()
-        menuAdd(self, setmenu, "Save settings", "Save the settings for the current document as the default for all documents (excluding syntax and encodings)", self.OnSaveSettings, wxNewId())
-        
+        menuAdd(self, setmenu, "Save settings", "Save the settings for the current document as the default for all documents (excluding syntax and encodings)", self.OnSaveSettings, wxNewId())        
 
 #--------------------------------- Tab Menu ----------------------------------
         tabmenu= wxMenu()
@@ -476,14 +473,6 @@ class MainWindow(wxFrame):
         EVT_SIZE(self, self.OnResize)
         EVT_ACTIVATE(self, self.OnActivation)
 
-    def updateMenu(self, menu, menu_items, lookup):
-        for i in menu_items:
-            if i:
-                menu.Append(i, lookup[i][0], lookup[i][1])
-                EVT_MENU(self, i, lookup[i][2])
-            else:
-                menu.AppendSeparator()
-
     def dialog(self, message, title, styl=wxOK):
         d= wxMessageDialog(self,message,title,styl)
         retr = d.ShowModal()
@@ -491,7 +480,6 @@ class MainWindow(wxFrame):
         return retr
 
     def exceptDialog(self, title="Error"):
-        #I personally think the use of StringIO for tracebacks is neat...that's why I did it.
         k = cStringIO.StringIO()
         traceback.print_exc(file=k)
         k.seek(0)
@@ -635,10 +623,8 @@ class MainWindow(wxFrame):
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
 
     def redrawvisible(self, win=None):
-        if self.control.GetPageCount() > 0:
+        if (not win) and self.control.GetPageCount() > 0:
             num, win = self.getNumWin()
-            #self.control.AdvanceSelection(True)
-            #self.control.AdvanceSelection(False)
         if win:
             a = win.parent.GetSashPosition()
             win.parent.SetSashPosition(a-1)
@@ -683,7 +669,6 @@ class MainWindow(wxFrame):
     def OnNew(self,e):
         self.newTab('', ' ', 1)
         self.control.GetPage(self.control.GetSelection()).GetWindow1().opened = 1
-        self.SetStatusText("Created a new file")
 
     def OnSave(self,e):
         wnum, win = self.getNumWin(e)
@@ -692,7 +677,6 @@ class MainWindow(wxFrame):
                 ofn = os.path.join(win.dirname, win.filename)
                 fil = open(ofn, 'wb')
                 txt = win.GetText()
-                #print repr(eol), repr(win.format), txt.count('\r\n'), txt.count('\n'), txt.count('\r'), txt.count('\r\r')
                 fil.write(txt)
                 fil.close()
                 if VS[-1] == 'u': a = "%s as %s"%(ofn, win.enc)
@@ -743,19 +727,11 @@ class MainWindow(wxFrame):
             self.control.SetSelection(sel)
     
     def OnOpen(self,e):
-#--------------------------- cmt-001 - 08/06/2003 ----------------------------
-# Set the working directory to the last directory used or current working directory if it doesn't exist 
         wd = self.config.get('lastpath', os.getcwd())
-
-#--------------------------- end cmt-001 - 08/06/2003 ----------------------------
-        #- cmt-001 - 08/06/2003  changed os.getcwd to wd
         dlg = wxFileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wxOPEN|wxMULTIPLE|wxHIDE_READONLY)
         if dlg.ShowModal() == wxID_OK:
             self.OnDrop(dlg.GetPaths())
-#--------------------------- cmt-001 - 08/06/2003 ----------------------------
-# Add the just-opened file to the file history menu and set the last directory 
             self.config['lp'] = dlg.GetDirectory()
-#--------------------------- end cmt-001 - 08/06/2003 ----------------------------
         dlg.Destroy()
 
     def FindModule(self, mod):
@@ -778,7 +754,7 @@ class MainWindow(wxFrame):
                 raise cancelled
         #If we are outside the loop, this means that the current 'module'
         #that we are on is a folder-module.  We can easily load the __init__.py
-        #from this folder.  Rock.
+        #from this folder.
         return os.sep.join([pth[1], '__init__.py'])
 
     def OnOpenModule(self,e):
@@ -912,6 +888,7 @@ class MainWindow(wxFrame):
             pass
         else:
             self.OnSave(None)
+
     def OnClose(self, e):
         wnum, win = self.getNumWin(e)
         if win.dirty:
@@ -1077,7 +1054,6 @@ class MainWindow(wxFrame):
         else:
             e.Skip()
 
-## Added code from PythonCard's codeEditor to comment/uncomment selected lines 08-04-2003 Mark Tipton    
     def OnCommentSelection(self, e):
         wnum, win = self.getNumWin(e)
         sel = win.GetSelection()
@@ -1117,7 +1093,6 @@ class MainWindow(wxFrame):
         win.SetCurrentPos(win.PositionFromLine(start))
         win.SetAnchor(win.GetLineEndPosition(end))
         win.EndUndoAction()
-## End modifications 08-04-2003 Mark Tipton  
 
 #--------------------- Find and replace dialogs and code ---------------------
     def getNumWin(self, e=None):
@@ -1306,7 +1281,6 @@ class MainWindow(wxFrame):
         else:
             split.SetSashPosition(width-split.GetMinimumPaneSize())
         win.SAVEDPOSITION = split.GetSashPosition()-self.control.GetClientSize()[0]
-
 
     def OnTreeHide(self, e):
         width = self.control.GetClientSize()[0]-10
@@ -1545,14 +1519,25 @@ class MainWindow(wxFrame):
                 win.SetFoldExpanded(line, 1)
 
     def OnFoldAll(self, e):
-        self.OnExpandAll(e)
         n, win = self.getNumWin(e)
+        #these next two lines are to allow
+        #win.GetFoldLevel() to be accurate
+        win.HideLines(0, win.GetLineCount()-1)
+        wxYield()
+        
+        #toss all the old folds
+        self.OnExpandAll(e)
+        
         lc = win.GetLineCount()
-        for line in xrange(lc-1, -1, -1):
+        lines = []
+        for line in xrange(lc):
             if win.GetFoldLevel(line) & wxSTC_FOLDLEVELHEADERFLAG:
-                a = win.GetLastChild(line, -1)
-                win.HideLines(line+1,a)
-                win.SetFoldExpanded(line, 0)
+                lines.append(line)
+        lines.reverse()
+        for line in lines:
+            a = win.GetLastChild(line, -1)
+            win.HideLines(line+1,a)
+            win.SetFoldExpanded(line, 0)
 
     def OnSetTabToggle(self, e):
         n, win = self.getNumWin(e)
@@ -1823,8 +1808,6 @@ class MainWindow(wxFrame):
         if wnum > -1:
             win = self.control.GetPage(wnum).GetWindow1()
             #print win.GetStyleAt(win.GetCurrentPos()-1), win.GetStyleAt(win.GetCurrentPos()), win.GetStyleAt(win.GetCurrentPos()+1)
-            #if win.CallTipActive():
-            #    win.CallTipCancel()
         if event.ShiftDown() and event.ControlDown():
             if self.config['usesnippets'] and (not self.restart):
                 if key == ord(','):

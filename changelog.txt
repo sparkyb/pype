@@ -1,3 +1,8 @@
+(PyPE 1.7.1)
+(fixed) a bug with the 'fold all' menu command that stopped all of the
+document from being folded.
+
+
 (PyPE 1.7)
 (added) When reloading from disk, a document's browsable source tree, etc.,
 will be updated.
