@@ -1,8 +1,28 @@
+(PyPE 1.8.1)
+(fixed) a bug with 'Open Last', in that it wouldn't actually open the
+documents that were open when PyPE was last closed.
+(fixed) a bug described here:
+1. Open some documents
+2. Close PyPE (saving if required)
+3. Open PyPE (don't load any documents)
+4. Close PyPE
+5. Open PyPE.
+A user would notice that no documents closed in step 2 will have their states
+saved.  As they are recently open documents, they (in version 1.8.1 and on)
+become part of the 64 most recent that get their states saved in addition to
+those documents closed when PyPE closes.
+(fixed) Updated some methods in the most recent queue to follow the dictionary
+standard of mapping(zip(map_instance.keys(), map_instance.values())) producing
+an equivalency to the original map_instance.
+(fixed) When calltips are shown, the class/method heirarchy for the function
+prototypes are now in the proper case (they were previously all in lowercase).
+
+
 (PyPE 1.8)
 (information) the bug that was fixed in PyPE 1.7.3 removed every file in the
 path '<user profile>/.pype', including the history.txt that kept user profile
 information.  During the update, sourceforge went down for maintenance, and I
-was expected at a friend's party.  It was eventually uploaded
+was expected at a friend's party.  It was eventually uploaded.
 (added) Every per-document setting that can be set, will be perserved if PyPE
 was closed with the document open.
 (added) The 64 most recently closed documents will have their state

@@ -59,7 +59,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.8"
+    VERSION = "1.8.1"
     VREQ = '2.4.2.4'
 
     import string
@@ -214,7 +214,7 @@ class MainWindow(wxFrame):
         self.restart = 0
         self.restartt = 0
         EVT_MENU_RANGE(self, wxID_FILE1, wxID_FILE9, self.OnFileHistory)
-        self.lastused = lastused(64, LASTUSED)
+        self.lastused = lastused(64+len(lastopen), LASTUSED)
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
         self.poller = wxTimer(self, ID_TIMER)
         self.toparse = []
@@ -606,8 +606,8 @@ class MainWindow(wxFrame):
                             ('display2code', {}),
                             ('displayorder', []),
                             ('shellcommands', []),
+                            ('lastopen', []),
                             ('LASTUSED', []),
-                            ('LASTOPEN', {}),
                             ('DEFAULTLEXER', 'python'),
                             ('splittersize', 40),
                             ('FIF_STATE', ([], [], [], 0, 0, 0))]:
@@ -866,9 +866,9 @@ class MainWindow(wxFrame):
             nwin.format = detectLineEndings(txt)
             nwin.SetText(txt)
             
-            if FN in self.config['LASTOPEN']:
-                state = self.config['LASTOPEN'][FN]
-            elif FN in self.lastused:
+            #if FN in self.config['LASTOPEN']:
+            #    state = self.config['LASTOPEN'][FN]
+            if FN in self.lastused:
                 state = self.lastused[FN]
                 del self.lastused[FN]
 
@@ -959,17 +959,19 @@ class MainWindow(wxFrame):
             try:    return e.Veto()
             except: return e.Skip()
 
-        LASTOPEN = {}
+        LASTOPEN = []
         sav = []
         for win in self.control:
             if win.dirname:
                 fn = self.getAbsolute(win.filename, win.dirname)
-                LASTOPEN[fn] = win.GetSaveState()
+                sav.append(fn)
+                LASTOPEN.append((fn, win.GetSaveState()))
         
+        if 'LASTOPEN' in self.config:
+            del self.config['LASTOPEN']
         #saving document state
         self.config["lastopen"] = sav
-        self.config["LASTOPEN"] = LASTOPEN
-        self.config["LASTUSED"] = [i for i in self.lastused.iteritems()]
+        self.config["LASTUSED"] = self.lastused.items() + LASTOPEN
 
         self.saveHistory()
         if sel > -1:
@@ -1919,9 +1921,8 @@ class MainWindow(wxFrame):
                                 #This deals with ending single and multi-line definitions properly.
                                 while linenum >= 0:
                                     found = []
-                                    for i in ['def', 'class', 'if', 'else', 'while',
+                                    for i in ['def', 'class', 'if', 'else', 'elif', 'while',
                                               'for', 'try', 'except', 'finally']:
-                                        #'elif' is found while searching for 'if'
                                         a = line.find(i)
                                         if (a > -1):
                                             found.append(a)
@@ -2543,9 +2544,9 @@ class MyNB(wxNotebook):
 
     def OnPageChanged(self, event):
         new = event.GetSelection()
-        #fix for dealing with current paths.  They are wonderful.
         if new > -1:
             win = self.GetPage(new).GetWindow1()
+            #fix for dealing with current paths.  They are wonderful.
             if win.dirname:
                 os.chdir(win.dirname)
             if VS[-1] == 'u':
@@ -3104,7 +3105,7 @@ class lastused:
             self.me = me
             self.next = None
     def __init__(self, count, lst=[]):
-        self.count = max(min(64, count), 0)
+        self.count = max(count, 1)
         self.d = {}
         self.first = None
         self.last = None
@@ -3166,11 +3167,12 @@ class lastused:
         for i,j in self.iteritems():
             yield j
     def keys(self):
-        return self.d.keys()
-
+        return [i for i,j in self.iteritems()]
+    def values(self):
+        return [j for i,j in self.iteritems()]
+    def items(self):
+        return [i for i in self.iteritems()]
         
-
-
 class findinfiles(wxDialog):
     def __init__(self, parent, choices):
         wxDialog.__init__(self, parent, -1, "Find in files...", size=(640,480),

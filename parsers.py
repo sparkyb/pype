@@ -93,7 +93,7 @@ def fast_parser(source, line_ending, flat=0):
     line_no = -1
 ##    SEQ = ('def ','class ')
     
-    FIL = lambda A:A[1][0]
+    FIL = lambda A:A[1][2]
 
     def fun(i, line, ls, line_no, stk):
         na = ls.find('(')
@@ -113,7 +113,7 @@ def fast_parser(source, line_ending, flat=0):
                 nam = i+fn
                 nl = nam.lower()
                 f = ls[len(i):na].strip()
-                stk.append((nam, (f.lower(), line_no), lead, []))
+                stk.append((nam, (f.lower(), line_no, f), lead, []))
                 docstring.setdefault(f, []).append(" ".join([fn, '.'.join(map(FIL, stk))]))
     
     for line in lines:
@@ -237,7 +237,6 @@ def main():
         toparse = ''.join(lines)
     toparse = eval(toparse)
     le = detectLineEndings(toparse)
-
     toprint = fast_parser(toparse, le, 3)
     
 ##    try:
