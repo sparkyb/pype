@@ -1,3 +1,7 @@
+#-------------------------------- PyPE 2.8.8 ---------------------------------
+(fixed) a bug related to realtime parsing of non-ascii Python source.
+
+
 #-------------------------------- PyPE 2.8.7 ---------------------------------
 (fixed) some bugs related to the parsers module movement.
 (fixed) ordering of user profile path discovery to not break when confronted

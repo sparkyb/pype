@@ -5461,7 +5461,7 @@ class PythonSTC(stc.StyledTextCtrl):
         
     def getcmd(self, ue=1):
         if self.GetTextLength() < 200000:
-            return stc.StyledTextCtrl.GetText(self)
+            return self.GetText(self, ue)
         return ''
     
     def GotoLineS(self, line):
