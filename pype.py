@@ -57,7 +57,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.6.5.2"
+    VERSION = "1.6.5.3"
     VREQ = '2.4.2.4'
 
     import string
@@ -414,8 +414,9 @@ class MainWindow(wxFrame):
         self.dialog(k.read(),title)
 
     def OnDrop(self, fnames, error=1):
+        cwd = os.getcwd()
         for i in fnames:
-            i = os.path.normcase(os.path.normpath(os.path.realpath(os.path.join(os.getcwd(), i))))
+            i = os.path.normcase(os.path.normpath(os.path.realpath(os.path.join(cwd, i))))
             if self.isAbsOpen(i):
                 if len(fnames)==1:
                     self.selectAbsolute(i)
@@ -428,8 +429,7 @@ class MainWindow(wxFrame):
                     else:             a = i
                     self.SetStatusText("Opened %s"%a)
                 except:
-                    if error:
-                        self.exceptDialog("File open failed")
+                    self.exceptDialog("File open failed")
 
     def SetStatusText(self, text, number=0):
         if (number == 0) and text:
@@ -664,7 +664,7 @@ class MainWindow(wxFrame):
         nwin.changeStyle(stylefile, self.style(fn))
         nwin.tree = hierCodeTreePanel(self, split)
         split.SetMinimumPaneSize(3)
-        split.SplitVertically(nwin, nwin.tree, max(ctrlwidth-20, 5))
+        split.SplitVertically(nwin, nwin.tree, max(ctrlwidth-30, 30))
         if d:
             f=open(os.sep.join([nwin.dirname,nwin.filename]),'rb')
             txt = f.read()

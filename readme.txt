@@ -1,4 +1,5 @@
-Readme/Help for PyPE 1.7 (Python Programmer's Editor')
+Readme/Help for PyPE (Python Programmer's Editor')
+http://pype.sourceforge.net
 http://come.to/josiah
 
 PyPE is copyright (c) 2003 Josiah Carlson.
@@ -13,15 +14,15 @@ The copy included was also distributed with wxPython version 2.4.1.2 for
 Python 2.2, and was not modified in any form.
 
 The included stc-styles.rc.cfg was slightly modified from the original version
-in order to no cause exceptions during style changes, and was also distributed
-with wxPython version 2.4.1.2 for Python 2.2
+in order to not cause exceptions during style changes, and was also
+distributed with wxPython version 2.4.1.2 for Python 2.2
 
 If you do not also receive a copy of gpl.txt with your version of this
 software, please inform the me of the violation at the web page at the top of
 this document.
 
 #------------------------------- Requirements --------------------------------
-PyPE has only been tested on Python 2.2 and wxPython 2.4.2.1.  It should work
+PyPE has only been tested on Python 2.3 and wxPython 2.4.2.4.  It should work
 on later versions of Python and wxPython.
 
 #----------------------------------- Help ------------------------------------
@@ -56,6 +57,36 @@ me as you.
 None currently known.
 
 #------------------------------------ FAQ ------------------------------------
+What's the deal with the version numbering scheme?
+Early in development, PyPE raised version numbers very quickly.  From 1.0 to
+1.5, not much more than 2 months passed.  In that time, most of the major
+architectural changes that were to happen, happened.  This is not the reason
+for the version number change.  Really it was so that the MAJOR versions could
+have their own point release (1.0 being the first), and minor bugfixes on the
+point releases would get a minor release number (like 1.0.1).
+
+Then, at around PyPE 1.4.2, I had this spiffy idea.  What if I were to release
+a series of PyPE versions with the same version numbers as classic Doom?  I
+remembered updating to 1.1, then to 1.2a, etc.  My favorite was 1.666.  Ah hah!
+PyPE 1.6.6.6, the best version of PyPE ever.
+
+I decided that I would slow version number advancement, if only so that people
+didn't get sick of new releases of PyPE being numbered so much higher, being
+that there are other projects where version 1.0 (if it is ever released) would
+be the perfect release, that there is no more changes to be made.
+
+Then the more I thought about it, the more I realized that it doesn't matter
+at all, I mean, Emacs is on version 20+.  *shrug*
+
+Yeah.  To be honest, version numbers advance as my whims decree.  As of this
+writing, PyPE 1.6.5.2 was released yesterday.  1.6.5.2 has a nice ring to it.
+Maybe the next version will be 1.6.5.3, or 1.6.6, or 1.7.  Who knows?  It
+doesn't really matter to tell the truth, as long as bugs get fixed, features
+are added, and people keep using it, what does it matter what version you are
+using?
+
+
+
 What is the difference between the fast and slow parser?
 The fast one uses custom parser that basically splits the file into lines,
 does a check to see if there is a function or class definition, then saves the
@@ -190,9 +221,7 @@ counting the number of different kind of line endings.  Which ever line ending
 appears the most in an open file will set the line ending support for viewing
 and editing in the window.  Also, any new lines will have that line ending.
 New files will have the default line endings as the host operating system, as
-given in configuration.py.  The only platforms I don't know for sure are
-RISCOS and JAVA, though I assume them to be '\n'.  Any information about what
-really is the case would be great.
+given in configuration.py.
 
 Additionally, copying from an open document will not change the line-endings.
 Future versions of PyPE may support the automatic translation of text during

@@ -1,3 +1,13 @@
+(PyPE 1.6.5.3)
+(fixed) a bug when starting up PyPE with more than one relative paths to files
+as arguments.  Thanks francescoa@sourceforge's for the bug report.
+(discovered) the reason why on some linux systems splitting the window would
+not display the source.  Thank you Patrick Installe (did not email through sf)
+It turns out to not be a bug with wxPython on linux, but instead it is the
+result of one's theme in linux changing how many pixels for each window is
+required to be displayed.
+
+
 (PyPE 1.6.5.2)
 (fixed) a bug when creating a newline with tabs disabled and the cursor was in
 or immediately to the right of indentation.
