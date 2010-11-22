@@ -94,7 +94,7 @@ class TreeCtrl(wx.TreeCtrl):
                         wx.ArtProvider_GetBitmap(wx.ART_FILE_OPEN, wx.ART_OTHER, isz),
                         wx.ArtProvider_GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz)]
             
-            for icf in ('icons/green.gif', 'icons/yellow.gif', 'icons/red.gif'):
+            for icf in ('icons/green.png', 'icons/yellow.png', 'icons/red.png'):
                 icf = os.path.join(_pype.runpath, icf)
                 self.images.append(wx.BitmapFromImage(wx.Image(icf)))
             

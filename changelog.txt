@@ -1,4 +1,4 @@
-
+﻿
 #--------------------------------- PyPE 2.9 ----------------------------------
 (fixed) another bug related to realtime parsing.
 (fixed) typo in stc-styles.rc.cfg that is shipped with PyPE that can cause
@@ -94,6 +94,8 @@ line in some situations.
 in 2.6, and removed in 3.0).  The new parser is a bit faster on large files
 (1.2 seconds vs. 1.4 seconds to parse pype.py on my machine), and should be
 future-proof.
+(changed) switched to using .png files for images, closing bug 1750959.
+(fixed) opening of utf8 files that lack a coding directive or a BOM.
 
 
 #-------------------------------- PyPE 2.8.8 ---------------------------------

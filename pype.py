@@ -4384,7 +4384,8 @@ class PythonSTC(stc.StyledTextCtrl):
                 tryencodings.insert(len(tryencodings)-foundbom, x)
                 foundcoding += 1
                 break
-
+            if 'utf-8' not in tryencodings:
+                tryencodings.append('utf-8')
             te = []
             while tryencodings:
                 i = tryencodings.pop()

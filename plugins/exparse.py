@@ -13,86 +13,11 @@ Adapted from Synopsis package, which is LGPL licensed.
 """
 
 import compiler
-import inspect
 import parser
 import re
 import symbol
 import sys
 import token
-
-USE_AST = False
-if sys.version >= '2.5':
-    # try to use the new ast module, it's faster than compiler.ast :)
-    USE_AST = True
-    import _ast
-
-    # these functions are inspired/copied from their equivalents in Python
-    # 2.6's high-level ast module
-    fields = lambda node: ((field, getattr(node, field, None)) for field in node._fields)
-
-    def transform(node):
-        # transform the targets in for/with clauses to assignment nodes
-        if isinstance(node, _ast.For):
-            a = _ast.Assign()
-            a.targets = [node.target]
-            yield a
-        elif isinstance(node, _ast.With) and node.optional_vars:
-            a = _ast.Assign()
-            a.targets = [node.optional_vars]
-            yield a
-        yield node
-
-    def _child_nodes(node):
-        ast = _ast.AST
-        if not node._fields:
-            return
-        for name, field in fields(node):
-            if isinstance(field, ast):
-                yield field
-            elif isinstance(field, list):
-                for item in field:
-                    if isinstance(item, ast):
-                        yield item
-
-    def child_nodes(node):
-        trans = transform
-        for i in _child_nodes(node):
-            for j in trans(i):
-                yield j
-
-    def cleandoc(doc):
-        """Clean up indentation from docstrings.
-    
-        Any whitespace that can be uniformly removed from the second line
-        onwards is removed."""
-        # borrowed and modified from Python trunk source
-        try:
-            lines = doc.expandtabs().split('\n')
-        except UnicodeError:
-            return None
-        else:
-            # Find minimum indentation of any non-blank lines after first line.
-            margin = sys.maxint
-            for line in lines[1:]:
-                content = len(line.lstrip())
-                if content:
-                    indent = len(line) - content
-                    margin = min(margin, indent)
-            # Remove indentation.
-            if lines:
-                lines[0] = lines[0].lstrip()
-            if margin < sys.maxint:
-                for i in xrange(1, len(lines)):
-                    lines[i] = lines[i][margin:]
-            # Remove any trailing or leading blank lines.
-            return '\n'.join(lines).strip('\n')
-
-    def get_docstring(node, clean=True):
-        if not isinstance(node, (_ast.FunctionDef, _ast.ClassDef, _ast.Module)):
-            raise TypeError("%r can't have docstrings" % node.__class__.__name__)
-        if node.body and isinstance(node.body[0], _ast.Expr) and \
-           isinstance(node.body[0].value, _ast.Str):
-            return cleandoc(node.body[0].value.s)
 
 line_end = ((token.NEWLINE, ''), (token.INDENT, ''), (token.DEDENT, ''))
 
@@ -469,6 +394,80 @@ IMPORT_STMT_PATTERN = (
 )
 
 #------------------------------- new parser :) -------------------------------
+USE_AST = False
+if sys.version >= '2.5':
+    # try to use the new ast module, it's faster than compiler.ast :)
+    USE_AST = True
+    import _ast
+
+# these functions are inspired/copied from their equivalents in Python
+# 2.6's high-level ast module
+fields = lambda node: ((field, getattr(node, field, None)) for field in node._fields)
+
+def transform(node):
+    # transform the targets in for/with clauses to assignment nodes
+    if isinstance(node, _ast.For):
+        a = _ast.Assign()
+        a.targets = [node.target]
+        yield a
+    elif isinstance(node, _ast.With) and node.optional_vars:
+        a = _ast.Assign()
+        a.targets = [node.optional_vars]
+        yield a
+    yield node
+
+def _child_nodes(node):
+    ast = _ast.AST
+    if not node._fields:
+        return
+    for name, field in fields(node):
+        if isinstance(field, ast):
+            yield field
+        elif isinstance(field, list):
+            for item in field:
+                if isinstance(item, ast):
+                    yield item
+
+def child_nodes(node):
+    trans = transform
+    for i in _child_nodes(node):
+        for j in trans(i):
+            yield j
+
+def cleandoc(doc):
+    """Clean up indentation from docstrings.
+
+    Any whitespace that can be uniformly removed from the second line
+    onwards is removed."""
+    # borrowed and modified from Python trunk source
+    try:
+        lines = doc.expandtabs().split('\n')
+    except UnicodeError:
+        return None
+    else:
+        # Find minimum indentation of any non-blank lines after first line.
+        margin = sys.maxint
+        for line in lines[1:]:
+            content = len(line.lstrip())
+            if content:
+                indent = len(line) - content
+                margin = min(margin, indent)
+        # Remove indentation.
+        if lines:
+            lines[0] = lines[0].lstrip()
+        if margin < sys.maxint:
+            for i in xrange(1, len(lines)):
+                lines[i] = lines[i][margin:]
+        # Remove any trailing or leading blank lines.
+        return '\n'.join(lines).strip('\n')
+
+def get_docstring(node, clean=True):
+    if not isinstance(node, (_ast.FunctionDef, _ast.ClassDef, _ast.Module)):
+        raise TypeError("%r can't have docstrings" % node.__class__.__name__)
+    if node.body and isinstance(node.body[0], _ast.Expr) and \
+       isinstance(node.body[0].value, _ast.Str):
+        return cleandoc(node.body[0].value.s)
+
 def translate_old_to_new(ucky_old_stuff, docs, last_line, depth=1, parent=''):
     out = []
     if depth == 1:
