@@ -1,3 +1,42 @@
+(PyPE 1.4)
+(added) in commenting/uncommenting feature thanks to Mark Tipton's adaptation
+of some codeEditor code.
+(added) in a few things to give the parsers a couple more options.  The slow
+parser is still slow.  It may be replaced by one that uses the compiler
+module.
+(change) there is a new 'slow' parser in included with PyPE parsers module.
+Instead of using the standard parser python module, it uses the compiler
+module.  This is better for a few reasons; it is faster, all the information
+that is needed for the browsable source tree, autocompletion, and even
+docstrings (for pulling out tooltips) are available.  Speaking of which...
+(submissions by Mark Tipton)
+cmt-001 - 08/06/2003: Added code to configuration.py to create a configuration
+directory to store user-related configuration information.  Added code to
+pype.py to store an opened file history that is displayed at the bottom of the
+file menu and that saves the directory of the last file opened and starts
+there the next time you start pype.
+cmt-002 - 08/06/2003: I couldn't get the 'runScript' function to work on
+Linux. It seemed to be related to files and directories with spaces in the
+name. The function was drastically modified (actually completely replaced)
+using code from PythonCard's codeEditor and seems to work on both Linux and
+Windows XP.
+(changed) now pathmarks, shell commands (as well as the new history.txt) are
+stored in <HOME>/.pype, where HOME is an environment variable set to be the
+path of your home directory, or the directory in which PyPE is currently
+running if the HOME environment variable is not set.
+(cleanup) After discovering that wxMenu will handle the majority of one's
+accelerator hotkey needs, I've cleaned up a bit of the code, removing some
+of what was remining in MainWindow.OnKeyPressed.  Here's hoping that I don't
+forget to test some hotkey by the time 1.4 is released.
+(fixed) a few minor misspellings in some comments.
+(added) some help stuff.
+(added) a native win32 build of PyPE due to request, thanks to py2exe.  I'll
+try to remember to build a win32 native version every time.  If someone out
+there in linuxland wants to build a linux native version using Gordon
+McMillan's Installer (available at http://www.mcmillan-inc.com/install1.html),
+I would happily post it.
+
+
 (PyPE 1.3.1)
 (added) a version checker to PyPE.  If you are running a version of wxPython
 before 2.4.1.2, and PyPE worked before I added this, please email me with the

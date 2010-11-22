@@ -1,5 +1,5 @@
 #----------------------------- configuration.py ------------------------------
-#----------------------- Settings for configuring PPE ------------------------
+#----------------------- Settings for configuring PyPE -----------------------
 import os
 import sys
 #from wxPython.wx import *
@@ -16,7 +16,7 @@ fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
 eol = os.linesep
 eolmode = fmt_mode[eol]
 
-runpath = os.path.split(os.path.normcase(os.path.normpath(sys.argv[0])))[0]
+runpath = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
@@ -68,8 +68,21 @@ paths = {}
 display2code={}
 displayorder=[]
 shellcommands = []
-try:
-    from pathmarks import *
-except:
-    pass
 
+# cmt-001 08/06/2003 - Create a pype configuration directory to store info
+default_homedir = os.path.dirname(os.path.abspath(__file__))
+try:
+    homedir = os.path.join(os.environ['HOME'], ".pype")
+except:
+    try:
+        homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
+    except:
+        homedir = os.path.join(default_homedir, ".pype")
+try:
+    # create the config directory if it
+    # doesn't already exist
+    if not os.path.exists(homedir):
+        os.mkdir(homedir)
+except:
+    print "unable to create config directory", homedir
+# End cmt-001 08/06/2003

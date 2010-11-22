@@ -1,4 +1,4 @@
-Readme/Help for PyPE 1.2 (Python Programmer's Editor')
+Readme/Help for PyPE 1.4 (Python Programmer's Editor')
 http://come.to/josiah
 
 PyPE is copyright (c) 2003 Josiah Carlson.
@@ -25,7 +25,7 @@ PyPE has only been tested on Python 2.2 and wxPython 2.4.2.1.  It should work
 on later versions of Python and wxPython.
 
 #----------------------------------- Help ------------------------------------
-The majority of PyPE was written from 10:30PM on the 2nd of July through
+The beginnings of PyPE was written from 10:30PM on the 2nd of July through
 10:30PM on the 3rd of July.  Additional features were put together on the 4th
 of July along with some bug fixing and more testing for version 1.0.
 Truthfully, I've been using it to edit itself since the morning of the 3rd of
@@ -60,6 +60,55 @@ dialog, which I use to get a folder and path.  I assure you, it saves your
 document properly.  Remember, visual bug, NOT functonality bug.
 
 #------------------------------------ FAQ ------------------------------------
+What is the difference between the Refresh (fast) and Refresh (slow)?
+The fast one uses custom parser that basically splits the file into lines,
+does a check to see if there is a function or class definition, then saves the
+heirarchy information based on the level of indentation and what came before
+it.  This can be innaccurate, as the fast parser will mistakenly believe that
+the below function 'enumerate' is a method of MyException.  The slow parser
+has no problems, it uses the standard Compile module.
+
+class MyException(exceptions.Exception):
+    pass
+try:
+    enumerate
+except:
+    def enumerate(inp):
+        return zip(range(len(inp)), inp)
+
+The fast parser also doesn't know anything about multi-line strings, so the
+definition nada in the following line would be seen as a function, and not
+part of a string.
+
+old = 'this used to be a function\
+def nada(inp):\
+    return None'
+
+Ah well, one has to give up something for speed.  Another thing given up is
+that the fast parser will not pull out doc strings/tooltips.  This may be
+changed in the future (parsing is an entertaining and educational topic), but
+it will ALWAYS be inaccurate.
+
+If you demand accuracy in your tooltips and docstrings and function defs, use
+the slow parser.
+
+
+
+Tooltips:
+How do you get usable tooltips?  Easy.  Make sure that your python source has
+no syntax errors, then do a 'Refresh (slow)' in the 'View' menu.  This will
+also rebuild the browsable source tree and autocompletion listing.
+
+
+
+Autocompletion:
+How do you get autocompletion?  Easy.  In the 'View' menu, there is an entry
+for 'Show autocomplete'.  Make sure there is a checkbox by it, and you are
+set.  If you want to get a new listing of functions, do either of the refresh
+commands in the same menu.
+
+
+
 Shell Commands:
 I don't know how much other people use this feature, but I use it enough to
 warrant the time I spent implementing it.  Basically this allows you to run

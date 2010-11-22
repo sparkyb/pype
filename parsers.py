@@ -1,4 +1,14 @@
 #!/usr/bin/python
+import time
+import compiler
+from compiler.ast import Function, Class
+import keyword
+
+def new_kwl():
+    kwl = {}
+    for i in keyword.kwlist:
+        kwl[i] = []
+    return kwl
 
 def detectLineEndings(text):
     crlf_ = text.count('\r\n')
@@ -14,74 +24,61 @@ def detectLineEndings(text):
     else:# cr_ is mx:
         return '\r'
 
-def slow_parser(source, extra=None):
-    import parser, keyword
-    kw = dict(zip(keyword.kwlist[:], len(keyword.kwlist)*[0]))
-    cd = {'class':1, 'def':1}
-    #Apparently the parser module has some problems with non \n line endings.
-    #It really shouldn't, but apparently it does.  It was having some problems
-    #with PyPE and a half-dozen other pieces of python source that had \r\n
-    #line endings before I added in the replace portions.  Now it doesn't seem
-    #to have any problems...other than being slow.
-    use = [parser.suite(source.replace('\r', '')).tolist()]
-    
-    #for line numbers, the parser module gacks...so we have the fast parser
-    numbers = fast_parser(source, detectLineEndings(source), 1)
-    numbers.reverse()
-    
-    out = []
-    stk = []
-    last = ''
-    #line_no = 0
-    names = {}
-    ListType = type([])
-    IntType = type(0)
-    while use:
-        #if we've gone up the tree parse tree enough to toss the current scope
-        #out...toss it out.
-        if stk and (stk[-1][2] > len(use)):
-            prev = stk.pop()
-            if stk:
-                stk[-1][-1].append(prev)
-            else:
-                out.append(prev)
-        cur = use.pop()
-        while cur:
-            obj = cur.pop(0)
-            if type(obj) is ListType:
-                use.append(cur)
-                cur = obj
-            elif type(obj) is IntType:
-                if obj == 1: #token.NAME
-                    if kw.get(cur[0], 1) and last:
-                        while stk and (stk[-1][2] >= len(use)):
-                            prev = stk.pop()
-                            if stk:
-                                stk[-1][-1].append(prev)
-                            else:
-                                out.append(prev)
-                        nam = last+cur[0]
-                        nl = nam.lower()
-                        names[cur[0]] = None
-                        last = ''
+def recur_compiled(obj, heir, lines):
+    if isinstance(obj, Function) or isinstance(obj, Class):
+        h = heir + [obj.name]
+        if obj.doc is None:
+            docstring = {obj.name: ['']}
+        else:
+            docstring = {obj.name: [obj.doc]}
+        if isinstance(obj, Function):
+            n = 'def '+obj.name
+            if not obj.doc:
+                docstring[obj.name][0] = "%s(%s) %s"%(obj.name, ', '.join(obj.argnames), '.'.join(h))
+            if obj.name == '__init__':
+                if heir:
+                    if heir[-1] in docstring:
+                        docstring[heir[-1]].append(docstring[obj.name][0])
+                    else:
+                        docstring[heir[-1]] = [docstring[obj.name][0]]
+        else:# isinstance(obj, Class)
+            n = 'class '+obj.name
+        out = [(n, (n.lower(), obj.lineno-1), leading(lines[obj.lineno-1]), [])]
+        ot = out[0][-1]
+    else:
+        h = heir
+        docstring = {}
+        out = []
+        ot = out
+    for i in obj.getChildNodes():
+        o, d = recur_compiled(i, h, lines)
+        ot.extend(o)
+        for nam, dsl in d.iteritems():
+            if nam in docstring: docstring[nam].extend(dsl)
+            else: docstring[nam] = dsl
+    return out, docstring
 
-                        #the while and if make sure to use the use proper line
-                        #numbers from fast_parser
-                        while len(numbers) and (numbers[-1][0] != nam):cr = numbers.pop()
-                            #print numbers[-1][1], line_no, nam, numbers[-1][0]
-                        if not len(numbers): numbers.append(cr)
-                        
-                        stk.append([nam, (nl, numbers[-1][1]), len(use), []])
-                        
-                        if len(numbers)>1:cr = numbers.pop()
-                            #print numbers[-1][1], line_no, nam, numbers[-1][0]
-                    elif cd.get(cur[0], 0):
-                        last = cur[0] + ' '
-    while len(stk)>1:
-        prev = stk.pop()
-        stk[-1][-1].append(prev)
-    out.extend(stk)
-    return out, names.keys()
+def slow_parser(source, line_ending, flat=0):
+    import keyword
+    docstring = new_kwl()
+
+    lines = source.split(line_ending)
+    mod = compiler.parse(source)
+    heir, ds = recur_compiled(mod, [], lines)
+    for nam, dsl in ds.iteritems():
+        if nam in docstring: docstring[nam].extend(dsl)
+        else: docstring[nam] = dsl
+    new_ds = {}
+    for i,j in docstring.iteritems():
+        #pulling out all the unused ones
+        new_ds[i] = filter(None, j)
+
+    if flat == 0:
+        return heir, new_ds.keys()
+    elif flat == 1:
+        return new_ds
+    else:
+        return heir, new_ds.keys(), new_ds
 
 def leading(line):
     cur = 0
@@ -91,10 +88,10 @@ def leading(line):
 
 def fast_parser(source, line_ending, flat=0):
     lines = source.replace('\t', 8*' ').split(line_ending)
+    docstring = new_kwl()
+    
     out = []
     stk = []
-    if flat: flattened = []
-    names = {}
     line_no = -1
     for line in lines:
         line_no += 1
@@ -113,9 +110,8 @@ def fast_parser(source, line_ending, flat=0):
                             if stk: stk[-1][-1].append(prev)
                             else:   out.append(prev)
                         nam = i+fn
-                        if flat: flattened.append((nam, line_no))
                         nl = nam.lower()
-                        names[fn] = None
+                        if not fn in docstring: docstring[fn] = []
                         stk.append([nam, (nl, line_no), lead, []])
                         break
         #else non-function or non-class definition lines
@@ -123,11 +119,13 @@ def fast_parser(source, line_ending, flat=0):
         a = stk.pop()
         stk[-1][-1].append(a)
     out.extend(stk)
-    if flat:
-        return flattened
-    return out, names.keys()
+    if flat == 0:
+        return out, docstring.keys()
+    elif flat==1:
+        return docstring
+    else:
+        return out, docstring.keys(), docstring
 
-cf_heirarchy = fast_parser
 
 def tim(p=1, ct = [None]):
     if ct[0] == None:
@@ -148,8 +146,10 @@ if __name__ == '__main__':
         tim();print 'fast parser...',
         fast_parser(txt, detectLineEndings(txt))
         tim();print 'done.\nslow parser...',
-        slow_parser(txt)
+        a,b,c = slow_parser(txt, detectLineEndings(txt), 2)
         tim();print 'done.'
+        import pprint
+        pprint.pprint(c)
 
     else:
         print 'usage:\n python parsers.py <source file>'
