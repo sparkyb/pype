@@ -511,6 +511,7 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
             self.root.control.other_focus = 1
 
     def _special_method(self, *args):
+        self.SetItemCount(self.root.control.GetPageCount())
         self.Refresh()
 
     _RemoveItem = _AddItem = _InsertItem = \

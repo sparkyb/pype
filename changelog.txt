@@ -112,6 +112,7 @@ documents tab.
 (added) the ability to remove items from history in the quick browse section
 of the documents tab.
 (added) drag and drop along the notebook tab list.
+(fixed) accidental document list borkage.
 
 
 #-------------------------------- PyPE 2.8.8 ---------------------------------
