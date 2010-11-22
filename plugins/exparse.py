@@ -622,7 +622,7 @@ def iter_tree(entries, include_labels=True):
         while stk and data.depth <= stk[-1].depth:
             _ = stk.pop()
         stk.append(data)
-        if data[2][:2] == '--' and include_labels:
+        if data[2][:2] == '--' and not include_labels:
             stk.pop()
             continue
         yield stk

@@ -105,6 +105,13 @@ open documents in the quick browse section on the documents tab.
 file not in it's history.
 (added) listing of currently open files to the quick browse section on the
 documents tab.
+(fixed) dialog opening on multi-monitor Windows configurations.
+(tweaked) indent discovery code.
+(fixed) label handling in some situations with the new AST-based parser.
+(removed) duplicate entries in the quick browse section of the documents tab.
+(added) the ability to remove items from history in the quick browse section
+of the documents tab.
+(added) drag and drop along the notebook tab list.
 
 
 #-------------------------------- PyPE 2.8.8 ---------------------------------

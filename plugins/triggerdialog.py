@@ -44,7 +44,7 @@ class TriggerDialog(wx.Dialog):
     def __init__(self, parent, stc, dct):
         wx.Dialog.__init__(self, parent, -1, "Set your Triggers",
                           style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER,
-                          size=(800, 400))
+                          size=(800, 400), pos=(0,0))
         self.stc = stc
         self.parent = parent
         self.dct = dct

@@ -421,7 +421,7 @@ class SpellCheck(scrolled.ScrolledPanel):
         
         dlg = wx.SingleChoiceDialog(self,
             'Which dictionary do you want to add words to?', 'Which Dictionary?',
-            k, wx.CHOICEDLG_STYLE)
+            k, wx.CHOICEDLG_STYLE, pos=(0,0))
         
         add = None
         if dlg.ShowModal() == wx.ID_OK:
@@ -440,7 +440,7 @@ class SpellCheck(scrolled.ScrolledPanel):
                 self.badsp.Delete(i)
 
     def OnAddD(self, evt):
-        dlg = wx.TextEntryDialog(self, "Dictionary Name?", "What would you like your new dictionary to be named?", "")
+        dlg = wx.TextEntryDialog(self, "Dictionary Name?", "What would you like your new dictionary to be named?", "", pos=(0,0))
         resp = dlg.ShowModal()
         valu = dlg.GetValue()
         dlg.Destroy()
@@ -469,7 +469,7 @@ class SpellCheck(scrolled.ScrolledPanel):
         
         dlg = wx.SingleChoiceDialog(self,
             'Which dictionary would\nyou like to delete?', 'Delete Dictionary?',
-            k, wx.CHOICEDLG_STYLE)
+            k, wx.CHOICEDLG_STYLE, pos=(0,0))
         
         dele = None
         if dlg.ShowModal() == wx.ID_OK:
@@ -486,7 +486,7 @@ class SpellCheck(scrolled.ScrolledPanel):
             dlg = wx.MessageDialog(self, '''\
                 Are you sure you want to delete the custom dictionary: '%s'?
                 It has %i words.'''.replace(16*' ', '')%(dele, len(dct[dele])),
-                "Are you sure?", wx.OK|wx.CANCEL)
+                "Are you sure?", wx.OK|wx.CANCEL, pos=(0,0))
             retr = dlg.ShowModal()
             dlg.Destroy()
             if retr != wx.ID_OK:

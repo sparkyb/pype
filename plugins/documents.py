@@ -78,38 +78,7 @@ class FileDropTarget(wx.FileDropTarget):
         if i == -1-OB1:
             i = self.root.control.GetPageCount()
         if i != cp:
-            #remove from original location, insert at destination
-            ## print "getting information for page", cp
-            p = self.root.control.GetPage(cp)
-            t = self.root.control.GetPageText(cp)
-            try:
-                self.root.control.Freeze()
-                self.root.dragger.Freeze()
-                self.root.control.other_focus = 1
-                self.root.dragger.justdragged = time.time()
-                self.root.starting = 1
-                ## print "removing page", cp
-                self.root.control.RemovePage(cp)
-                if i >= self.root.control.GetPageCount():
-                    self.root.control.AddPage(p, t)
-                    ## print "appending page", i, self.root.control.GetPageCount()
-                else:
-                    ## print "inserting page at", i
-                    self.root.control.InsertPage(i, p, t)
-                if cp == selindex:
-                    ## print "selecting page"
-                    page = min(i, self.root.control.GetPageCount()-1)
-                    _callme = lambda: (self.root.control.SetSelection(page),
-                                       self.root.control.GetPage(page).GetWindow1().SetFocus(),
-                                       self.root.dragger._SelectItem(page)
-                                       )
-
-                    wx.CallAfter(_callme)
-            finally:
-                self.root.starting = 0
-                self.root.dragger.Thaw()
-                self.root.control.Thaw()
-
+            self.root.control.MoveTabPage(cp, i, selindex)
 
 WHICHNB = 2
 
@@ -125,7 +94,7 @@ elif WHICHNB == 1:
 elif WHICHNB == 2:
     from wx import aui
     BaseNotebook = aui.AuiNotebook
-    _style = aui.AUI_NB_SCROLL_BUTTONS|aui.AUI_NB_TOP
+    _style = aui.AUI_NB_SCROLL_BUTTONS|aui.AUI_NB_TOP|aui.AUI_NB_CLOSE_ON_ACTIVE_TAB|aui.AUI_NB_TAB_MOVE
     pch = aui.EVT_AUINOTEBOOK_PAGE_CHANGED
 
 class MyNB(BaseNotebook):
@@ -147,6 +116,15 @@ class MyNB(BaseNotebook):
         self.SetDropTarget(__main__.FileDropTarget(self.root))
         self.calling = 0
         self.other_focus = 0
+        self.fr = None
+        self.cs = 0
+        self.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnClose)
+        self.Bind(aui.EVT_AUINOTEBOOK_BEGIN_DRAG, self.OnBeginDrag)
+        self.Bind(aui.EVT_AUINOTEBOOK_DRAG_DONE, self.OnDragDone)
+
+    def OnClose(self, evt):
+        evt.Veto()
+        self.root.OnClose(None)
 
     def __iter__(self):
         count = self.GetPageCount()
@@ -217,6 +195,8 @@ class MyNB(BaseNotebook):
                 win.SetXCaretPolicy(flags, __main__.caret_slop*__main__.caret_multiplier)
                 win.SetYCaretPolicy(flags, __main__.caret_slop)
                 win.SetCaretWidth(__main__.CARET_WIDTH)
+                if not win.loaded:
+                    win.loadfile()
 
             self.root.timer.Start(10, wx.TIMER_ONE_SHOT)
             if event:
@@ -226,7 +206,7 @@ class MyNB(BaseNotebook):
                 self.other_focus = 0
             else:
                 self.root.dragger.justdragged = time.time()
-            wx.CallAfter(self._seen)
+            self._seen()
             ## print "pagechanged", new, old
         finally:
             self.calling = 0
@@ -312,9 +292,9 @@ class MyNB(BaseNotebook):
 
 #----------------- This deals with the tab swapping support. -----------------
     def RemovePage(self, index):
-        self.root.dragger._RemoveItem(index)
         BaseNotebook.RemovePage(self, index)
-        wx.CallAfter(self._seen)
+        self.root.dragger._RemoveItem(index)
+        self._seen()
 
     def DeletePage(self, index):
         self.root.dragger._RemoveItem(index)
@@ -323,33 +303,81 @@ class MyNB(BaseNotebook):
         stc.docstate.Hide()
         stc.docstate.Destroy()
         BaseNotebook.DeletePage(self, index)
-        wx.CallAfter(self._seen)
+        self._seen()
 
     def AddPage(self, page, text, switch=1):
         which = __main__.GDI(text)
-        self.root.dragger._AddItem(text)
         BaseNotebook.AddPage(self, page, text, 0, self.GNBI(which))
+        self.root.dragger._AddItem(text)
         if switch or self.GetPageCount() == 1:
             self.root.OnDocumentChange(page.GetWindow1())
             ## self.root.dragger._SelectItem(max(self.GetPageCount()-1, 0))
-            wx.CallAfter(self._seen)
+            self._seen()
         ## if switch:
             ## wx.CallAfter(self.SetSelection, self.GetPageCount()-1)
 
     def InsertPage(self, posn, page, text, switch=1):
         which = __main__.GDI(text)
-        self.root.dragger._InsertItem(posn, text)
         BaseNotebook.InsertPage(self, posn, page, text, 0, self.GNBI(which))
+        self.root.dragger._InsertItem(posn, text)
         if self.GetSelection() == posn or switch:
             self.root.OnDocumentChange(page.GetWindow1())
-        wx.CallAfter(self._seen)
+        self._seen()
         ## if switch:
             ## wx.CallAfter(self.SetSelection, posn)
+
+    def MoveTabPage(self, cp, i, selindex=None):
+        #remove from original location, insert at destination
+        ## print "getting information for page", cp
+        if selindex is None:
+            selindex = cp
+        p = self.GetPage(cp)
+        t = self.GetPageText(cp)
+        try:
+            self.Freeze()
+            self.root.dragger.Freeze()
+            self.other_focus = 1
+            self.root.dragger.justdragged = time.time()
+            self.root.starting = 1
+            ## print "removing page", cp
+            self.RemovePage(cp)
+            if i >= self.GetPageCount():
+                self.AddPage(p, t)
+                ## print "appending page", i, self.GetPageCount()
+            else:
+                ## print "inserting page at", i
+                self.InsertPage(i, p, t)
+            if cp == selindex:
+                ## print "selecting page"
+                page = min(i, self.GetPageCount()-1)
+                _callme = lambda page: (self.SetSelection(page),
+                                   self.GetPage(page).GetWindow1().SetFocus(),
+                                   self.root.dragger._SelectItem(page)
+                                   )
+        
+                wx.CallAfter(_callme, page)
+        finally:
+            self.root.starting = 0
+            self.root.dragger.Thaw()
+            self.Thaw()
+
+    def OnBeginDrag(self, evt):
+        self.fr = evt.OldSelection
+        evt.Skip()
+
+    def OnDragDone(self, evt):
+        i = evt.Selection
+        cp = self.fr
+        self.fr = None
+        if cp is None:
+            return
+        self.MoveTabPage(cp, i)
+        evt.Skip()
 
     def SetPageText(self, posn, text):
         self.root.dragger._RenameItem(posn, text)
         BaseNotebook.SetPageText(self, posn, text)
-        wx.CallAfter(self._seen)
+        self._seen()
 
     def SetPageImage(self, which, img):
         if WHICHNB == 2:
@@ -358,6 +386,12 @@ class MyNB(BaseNotebook):
             BaseNotebook.SetPageImage(self, which, img)
 
     def _seen(self):
+        if not self.cs:
+            self.cs = 1
+            wx.CallAfter(self._seen_)
+
+    def _seen_(self):
+        self.cs = 0
         sel = self.GetSelection()
         if sel == -1:
             return
@@ -477,7 +511,6 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
             self.root.control.other_focus = 1
 
     def _special_method(self, *args):
-        self.SetItemCount(self.root.control.GetPageCount())
         self.Refresh()
 
     _RemoveItem = _AddItem = _InsertItem = \
@@ -723,7 +756,7 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
             def key(i, x=text[::-1], score=filtertable._sseq_score):
                 # we're going to prefer filename matches over path matches
                 return score(i[::-1].lower(), x), i
-            self.disp_items = sorted((k for k in (j for j in items if j) if lcs(k.lower(), text)), key=key)
+            self.disp_items = sorted(set(k for k in (j for j in items if j) if lcs(k.lower(), text)), key=key)
 
         self.SetItemCount(len(self.disp_items))
         self.Refresh()
@@ -813,11 +846,17 @@ class DocumentPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnRefresh, b)
 
         sz3.Add(wx.StaticText(self, -1, ""), 1, wx.EXPAND|wx.ALL, 2)
-        
+
+        b = Button(self, -1, "X", help="Remove file from history", style=wx.BU_EXACTFIT)
+        sz3.Add(b, 0, wx.ALL, 2)
+        self.Bind(wx.EVT_BUTTON, self.OnRemoveHistory, b)
+
+        sz3.Add(wx.StaticText(self, -1, ""), 1, wx.EXPAND|wx.ALL, 2)
+
         b = Button(self, -1, "E+", help="Add extensions to watch", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnAddExt, b)
-        
+
         b = Button(self, -1, "E-", help="Remove extensions to watch", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnRemExt, b)
@@ -855,14 +894,14 @@ class DocumentPanel(wx.Panel):
         self.table.refresh(self.filter.GetValue())
 
     def OnPlus(self, evt):
-        dlg = wx.DirDialog(self, "Choose a directory to add to the quick browse listing:", style=wx.DD_DEFAULT_STYLE)
+        dlg = wx.DirDialog(self, "Choose a directory to add to the quick browse listing:", style=wx.DD_DEFAULT_STYLE, pos=(0,0))
         if dlg.ShowModal() == wx.ID_OK:
             self.table.add_path(dlg.GetPath())
         dlg.Destroy()
 
     def OnMinus(self, evt):
         dlg = wx.MultiChoiceDialog(self, "Select paths you would like to remove from the\nlist of paths you are currently monitoring.",
-            "Remove Paths...", self.table.paths_to_watch)
+            "Remove Paths...", self.table.paths_to_watch, pos=(0,0))
 
         if (dlg.ShowModal() == wx.ID_OK):
             selections = dlg.GetSelections()
@@ -876,7 +915,7 @@ class DocumentPanel(wx.Panel):
     def OnAddExt(self, evt):
         dlg = wx.TextEntryDialog(
                 self, 'Please add extensions you would like to watch',
-                'Add extensions to watch', '')
+                'Add extensions to watch', '', pos=(0,0))
         if dlg.ShowModal() == wx.ID_OK:
             self.table.extensions_to_watch[:] = list(
                 set(dlg.GetValue().replace(';', ' ').replace('.', ' ').replace(',', ' ').split()) |
@@ -887,13 +926,21 @@ class DocumentPanel(wx.Panel):
     def OnRemExt(self, evt):
         extensions = sorted(self.table.extensions_to_watch)
         dlg = wx.MultiChoiceDialog(self, "Select extensions you would like to remove from the\nlist of extensions you are currently monitoring.",
-            "Remove Extensions...", extensions)
+            "Remove Extensions...", extensions, pos=(0,0))
         if dlg.ShowModal() == wx.ID_OK:
             selections = dlg.GetSelections()
             self.table.extensions_to_watch[:] = [i for i in extensions if i not in set(extensions[x] for x in selections)]
             self.table.update_data(True)
         dlg.Destroy()
-        
+
+    def OnRemoveHistory(self, evt):
+        for i in self.table.GetSelectedList():
+            try:
+                del self.root.lastused[self.table.disp_items[i]]
+            except (KeyError, IndexError):
+                pass
+        self._refresh()
+
     def OnButton(self, evt):
         rc = self.recentlyclosed
         lst = rc.GetSelectedList()

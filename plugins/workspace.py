@@ -55,7 +55,7 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
         #get the name of the workspace
         while 1:
         
-            dlg = wx.TextEntryDialog(parentwindow, "What would you like this workspace to be called?", "Workspace name")
+            dlg = wx.TextEntryDialog(parentwindow, "What would you like this workspace to be called?", "Workspace name", pos=(0,0))
             if openmenu.last:
                 dlg.SetValue(openmenu.last)
             rslt = dlg.ShowModal()

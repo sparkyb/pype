@@ -423,7 +423,7 @@ class macroPanel(wx.Panel):
                  'with location: %s'
                 )%self.m[x],
                 'Are you sure?',
-                wx.YES_NO | wx.ICON_INFORMATION | wx.NO_DEFAULT
+                wx.YES_NO | wx.ICON_INFORMATION | wx.NO_DEFAULT, pos=(0,0)
                 )
         yesno = dlg.ShowModal()
         dlg.Destroy()
@@ -456,6 +456,6 @@ class macroPanel(wx.Panel):
         else:
             h = '\n'.join((ha,hd))
             d = '\n'.join(('#'+ha,'#'+hd))
-        dlg = wx.lib.dialogs.ScrolledMessageDialog(self, hlp%locals(), "Your hotkey")
+        dlg = wx.lib.dialogs.ScrolledMessageDialog(self, hlp%locals(), "Your hotkey", pos=(0,0))
         dlg.ShowModal()
         dlg.Destroy()

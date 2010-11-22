@@ -74,7 +74,7 @@ def detectLineIndent(lines, use_tabs, spaces_per_tab, spaces_per_indent):
         x = (0,)
         if tl or prev[0]:
             # Let's just check all of the indents up to 8.
-           x = tuple(range(9))
+           x = tuple(range(1,9))
         for i in x:
             d = abs((ind + i*tl) - (prev[1] + i*prev[0]))
             deltas[i,d] = deltas.get((i,d), 0) + 1
@@ -85,7 +85,12 @@ def detectLineIndent(lines, use_tabs, spaces_per_tab, spaces_per_indent):
     if deltas:
         # if more than 1/8 of your lines have tabs...you probably used tabs
         need_tabs = tablines > lc / 8
-        for count, (sppt, delta) in sorted(((j,i) for i,j in deltas.iteritems()), reverse=True):
+        dts = []
+        for i,j in deltas.iteritems():
+            j += j**.5 * (spaces_per_tab == i[0]) + j**.5 * (spaces_per_indent == i[1])
+            dts.append((j,i))
+        dts.sort(reverse=True)
+        for count, (sppt, delta) in dts:
             # Unless something funky is going on, the maximum is the likely
             # correct answer, so we'll use it unless we are supposed to use tabs...
             if not sppt and need_tabs:

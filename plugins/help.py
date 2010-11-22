@@ -28,7 +28,7 @@ class MyHtmlWindow(html.HtmlWindow):
 class HtmlHelpDialog(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(self, parent, title="PyPE Help",
-            style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
+            style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER, pos=(0,0))
         
         w, h = parent.GetSizeTuple()
         self.SetSize((3*w//4, 3*h//4))

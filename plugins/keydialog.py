@@ -57,7 +57,7 @@ class GetKeyDialog(wx.Dialog):
     def __init__(self, parent, defa, curr, currk=''):
         wx.Dialog.__init__(self, parent, -1, "Define your hotkey",
                           style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER,
-                          size=(320, 240))
+                          size=(320, 240), pos=(0,0))
         
         self.parent = parent
         
@@ -188,7 +188,7 @@ class HotkeyList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
             dlg = wx.TextEntryDialog(self,
                 "Enter the new name of the menu item\n"\
                 "Default: %s  Current: %s"%(item[0].split('->')[-1], item[1]),\
-                "What should the item be called?")
+                "What should the item be called?", pos=(0,0))
             dlg.SetValue(item[1])
             rslt = dlg.ShowModal()
             name = None
@@ -207,7 +207,7 @@ class HotkeyList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
                 item5 = item[5]
             else:
                 item5 = item[4]
-            dlg = GetKeyDialog(self, item[2], item[3], item5)
+            dlg = GetKeyDialog(self, item[2], item[3], item5, pos=(0,0))
             dlg.ShowModal()
             #dlg.Destroy() #this dialog destroys itself.
             item = item[:3] + (self.accelerator, 1, self.acceleratork)
@@ -255,7 +255,7 @@ class HotkeyListPanel(wx.Panel):
 class MenuItemDialog(wx.Dialog):
     def __init__(self, parent, root):
         wx.Dialog.__init__(self, parent, -1, "Menu item names and hotkey bindings.",
-                          size=(640,480), style=wx.RESIZE_BORDER|wx.DEFAULT_DIALOG_STYLE)
+                          size=(640,480), style=wx.RESIZE_BORDER|wx.DEFAULT_DIALOG_STYLE, pos=(0,0))
 
         self.root = root
         self.vmu = HotkeyListPanel(self)

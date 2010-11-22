@@ -769,7 +769,7 @@ class FindInFiles(wx.Panel):
             stc.EnsureCaretVisible()
 
     def OnDirButtonClick(self, e):
-        dlg = wx.DirDialog(self, "Choose a directory", style=wx.DD_DEFAULT_STYLE)
+        dlg = wx.DirDialog(self, "Choose a directory", style=wx.DD_DEFAULT_STYLE, pos=(0,0))
         a = dlg.ShowModal()
         if a == wx.ID_OK:
             a = self.sdirs.GetValue()
