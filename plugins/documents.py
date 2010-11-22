@@ -18,6 +18,7 @@ import wx.lib.mixins.listctrl as listmix
 import __main__
 
 import filtertable
+import pubsub
 
 attr1 = wx.ListItemAttr()
 attr1.SetBackgroundColour(wx.Colour(0xee, 0xff, 0xee))
@@ -220,12 +221,15 @@ class MyNB(BaseNotebook):
             self.calling = 0
 #
     def updateChecks(self, message):
-        for win in self:
-            if id(win) == message.stc_id:
-                break
+        if isinstance(message, dict):
+            for win in self:
+                if id(win) == message.stc_id:
+                    break
+            else:
+                # we can't find the proper window... skip the updating process
+               return
         else:
-            # we can't find the proper window... skip the updating process
-            return
+            win = message
         #Clear for non-documents
         for i in __main__.ASSOC:
             self.root.menubar.Check(i[1], 0)

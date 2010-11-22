@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 This software is licensed under the GPL (GNU General Public License) version 2
@@ -1479,7 +1479,7 @@ class MainWindow(wx.Frame):
             wx.CallAfter(parse_thread, self)
             wx.CallAfter(check_files, self)
 
-        subscribe('document.selected', self.OnDocumentChange)
+        pubsub.subscribe('document.selected', self.OnDocumentChange)
 
     ## def RunEvents(self, evt):
         ## scheduler.GlobalSchedule.run(time.time())
