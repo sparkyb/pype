@@ -5,7 +5,7 @@
 # Author:      Riaan Booysen
 #
 # Created:     2001/08/20
-# RCS-ID:      $Id: STCStyleEditor.py,v 1.1 2005/04/24 02:05:52 jcarlson Exp $
+# RCS-ID:      $Id: STCStyleEditor.py,v 1.5 2004/06/26 18:45:02 RD Exp $
 # Copyright:   (c) 2001 - 2002 Riaan Booysen
 # Licence:     wxWindows license
 #-----------------------------------------------------------------------------
@@ -59,8 +59,7 @@ from wxPython.stc import *
 
 settingsIdNames = {-1: 'Selection', -2: 'Caret', -3: 'Edge'}
 
-commonPropDefs = {'fore': '#888888', 'size': 8,
-  'face': wxSystemSettings_GetSystemFont(wxSYS_DEFAULT_GUI_FONT).GetFaceName()}
+commonPropDefs = {}
 
 styleCategoryDescriptions = {
  '----Language----': 'Styles spesific to the language',
@@ -95,8 +94,9 @@ styleCategoryDescriptions = {
 ] = map(lambda _init_ctrls: wxNewId(), range(47))
 
 class STCStyleEditDlg(wxDialog):
-    """ Style editor for the wxStyledTextCtrl """
-    _custom_classes = {'wxWindow' : ['wxStyledTextCtrl']}
+    if 1:
+        """ Style editor for the wxStyledTextCtrl """
+        _custom_classes = {'wxWindow' : ['wxStyledTextCtrl']}
     def _init_utils(self):
         # generated method, don't edit
         pass
@@ -370,6 +370,11 @@ class STCStyleEditDlg(wxDialog):
               pos=wxPoint(88, 0), size=wxSize(16, 16), style=0)
 
     def __init__(self, parent, langTitle, lang, configFile, STCsToUpdate=()):
+        global commonPropDefs
+        commonPropDefs = {'fore': '#888888',
+                          'size': 8,
+                          'face': wxSystemSettings_GetSystemFont(wxSYS_DEFAULT_GUI_FONT).GetFaceName()}
+
         self.stc_title = 'wxStyledTextCtrl Style Editor'
         self.stc_title = 'wxStyledTextCtrl Style Editor - %s' % langTitle
         if wxPlatform == '__WXMSW__':
@@ -679,7 +684,7 @@ class STCStyleEditDlg(wxDialog):
             if num == wxSTC_STYLE_DEFAULT:
                 self.elementLb.InsertItems([name, '----Language----'], 0)
                 self.elementLb.Append('----Standard----')
-                stdStart = stdPos = self.elementLb.Number()
+                stdStart = stdPos = self.elementLb.GetCount()
             else:
                 # std styles
                 if num >= 33 and num < 40:
@@ -704,7 +709,7 @@ class STCStyleEditDlg(wxDialog):
 
         # add definitions
         self.elementLb.Append('----Common----')
-        self.commonDefsStartIdx = self.elementLb.Number()
+        self.commonDefsStartIdx = self.elementLb.GetCount()
         for common in self.commonDefs.keys():
             tpe = type(self.commonDefs[common])
             self.elementLb.Append('%('+common+')'+(tpe is type('') and 's' or 'd'))
@@ -974,7 +979,7 @@ class STCStyleEditDlg(wxDialog):
                     self.commonDefs[name] = commonPropDefs[prop]
                     self.elementLb.Append('%('+name+')'+\
                      (type(commonPropDefs[prop]) is type('') and 's' or 'd'))
-                    self.elementLb.SetSelection(self.elementLb.Number()-1, True)
+                    self.elementLb.SetSelection(self.elementLb.GetCount()-1, True)
                     self.populateCombosWithCommonDefs()
                     self.OnElementlbListbox(None)
         finally:
@@ -1004,7 +1009,7 @@ class STCStyleEditDlg(wxDialog):
             self.populateCombosWithCommonDefs()
             selIdx = self.elementLb.GetSelection()
             self.elementLb.Delete(selIdx)
-            if selIdx == self.elementLb.Number():
+            if selIdx == self.elementLb.GetCount():
                 selIdx = selIdx - 1
             self.elementLb.SetSelection(selIdx, True)
             self.OnElementlbListbox(None)
@@ -1315,9 +1320,8 @@ if __name__ == '__main__':
     provider = wxSimpleHelpProvider()
     wxHelpProvider_Set(provider)
 
-    home = os.environ.get('HOME')
-    if home: home = os.path.join(home, '.boa')
-    config = os.path.abspath(os.path.join(home, 'stc-styles.rc.cfg'))
+    base = os.path.split(__file__)[0]
+    config = os.path.abspath(os.path.join(base, 'stc-styles.rc.cfg'))
     if 0:
         f = wxFrame(None, -1, 'Test frame (double click for editor)')
         stc = wxStyledTextCtrl(f, -1)
@@ -1332,12 +1336,13 @@ if __name__ == '__main__':
         app.MainLoop()
     else:
         dlg = STCStyleEditDlg(None,
-            'Python', 'python',
+            #'Python', 'python',
             #'HTML', 'html',
             #'XML', 'xml',
             #'C++', 'cpp',
             #'Text', 'text',
             #'Properties', 'prop',
+            'Latex', 'tex',
             config)
         try: dlg.ShowModal()
         finally: dlg.Destroy()

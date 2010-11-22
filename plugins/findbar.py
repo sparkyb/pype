@@ -1,5 +1,6 @@
 
 import wx
+import wx.stc
 import compiler
 
 class OnCloseBar: #embedded callback to destroy the findbar on removal
@@ -10,6 +11,9 @@ class OnCloseBar: #embedded callback to destroy the findbar on removal
         self.c.parent.Unsplit()
         self.c.Destroy()
         del self.c
+
+word = dict.fromkeys(map(ord, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'))
+non_word = dict.fromkeys([chr(i) for i in xrange(256) if i not in word])
 
 class ReplaceBar(wx.Panel):
     def __init__(self, parent, root):
@@ -24,6 +28,8 @@ class ReplaceBar(wx.Panel):
         self.loop = 0
         self.shiftdown = 0
         self.buttons = []
+        self.replacing = 0
+        self.wholeword = 0
         
         prefs = self.readPreferences()
         self.setup()
@@ -142,7 +148,8 @@ class ReplaceBar(wx.Panel):
         matchcase = self.case.GetValue() and wx.FR_MATCHCASE
         if not findTxt:
             if not which:
-                evt.Skip()
+                if evt:
+                    evt.Skip()
                 raise cancelled
             return "", None, None
         
@@ -156,7 +163,8 @@ class ReplaceBar(wx.Panel):
         #nothing to find!
         if not findTxt:
             if not which:
-                evt.Skip()
+                if evt:
+                    evt.Skip()
                 raise cancelled
             return "", None, None
         
@@ -171,25 +179,48 @@ class ReplaceBar(wx.Panel):
         self.status(msg)
         line = win.LineFromPosition(posns)
         win.GotoLine(line)
+        posns, posne = self.getRange(win, posns, posne-posns)
         win.SetSelection(posns, posne)
         win.EnsureVisible(line)
         win.EnsureCaretVisible()
+    
+    def getRange(self, win, start, chars):
+        end = start
+        for i in xrange(chars):
+            end = win.PositionAfter(end)
+        return start, end
+    
+    def isWholeWord(self, start, chars, win):
+        #we may need to use this for unicode whole word checks
+        start, end = self.getRange(win, start, chars)
+        if start != 0:
+            if win.GetCharAt(win.PositionBefore(start)) not in non_word:
+                return 0
+        
+        if end != win.GetTextLength():
+            if win.GetCharAt(win.PositionAfter(end)) not in non_word:
+                return 0
+        
+        return 1
 
     def OnFindN(self, evt, incr=0):
         self._lastcall = self.OnFindN
         self.incr = incr
         findTxt, matchcase, win = self.getFinds(evt)
+        flags = wx.FR_DOWN|matchcase
+        if self.wholeword:
+            flags |= wx.stc.STC_FIND_WHOLEWORD
         
         #handle finding next item, handling wrap-arounds as necessary
         st = win.GetSelection()[1-incr]
-        posn = win.FindText(st, win.GetTextLength(), findTxt, wx.FR_DOWN|matchcase)
+        posn = win.FindText(st, win.GetTextLength(), findTxt, flags)
         if posn != -1:
             self.sel(posn, posn+len(findTxt), '', win)
             self.loop = 0
             return
         
         if self.wrap.GetValue() and st != 0:
-            posn = win.FindText(0, win.GetTextLength(), findTxt, wx.FR_DOWN|matchcase)
+            posn = win.FindText(0, win.GetTextLength(), findTxt, flags)
         self.loop = 1
         
         if posn != -1:
@@ -202,17 +233,21 @@ class ReplaceBar(wx.Panel):
         self._lastcall = self.OnFindP
         self.incr = 0
         findTxt, matchcase, win = self.getFinds(evt)
+        flags = matchcase
+        if self.wholeword:
+            flags |= wx.stc.STC_FIND_WHOLEWORD
+        
         
         #handle finding previous item, handling wrap-arounds as necessary
-        st = max(win.GetSelection()[0]-len(findTxt), 0)
-        posn = win.FindText(st, 0, findTxt, matchcase)
+        st = max(win.GetSelection()[0]-len(ft), 0)
+        posn = win.FindText(st, 0, findTxt, flags)
         if posn != -1:
             self.sel(posn, posn+len(findTxt), '', win)
             self.loop = 0
             return
         
         if self.wrap.GetValue() and st != win.GetTextLength():
-            posn = win.FindText(win.GetTextLength(), 0, findTxt, matchcase)
+            posn = win.FindText(win.GetTextLength(), 0, findTxt, flags)
         self.loop = 1
         
         if posn != -1:
@@ -222,6 +257,8 @@ class ReplaceBar(wx.Panel):
         self.OnNotFound()
     
     def OnKeyDown(self, evt):
+        if self.FindFocus() == self.box1:
+            self.wholeword = 0
         kc = evt.GetKeyCode()
         if kc == wx.WXK_ESCAPE:
             p = self.parent.GetWindow1()
@@ -236,12 +273,14 @@ class ReplaceBar(wx.Panel):
                 return self.buttons[0].SetFocus()
             elif len(self.buttons) == 2 and foc == self.box2:
                 return self.buttons[1].SetFocus()
-        evt.Skip()
+        if evt:
+            evt.Skip()
     
     def OnKeyUp(self, evt):
         if evt.GetKeyCode() == wx.WXK_SHIFT:
             self.shiftdown = 0
-        evt.Skip()
+        if evt:
+            evt.Skip()
     
     def OnEnter(self, evt):
         if self.shiftdown:
@@ -250,11 +289,13 @@ class ReplaceBar(wx.Panel):
     
     def OnKillFocus(self, evt):
         self.shiftdown = 0
-        evt.Skip()
+        if evt:
+            evt.Skip()
     
     def OnSetFocus(self, evt):
         self.box1.SetMark(0, self.box1.GetLastPosition())
-        evt.Skip()
+        if evt:
+            evt.Skip()
 
     def OnReplace(self, evt):
         findTxt, matchcase, win = self.getFinds(evt)
@@ -299,14 +340,17 @@ class ReplaceBar(wx.Panel):
                 replaceTxt = replaceTxt[:1].lower() + replaceTxt[1:]
         
         sel = win.GetSelection()
-        win.ReplaceSelection(replaceTxt)
-        win.SetSelection(sel[0], sel[0]+len(replaceTxt))
-        self.OnFindN(evt)
-        
-        return sel, len(findTxt)-len(replaceTxt)
+        if win.CanEdit():
+            win.ReplaceSelection(replaceTxt)
+            #fix for unicode...
+            win.SetSelection(min(sel), min(sel)+len(replaceTxt))
+            self.OnFindN(evt)
+            
+            return sel, len(findTxt)-len(replaceTxt)
+        else:
+            return (max(sel), max(sel)), 0
     
-    def replaceAll(self, evt, ris):
-        
+    def _replaceAll(self, evt, ris):
         win = self.parent.GetWindow1()
         ostart, oend = win.GetSelection()
         
@@ -340,17 +384,85 @@ class ReplaceBar(wx.Panel):
             elif rsel < ostart:
                 ostart -= delta
                 oend -= delta
-        
+            try:
+                wx.Yield()
+            except:
+                pass
         ## print self.loop, failed
         
         self.sel(ostart, oend, '', win)
         win.SetFocus()
         win.EndUndoAction()
+    
+    def replaceAll(self, evt, ris):
+        win = self.parent.GetWindow1()
+        ostart, oend = win.GetSelection()
+        
+        #ris = self.replinsel.GetValue()
+        win.BeginUndoAction()
+        if ris:
+            win.SetSelection(ostart, ostart)
+        else:
+            win.SetSelection(0, 0)
+        
+        self.replacing = 1
+        wx.CallAfter(self.ReentrantReplace, (ostart, oend, ris, win))
+
+    def ReentrantReplace(self, state):
+        ostart, oend, ris, win = state
+        
+        try:
+            self.loop
+        except:
+            return
+        
+        cont = 1
+        count = 0
+        while not self.loop:
+            sel = win.GetSelection()
+            if ris and (sel[0] < ostart or sel[1] > oend):
+                cont = 0
+                break
+            #find/replace next item
+            (lsel, rsel), delta = self.OnReplace(None)
+            ## print (lsel, rsel), delta, repr(win.GetTextRange(lsel, rsel)), self.loop
+            #if nothing found, continue
+            if lsel == -1:
+                continue
+            #if change was entirely in the old selection...
+            elif ostart <= lsel and rsel <= oend:
+                oend -= delta
+            #original selection is encompassed by the replacement.
+            elif lsel <= ostart and rsel >= oend:
+                ostart = oend = lsel
+            #replaced portion is to the left of the original selection
+            elif rsel < ostart:
+                ostart -= delta
+                oend -= delta
+            count += 1
+            if count >= 10 and not self.loop:
+                break
+        else:
+            cont = 0
+        
+        if cont:
+            wx.FutureCall(1, self.ReentrantReplace, (ostart, oend, ris, win))
+        else:
+            self.replacing = 0
+            self.sel(ostart, oend, '', win)
+            if self.root.control.GetPageCount() and \
+               self.root.control.GetCurrentPage() == self.parent:
+                win.SetFocus()
+            win.EndUndoAction()
 
     def OnReplaceAll(self, evt):
+        if self.replacing:
+            return
         self.replaceAll(evt, 0)
     
     def OnReplaceSel(self, evt):
+        if self.replacing:
+            return
         self.replaceAll(evt, 1)
 
     #----------------------------------

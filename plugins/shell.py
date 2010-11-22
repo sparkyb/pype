@@ -84,6 +84,66 @@ else:
 chnames = [i[0] for i in choices]
 chlookup = dict(choices)
 
+class StartupError(Exception):
+    pass
+
+close_stdin = "<CLOSE STDIN>"
+
+class process:
+    def __init__(self, parent, cmd, end_callback):
+        self.process = wx.Process(parent)
+        self.process.Redirect()
+        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC, self.process)
+        if self.process.pid:
+            #what was up with wx.Process.Get*Stream names?
+            self.process._stdin_ = self.process.GetOutputStream()
+            self.process._stdout_ = self.process.GetInputStream()
+            self.process._stderr_ = self.process.GetErrorStream()
+            self.process.Bind(wx.EVT_END_PROCESS, end_callback)
+            return
+        self.b = []
+        raise StartupError
+            
+    def Poll(self, input=''):
+        if input and self.process and self.process._stdin_:
+            self.process._stdin_.write(input)
+            ## y = self.process._stdin_.LastWrite()
+            ## if y != len(input):
+                ## print "sent %s of %s"%(y, len(input))
+        x = []
+        for s in (self.process._stderr_, self.process._stdout_):
+            if s and s.CanRead():
+                x.append(s.read())
+            else:
+                x.append('')
+        return x
+        
+    def CloseInp(self):
+        if self.process and self.process._stdin_:
+            self.process.CloseOutput()
+            self.process._stdin_ = None
+    
+    def Kill(self, ks):
+        errors = {wx.KILL_BAD_SIGNAL: "KILL_BAD_SIGNAL",
+                  wx.KILL_ACCESS_DENIED: "KILL_ACCESS_DENIED",
+                  wx.KILL_ERROR: "KILL_ERROR"}
+        if self.process:
+            if ks == close_stdin:
+                self.CloseInp()
+                return 1, None
+            elif wx.Process.Exists(self.process.pid):
+                signal = getattr(wx, ks)
+                r = wx.Process.Kill(self.process.pid, signal)
+            else:
+                r = 65535
+                self.CloseInp()
+                return 1, None
+            
+            if r not in (wx.KILL_OK, wx.KILL_NO_PROCESS, 65535):
+                return 0, (self.process.pid, signal, errors.get(r, "UNKNOWN_KILL_ERROR %s"%r))
+            else:
+                return 1, None
+
 class Shell(wx.Panel):
     def __init__(self, parent, root, prefs={}):
         wx.Panel.__init__(self, parent, -1)
@@ -139,7 +199,6 @@ class Shell(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnSendText, self.sndBtn)
         self.Bind(wx.EVT_TEXT_ENTER, self.OnSendText, self.inp)
         self.inp.Bind(wx.EVT_CHAR, self.OnChar, self.inp)
-        self.Bind(wx.EVT_END_PROCESS, self.OnProcessEnded)
         self.Bind(wx.EVT_BUTTON, self.OnKillProcess, self.killBtn)
 
         # Do the layout
@@ -246,22 +305,14 @@ class Shell(wx.Panel):
             
             cmd = cmd%x
         
-        self.process = wx.Process(self)
-        self.process.Redirect()
-        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC, self.process)
-        if self.process.pid:
-            #what was up with wx.Process.Get*Stream names?
-            self.process._stdin_ = self.process.GetOutputStream()
-            self.process._stdout_ = self.process.GetInputStream()
-            self.process._stderr_ = self.process.GetErrorStream()
-
+        try:
+            self.process = process(self, cmd, self.OnProcessEnded)
             self.started()
-        
-            self.root.SetStatusText("Started, pid: %i command: %s"%(self.process.pid, cmd))
-        else:
+            self.root.SetStatusText("Started, pid: %i command: %s"%(self.process.process.pid, cmd))
+        except StartupError:
             self.process = None
             self.root.SetStatusText("Couldn't start command: %s"%cmd)
-            self.root.SetStatusText("Try disabling/enabling the use of a shell, or running the shell directly")
+            self.root.SetStatusText("Try disabling/enabling the use of a shell, or running the shell directly")            
 
     def ended(self):
         self.process = None
@@ -273,14 +324,13 @@ class Shell(wx.Panel):
     
     def OnProcessEnded(self, evt):
         self.OnCloseStream(evt)
-        for s in (self.process._stdout_, self.process._stderr_):
-            if s.CanRead():
-                self.AppendText(s.read())
+        for i in self.process.Poll():
+            self.AppendText(i)
         self.root.SetStatusText("Process Ended, pid:%s,  exitCode: %s"%(evt.GetPid(), evt.GetExitCode()))
         self.ended()
     
     def OnSendText(self, evt):
-        if self.process and self.process._stdin_:
+        if self.process and self.process.process._stdin_:
             c = self.inp.GetValue()
             #handle string escaping...
             if c.strip():
@@ -295,42 +345,26 @@ class Shell(wx.Panel):
             except UnicodeEncodeError, why:
                 self.root.SetStatusText("Couldn't send to subprocess: %s"%why)
                 return
-            self.process._stdin_.write(c)
+            ta = self.process.Poll(c)
             if self.echo.GetValue():
                 self.AppendText(c)
-            ## snt = self.process._stdin_.LastWrite()
+            for i in ta:
+                self.AppendText(i)
             self.inp.SetValue('')
             self.inp.SetFocus()
 
     def OnCloseStream(self, evt):
-        if self.process and self.process._stdin_:
-            self.process.CloseOutput()
-            self.process._stdin_ = None
-            self.inp.Enable(False)
-            self.sndBtn.Enable(False)
-            ## if self.outbuf:
-                ## self.SetStatusText("Didn't write to subprocess: %r"%self.outbuf)
-                ## self.outbuf = ''
+        self.process.CloseInp()
+        self.inp.Enable(False)
+        self.sndBtn.Enable(False)
     
     def OnKillProcess(self, evt):
-        errors = {wx.KILL_BAD_SIGNAL: "KILL_BAD_SIGNAL",
-                  wx.KILL_ACCESS_DENIED: "KILL_ACCESS_DENIED",
-                  wx.KILL_ERROR: "KILL_ERROR"}
         if self.process:
-            ks = self.killSel.GetValue()
-            if ks == '<CLOSE STDIN>':
-                return self.OnCloseStream(evt)
-            elif wx.Process.Exists(self.process.pid):
-                signal = getattr(wx, ks)
-                r = wx.Process.Kill(self.process.pid, signal)
-            else:
-                r = 65535
+            succ, args = self.process.Kill(self.killSel.GetValue())
+            if succ:
                 self.OnCloseStream(evt)
-            
-            if r not in (wx.KILL_OK, wx.KILL_NO_PROCESS, 65535):
-                self.root.SetStatusText("***Error killing process: %i  with signal: %i  error: %s ***"%(self.process.pid, signal, errors.get(r, "UNKNOWN_KILL_ERROR %s"%r)))
             else:
-                self.OnCloseStream(evt)
+                self.root.SetStatusText("***Error killing process: %i  with signal: %i  error: %s ***"%args)
     
     def AppendText(self, txt):
         if not txt:
@@ -383,12 +417,7 @@ class Shell(wx.Panel):
             self.out.ShowPosition(lp)
     
     def OnPoll(self, evt):
-        ## if self.outbuf:
-            ## self.process._stdin_.write(self.outbuf)
-            ## ## snt = self.process._stdin_.LastWrite()
-            ## self.outbuf = ''
         
         if self.process and not self.pause.GetValue():
-            for s in (self.process._stderr_, self.process._stdout_):
-                if s.CanRead():
-                    self.AppendText(s.read())
+            for i in self.process.Poll():
+                self.AppendText(i)

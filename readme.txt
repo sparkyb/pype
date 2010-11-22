@@ -11,16 +11,19 @@ It is also included with this archive as gpl.txt.
 
 The included STCStyleEditor.py, which is used to support styles, was released
 under the wxWindows license and is copyright (c) 2001 - 2002 Riaan Booysen.
-The copy included was also distributed with wxPython version 2.4.1.2 for
-Python 2.2, and was not modified in any form.
+The copy included was also distributed with the wxPython Demos and Docs for
+wxPython version 2.6 for Python 2.3, and may or may not have been modified by
+the time you read this.  The wxWindows license and the lGPL license it
+references are included with this software as wxwindows.txt and lgpl.txt .
 
-The included stc-styles.rc.cfg was slightly modified from the original version
-in order to not cause exceptions during style changes, and was also
-distributed with wxPython version 2.4.1.2 for Python 2.2
+The included stc-styles.rc.cfg was modified from the original version in order
+to not cause exceptions during style changes, as well as adding other language
+style definitions, and was originally distributed with wxPython version
+2.4.1.2 for Python 2.2 .
 
-If you do not also receive a copy of gpl.txt with your version of this
-software, please inform me of the violation at the web page at the top of this
-document.
+If you do not also receive a copy of gpl.txt, wxwindows.txt, and lgpl.txt with
+your version of this software, please inform me of the violation at the web
+page at the top of this document.
 
 
 #------------------------------- Requirements --------------------------------
@@ -55,6 +58,28 @@ doesn't mean that you /have/ to run them.
 
 
 #----------------------------------- Help ------------------------------------
+Dictionaries and alphabets for the Spell checker...
+You can create/delete custom dictionaries via the +/- buttons right next to
+the 'Custom Dictionaries:" section.  You can add words to these custom
+dictionaries by "Check"ing your document for misspellings, checking all of the
+words you want to add, clicking "+ ./", then choosing the custom dictionary
+you want the words added to.
+
+If you want to use a large primary dictionary, create a 'dictionary.txt' file
+that is utf-8 encoded, and place it into the same path that PyPE is.  This
+will be far faster for startup, shutdown, and creating the list than manually
+adding all of the words to custom dictionaries.  Fairly reasonable word lists
+for english (British, Canadian, or American) are available at Kevin's Word 
+list page: http://wordlist.sourceforge.net/ Words should be separated by any
+standard whitespace character (spaces, tabs, line endings, etc.).
+
+If you want to customize the alphabet that PyPE uses for suggesting spelling,
+you can create an 'alphabet.txt' file that is utf-8 encoded, where alphabet
+characters separated by commas ',', and place it into the same path that PyPE
+is.
+
+
+
 How does "One PyPE" work?
 If "One PyPE" is selected, it will remove the file named 'nosocket' from the
 path in which PyPE is running from (if it exists), and start a listening
@@ -62,7 +87,7 @@ socket on 127.0.0.1:9999 .  If "One PyPE" is deselected, it will create a file
 called 'nosocket' in the path from which PyPE is running, and close the
 listening socket (if one was listening).
 
-Any new PyPE instances which attempt to open will check for the existance of
+Any new PyPE instances which attempt to open will check for the existence of
 the nosocket file.  If it does not find that file, it will attempt to create a
 new listening socket on 127.0.0.1:9999 .  If the socket creation fails, it
 will attempt to connect to 127.0.0.1:9999 and send the documents provided on
@@ -86,7 +111,7 @@ a few macro-like expansions, like 'img' -> '<img src="">'.
 4. In the 'left' column, type in '<img src="' (without single-quotes).
 5. In the 'right' column, type in '">' (without single quotes).
 
-In the future, if you type in 'img' (wihout quotes) and use
+In the future, if you type in 'img' (without quotes) and use
 Edit->Perform Trigger, it will expand itself to '<img src="">' (without single
 quotes) with your cursor between the two double quotes.
 
@@ -105,7 +130,7 @@ Find/Replace bars:
 If you have ' or " as the first character in a find or find/replace entry, and
 what you entered is a proper string declaration in Python, PyPE will use the
 compiler module to parse and discover the the string.  For example, to
-discover the LF charactesr, use "\n", including quotes.
+discover LF characters, use "\n", including quotes.
 
 
 
@@ -172,7 +197,7 @@ How do I use the 'Todo' list?
 On a line by itself (any amount of leading spaces), place something that
 matches the following regular expression: #([a-zA-Z0-9 ]+):(.*)
 The first group (after a .strip().lower() translation) will become category in
-the 'Cateogry' column, the second group (after a .strip()) becomes the todo in
+the 'Category' column, the second group (after a .strip()) becomes the todo in
 the 'Todo' column, and the number of exclamation points will become the number
 in the '!' column.
 
@@ -193,9 +218,9 @@ The following lines are all valid todos;
 
 What are the currently known bugs within PyPE's parser?
 Well, it basically splits the file into lines, does a check to see if there is
-a function, class, or comment on that line, then saves the heirarchy
+a function, class, or comment on that line, then saves the hierarchy
 information based on the level of indentation and what came before it.  This
-can be innaccurate, as it will mistakenly believe that the below function
+can be inaccurate, as it will mistakenly believe that the below function
 'enumerate' is a method of MyException.
 
 class MyException(exceptions.Exception):
@@ -263,9 +288,9 @@ you received.  As it is a known-good version, use it.
 
 
 
-Expandable/collapseable/foldable code:
-Since the beginning, there have been expandable and collapseable scopes thanks
-to wxStyledTxtCtrl.  How to use them...
+Expandable/collapsable/foldable code:
+Since the beginning, there have been expandable and collapsable scopes thanks
+to wxStyledTextCtrl.  How to use them...
 Given the below...
 - class nada:
 -     def funct(self):
@@ -299,8 +324,6 @@ To convert from 8 spaces to one tab; replace "        " with "\t"
 
 
 
-----------------ADD SECTION ABOUT SHELL----------
-
 #-------------------------- How did PyPE come about --------------------------
 The beginnings of PyPE was written from 10:30PM on the 2nd of July through
 10:30PM on the 3rd of July, 2003.  Additional features were put together on
@@ -320,7 +343,7 @@ PyPE wiki, so who knows, maybe documentation will get better.
 
 The majority of the things that this editor can do are in the menus.  Hot-keys
 for things that have them are listed next to their menu items.  As I am still
-learning all the neat things one can do with wxStyledTxtCtrl, I don't know all
+learning all the neat things one can do with wxStyledTextCtrl, I don't know all
 the built-in features, and this is likely as much of a learning experience for
 me as you.
 
@@ -382,7 +405,7 @@ I have ever used, made them easy to use, and offer them on every platform that
 I would ever want or need.  You rock.
 
 Neil Hodgson and others who work on Scintilla.  As wxStyledTextCtrl is a
-binding for scitilla in wxWindows, which then has bindings for wxPython,
+binding for scintilla in wxWindows, which then has bindings for wxPython,
 basically ALL the REAL functionality of the editor you are now using is the
 result of Scintilla.  The additional things like tabbed editing, hotkeys,
 etc., they are mere surface decorations in comparison to what it would take to

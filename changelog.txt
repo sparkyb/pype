@@ -1,3 +1,81 @@
+#--------------------------------- PyPE 2.3 ----------------------------------
+(fixed) setup.py for non-Windows platforms.
+(added) embedded Python shell.  Uses the platform-defined 'python' to run an
+interpreter in another process.  Because the interpreter is not running in the
+same process, it is not susceptible to the 'while 1:pass' issue that other
+in-process interpreters seem to have.  wxPython and Tk should work without
+issue in this shell.  You get syntax highlighting.
+(added) embedded command shell.  You get a shell to either 'cmd' on Windows,
+or '/bin/sh' on *nix.
+Note: The above two shells replace the old shell tab in the bottom toolbar,
+and act like documents.
+(changed) When using "Replace All" and "Replace in Selection", you will now
+notice that your view is constantly updated as the replacements are advancing.
+You can stop the replacement by closing the replace bar (via the "close"
+button, hitting "escape" while one of the replace bar text entries has focus,
+or by attempting to close the document - it will cancel the replacement
+whether you actually close the document or not)).
+(fixed) the title for the trigger setting dialog.
+(added) menu items for TeX/LaTeX support and made it easier to add support for
+more languages in the future.  Will probably at some time attempt to integrate
+a version of the STCStyleEditor into PyPE, along with a menu to customize
+which languages to show in the Open dialog, as well as the Syntax Highlighting
+and various save/load settings menus.
+(updated) the STCStyleEditor.py to the most recent version shipped with the
+wxPython 2.6 Docs and Demos.
+(replaced) the STCStyleEditor.py for style changes.  When running along with
+threads (which weren't accessing the GUI), it tended to crash Python and
+wxPython.  I can supply a proof-of-concept minimal application which crashes
+the STC quite reliably.  I've replaced it with a work-alike which doesn't use
+wxFileConfig, and should do essentially everything STCStyleEditor does for
+style changes.
+(added) a better/stronger slow parser.  This slow parser offers docstrings,
+better support for multi-line function signature definitions, and a correct
+hierarchical source tree.  It will do its job in a background thread, unless
+your code has a syntax error, in which case it will switch to the fast parser.
+Note: the slow parser can be 3-100 times slower than the fast parser,
+depending on the structure of the document.
+(added) full style support for Pyrex (gets its own entries in the stc-styles
+file.
+(changed) embedded Python shell to be faster when sending code to the
+underlying shell.
+(fixed) embedded Python shell to not duplicate '... ' and '>>> ' prompt
+prefixes.
+(changed) in the embedded Python shell, numpad enter is the same as the normal
+enter, and ctrl+enter sends the current contents of the buffer plus a line
+feed, regardless of the Python parsing or not (to handle raw_input from the
+underlying shell).
+(added) spell checker with support for custom dictionaries, a very simple
+spelling suggester, and alternate user-defined alphabets (for languages where
+this makes sense), see the readme.
+(fixed) Options->Title Options will now also update the title whenever you
+switch documents.
+(changed) made all of the block submenus for options (Line Ending, Long Line
+Indicator, Default Highlighting, Toolbar, and Caret Options) into blocks of
+data, which reduced the number of global ids significantly.
+(contemplating) switching to ReStructured Text for the help file, then using
+the ReST to generate an HTML help file, which then gets viewed via the Help.
+PyPE could definitely use better documentation.
+(added) try/except, try/finally, and try/except/finally wrapping of selected
+code to new Transforms menu.
+(changed) moved code transformations indenting, wrapping, commenting, and
+perform trigger to the new transforms menu, from the edit menu.
+(added) code path for 'insert comment' for C/C++, HTML/XML, and LaTeX.
+(added) code path for 'comment/uncomment selection' for LaTeX.
+(added) sample_alphabet.txt for english and sample_dictionary.txt from Scowl 6
+english-words.10 for examples of input.
+(updated) auto-indent/dedent code for break/continue and the forthcoming
+'with' statement.
+(added) \section, \subsection, \subsubsection, \label, and %todo: support for
+latex.
+(added) \\todo: support for C/C++
+(wanted) a decent parser for C/C++
+(fixed) pasting in Python/command shells to properly handle pasting of text
+without line endings.
+(added) Options->Save preferences to save your current preferences (some
+slight protection against OS crash, etc.)
+
+
 #-------------------------------- PyPE 2.2.2 ---------------------------------
 (added) Ability to have the toolbar hidden, on the top, or on the left side.
 Feature thanks to Dave Schuyler.
@@ -14,8 +92,10 @@ the readme/help for details.
 been fixed.  A big thank you to Michele Petrazzo for figuring out where the
 problem was (I don't have a linux box for testing).
 
+
 #-------------------------------- PyPE 2.2.1 ---------------------------------
 (fixed) exception when opening any document (new or old).
+
 
 #--------------------------------- PyPE 2.2 ----------------------------------
 (removed) a debug statement or two.
@@ -115,7 +195,7 @@ opened document.
 (added) keywords and filename masks for Pyrex files (uses the Python lexer and
 settings).
 (added) auto-indent/dedent on 'enter' keypress for C code, based on curly
-braces '{}' and the existance of 'return' as the first non-whitespace item on
+braces '{}' and the existence of 'return' as the first non-whitespace item on
 the line.
 (fixed) an issue where documents listed in the documents tab would not have
 their modified '*' prefix set or reset properly unless the document was
@@ -176,7 +256,7 @@ representative of what the tab is currently capable of.
 (added) findbar features with help from Dave Schuyler:
 (updated) the behavior of smartcasing to be 'more smart', updated the readme.
 (changed) find/replace bars now remember their status per-document.
-(chanegd) find/replace bars now have a history of search/replace terms.
+(changed) find/replace bars now have a history of search/replace terms.
 -- end of findbar features written or helped by Dave Schuyler
 (fixed) saving of files with unicode characters (was caused by writing unicode
 strings to standard out without converting them to an ascii representation
@@ -427,7 +507,7 @@ those documents closed when PyPE closes.
 (fixed) Updated some methods in the most recent queue to follow the dictionary
 standard of mapping(zip(map_instance.keys(), map_instance.values())) producing
 an equivalency to the original map_instance.
-(fixed) When calltips are shown, the class/method heirarchy for the function
+(fixed) When calltips are shown, the class/method hierarchy for the function
 prototypes are now in the proper case (they were previously all in lowercase).
 
 
@@ -489,7 +569,7 @@ will be updated.
 (changed) the exceptDialog to show a scrolled text dialog, for easy copy/paste
 bug reports.
 (fixed) Thanks once again to Villy Dachev, any time the PyPE executable (or
-the source vesion was run with the python binary) was run from a path that
+the source version was run with the python binary) was run from a path that
 contained spaces, it used to have some SERIOUS issues.  They have all been
 resolved.
 (fixed) a problem when one's user profile was not stored in a path containing
@@ -631,7 +711,7 @@ or immediately to the right of indentation.
 (fixed) on linux, opening a document would not display the source, this is
 seemingly a bug in wxSplitterWindow on linux.  The split argument I give is
 negative, so it should result in a size for the right panel.  It instead makes
-the left window non-existant.  The negative argument has been replaced with a
+the left window non-existent.  The negative argument has been replaced with a
 positive argument based on the current notebook size.  No guarantees on
 whether either window will be created when the notebook is smaller than 25
 pixels wide.
@@ -663,7 +743,7 @@ and wxGTK according to the docs), the syntax highlighting and encodings
 submenus will display a mark next to the current document's syntax
 highlighting and encoding.
 (fixed) previously when opening a document in windows, an msdos console would
-make a momentary appearance, then dissappear.  This has been fixed with the
+make a momentary appearance, then disappear.  This has been fixed with the
 use of os.spawnv().  Woo.  Thanks Luc Perrin (leblin@sourceforge) for pointing
 out the popping of the msdos prompt, I had gotten used to it, and didn't
 realize it bothered people.
@@ -925,7 +1005,7 @@ command line arguments for files to open.  This has been fixed.  There is a
 minor bug relating to the recently open files menu, but that'll be fixed when
 I get back from vacation.
 (fixed) my constant misspellings of hierarchy, I had been incorrectly spelling
-it as heirarchy.  Misspelling pointed out by my wife.
+it as hierarchy.  Misspelling pointed out by my wife.
 
 
 #-------------------------------- PyPE 1.5.1 ---------------------------------
@@ -1013,7 +1093,7 @@ path of your home directory, or the directory in which PyPE is currently
 running if the HOME environment variable is not set.
 (cleanup) After discovering that wxMenu will handle the majority of one's
 accelerator hotkey needs, I've cleaned up a bit of the code, removing some
-of what was remining in MainWindow.OnKeyPressed.  Here's hoping that I don't
+of what was remaining in MainWindow.OnKeyPressed.  Here's hoping that I don't
 forget to test some hotkey by the time 1.4 is released.
 (fixed) a few minor misspellings in some comments.
 (added) some help stuff.
@@ -1035,7 +1115,7 @@ To email me, head to http://www.ics.uci.edu/~jcarlson/contact.html
 #--------------------------------- PyPE 1.3 ----------------------------------
 (confirmed) As believed, PyPE 1.2 and later work with Python 2.3.  No worries
 about upgrading, but no requirements either.  I'll be developing with 2.2, but
-will test all releases from now on with 2.3 as well.  I don't forsee any
+will test all releases from now on with 2.3 as well.  I don't foresee any
 issues involved with the transition to Python 2.3 in the future.  In the next
 6 months, if I happen to use features added in Python 2.3 (like enumerate), I
 will make sure to include a work-alike for those of us who migrate a few
@@ -1052,7 +1132,7 @@ rudimentary.  All bug reports regarding the hierarchical python parser will be
 ignored.  Patches for making the parser better will be merged, likely used,
 and properly attributed.
 (added) "autocompletion" dropdown for keyword/function/method completion.
-Accessable via CTRL-<space>.
+Accessible via CTRL-<space>.
 (added) a browsable source tree per open document.  Check the view menu.  It
 uses an iterative method rather than a recursive method which could go beyond
 the interpreter's recursion limit for very deep source files.

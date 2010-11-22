@@ -66,13 +66,14 @@ wildcard = "All python files (*.py *.pyw)|*.py;*.pyw|"\
            "Pyrex files (*.pyi *.pyx)|*.pyi;*.pyx|"\
            "C/C++ files (*.c* *.h)|*.c*;*.h|"\
            "HTML/XML files (*.htm* *.shtm* *.xml)|*.htm*;*.shtm*;*.xml|"\
+           "Latex files (*.tex *.bib)|*.tex;*.bib|"\
            "All Files (*.*)|*.*"
 
 #for style mappings from extensions
 extns = {'py' : 'python',
         'pyw' : 'python',
-        'pyi' : 'python', #I need a new system so that adding new file types isn't such a pain.
-        'pyx' : 'python',
+        'pyi' : 'pyrex',
+        'pyx' : 'pyrex',
           'c' : 'cpp',
          'cc' : 'cpp',
         'cpp' : 'cpp',
@@ -84,6 +85,8 @@ extns = {'py' : 'python',
        'shtm' : 'html',
       'shtml' : 'html',
         'xml' : 'xml',
+        'tex' : 'tex',
+        'bib' : 'tex',
         'txt' : 'text'}
 
 default_homedir = os.path.dirname(os.path.abspath(__file__))

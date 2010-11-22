@@ -22,7 +22,7 @@ Beta 1:
 * made window remember size and position
 * made subwindows remember size and position
 * tooltips now understand __init__ and __new__
-- interpreter
+(done in 2.3) - interpreter
 * shell command support (embedded within window)
 * filesystem browser with pathmarks
 * workspace management
@@ -52,12 +52,13 @@ Beta 2
 2.2:
 * Add support for #encoding in python files (on open/save, but do not change).
 ? Add search support for unicode/#encoding defined files that are not open.
-? Add PyShell from PyCrust as a Python console, but use the external process
-support to run the shell in another process.  Caveat:
+(done in 2.3) ? Add PyShell from PyCrust as a Python console, but use the
+external process support to run the shell in another process.  Caveat:
   ? PyShell would not get all the really neat introspection capabilities
   without significant additional work (which I probably won't ever have time
   for)
 ? Use external command support to spawn persistant slow parser for tooltips,
 calltips, and better parsing.
-? Use optional listening socket to support later callings of PyPE pushing
-document opening into a single PyPE instance ("only single instance")
+(done in 2.3) ? Use optional listening socket to support later callings of
+PyPE pushing document opening into a single PyPE instance ("only single
+instance")
