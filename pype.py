@@ -48,14 +48,14 @@ from wxPython.lib.mixins.listctrl import wxListCtrlAutoWidthMixin
 #--------------------------- configuration import ----------------------------
 from configuration import *
 #--------- The two most useful links for constructing this editor... ---------
-# http://www.pyframe.com/stc/index.html
+# http://www.yellowbrain.com/stc/index.html
 # http://personalpages.tds.net/~edream/out2.htm
 
 #---------------------------- Event Declarations -----------------------------
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.9.1"
+    VERSION = "1.9.2"
     VREQ = '2.4.2.4'
 
     try:
@@ -690,6 +690,8 @@ class MainWindow(wxFrame):
                     else:
                         self.OnReload(None, document)
         del self.iter
+        self.redrawvisible()
+        self.SendSizeEvent()
         e.Skip()
                     
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
@@ -719,7 +721,8 @@ class MainWindow(wxFrame):
                             ('LASTUSED', []),
                             ('DEFAULTLEXER', 'python'),
                             ('splittersize', 40),
-                            ('FIF_STATE', ([], [], [], 0, 0, 0))]:
+                            ('FIF_STATE', ([], [], [], 0, 0, 0)),
+                            ('match_flags', wxFR_DOWN)]:
             if not (nam in self.config):
                 self.config[nam] = dflt
             globals()[nam] = self.config[nam]
@@ -756,6 +759,7 @@ class MainWindow(wxFrame):
             a.append(self.shell.menu[i])
         self.config['shellcommands'] = a
         self.config['paths'] = pathmarks
+        self.config['match_flags'] = match_flags
         if self.config['usesnippets'] and (not self.restart):
             self.config['display2code'] = self.snippet.display2code
             self.config['displayorder'] = self.snippet.displayorder
@@ -1270,6 +1274,7 @@ class MainWindow(wxFrame):
         end = win.WordEndPosition(gcp, 1)
         if st != end:
             data.SetFindString(win.GetTextRange(st, end))
+        data.SetFlags(match_flags)
         return data
 
     def OnShowFind(self, evt):
@@ -1284,7 +1289,7 @@ class MainWindow(wxFrame):
             #print win.gcp, "found gcp"
             win.last = 0
         data = self.makedata(evt)
-        dlg = wxFindReplaceDialog(self, data, "Find")
+        dlg = wxFindReplaceDialog(self, data, "Find", style=(VS[-1]=='u' and wxFR_NOUPDOWN))
         dlg.data = data
         dlg.Show(True)
 
@@ -1416,6 +1421,9 @@ class MainWindow(wxFrame):
         #self.log.write("wxFindReplaceDialog closing...\n")
         evt.GetDialog().Destroy()
         self.FINDSHOWN = 0
+        flags = evt.GetFlags()
+        global match_flags
+        match_flags = flags
         for win in self.control:
             try:
                 if win.last == -1:
@@ -3876,6 +3884,7 @@ def main():
     app.frame.Show(1)
     if opn:
         app.frame.OnOpenPrevDocs(None)
+    app.frame.SendSizeEvent()
     app.MainLoop()
 
 if __name__ == '__main__':

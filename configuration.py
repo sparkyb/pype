@@ -50,6 +50,9 @@ else:
     runme = "%s %s"%(se,b)
     spawnargs.append(b)
     runpath = __file__
+
+#toss all the " marks in path names if necessary
+runpath = ''.join(runpath.split('"'))
 runpath = os.path.dirname(os.path.normpath(os.path.abspath(runpath)))
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')

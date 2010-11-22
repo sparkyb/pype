@@ -1,3 +1,11 @@
+(PyPE 1.9.2)
+(improved) the find and find/replace dialogs will now remember the case, whole
+word setting, and direction (if applicable) for the last time the find/replace
+button was pressed.
+(fixed) various refresh bugs have been fixed.
+(fixed) syntax highlighting bug in PyPE 1.9.1
+
+
 (PyPE 1.9.1)
 (improved) the speed of PyPE closing down with many documents open.
 (fixed) old hotkeys and menu items that are no longer being used are now
