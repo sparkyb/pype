@@ -1,3 +1,13 @@
+
+.. raw:: html
+
+    <style type="text/css">
+    pre.literal-block {
+        background-color: rgb(192, 192, 255);
+        margin: 0cm 1.5cm 0cm 1.5cm;
+    }
+    </style>
+
 =================================================
 Readme/Help for PyPE (Python Programmer's Editor)
 =================================================
@@ -54,15 +64,14 @@ a bug report on http://sourceforge.net/projects/pype .
 Installation
 ------------
 
-If you have Python 2.3 or later as well as wxPython 2.6.1.0 or later, you can
-extract PyPEX.Y.Z-src.zip anywhere and run it by double-clicking on pype.py or
-pype.pyw .  If you want to be all official, you can use
+If you have Python 2.3 or later as well as wxPython 2.6.3 or later, you can
+extract PyPE-X.Y.Z-src.zip anywhere and run it by double-clicking on pype.py
+or pype.pyw .  If you want to be all official, you can use
 'python setup.py install', but that is generally unnecessary.
 
-If you don't have Python 2.3 wxPython 2.6.1.0 or later, and are running
-Windows, you should (hopefully) be able to run the Windows binaries.  They are
-provided for your convenience (so you don't have to install Python and
-wxPython).
+If you don't have Python 2.3 wxPython 2.6.3 or later, and are running Windows,
+you should (hopefully) be able to run the Windows binaries.  They are provided
+for your convenience (so you don't have to install Python and wxPython).
 
 If it so happens that the Windows binaries don't work for you, and you have an
 installation of Python and wxPython that fits the requirements, why don't you
@@ -70,53 +79,8 @@ run the source version?  The only difference is a pass through py2exe, and a
 minor loading time speed increase.  Just because the Windows binaries exist,
 doesn't mean that you /have/ to run them.
 
---------------------
-Command Line Options
---------------------
-
---last
-======
-
-When PyPE is run with the '--last' command line option, PyPE will attempt to
-load all documents that were opened the last time you shut down PyPE.  This is
-equivalent to starting up PyPE and using File->Open Last .
-
---unicode and --ansi
-====================
-
-If PyPE is started up with the --unicode or --ansi command line options, it
-will attempt to use the unicode or ansi versions of wxPython respectively.  On
-failure, it will display to the user with a failure notice.  These options
-have no effect on the Windows distributions of PyPE, or wherever 
-``hasattr(sys, 'frozen')`` is true.
-
---nothread
-==========
-
-This command line option will disable the threaded parser, which may cause
-problems on some platforms.  This will reduce the accuracy of the tools in
-the "Tools" menu, due to the faster and not necessarily correct parser.
-
-*Experimental* --macros
-=======================
-
-PyPE 2.5 has a partially functional macro system.  Anything involving regular
-typing, keyboard navagation with arrows, etc., should work.  Cut/Copy/Paste
-should work.  At this time, I offer no support for PyPE's macro functionality,
-which is incomplete, and may never be complete.  Due to its experimental
-nature, you only get access to one macro at a time; the most recent macro.
-Macro recording and playback are available in the Document menu as
-"Record Macro" and "Playback Macro".
-
-
-
-----
-Help
-----
-
 Why doesn't the Windows install work?
 =====================================
-
 Depending on your platform, it may or may not work.  It works for me on
 Windows 2k, XP and 98.  Most problems people have is that they mistakenly
 extract library.zip, which they shouldn't do.  It could also be due to the
@@ -124,11 +88,9 @@ lack of some DLL, in which case an error message should inform you of what DLL
 you are missing.
 
 
-
 Why doesn't PyPE work on Linux?
 ===============================
-
-PyPE 2.5 has been tested on Ubuntu 6.06 with...
+PyPE 2.5+ has been tested on Ubuntu 6.06 with...
 
 * python-wxversion_2.6.1.2ubuntu2_all.deb
 
@@ -142,29 +104,86 @@ displaying all of the options for searching within files.  Making the bottom
 set of tools larger, then using a hotkey to show/hide the tools whenever
 necessary is a workable (if not ugly and inconvenient) workaround.
 
+PyPE 2.5+ has also been tested on Kubuntu 6.06 after the installation of the
+Synaptic packaage manager, which may or may not have introduced other Gtk
+libraries that may or may not affect its performance.  On Kubuntu, there are
+a large number of errors and/or warnings during PyPE startup, but I have not
+been able to crash PyPE yet, so I presume it is stable.
+
 There have previously been reports of PyPE segfaulting in certain Linux
 distributions when opening a file.  This seems to be caused by icons in the
 file listing in the 'Documents' tab on the right (or left) side of the editor
 (depending on your preferences), or by icons in the notebook tabs along the
-top of the editor.  You can disable these icons by starting up PyPE, going to
-Options->Use Icons, and making sure that it is unchecked.  You should restart
-PyPE to make sure that the setting sticks.  PyPE will be uglier, but it should
-work.  I believe that this has been fixed in PyPE 2.4.1 and later, but this
-documentation persists "just in case".
+top of the editor.  It was due to either the platform not being able to find
+the icons to display, or the icons being improperly sized.  You can disable
+these icons by starting up PyPE, going to Options->Use Icons, and making sure
+that it is unchecked.  You should restart PyPE to make sure that the setting
+sticks.  PyPE will be uglier, but it should work.  I believe that this has
+been fixed in PyPE 2.4.1 and later, but this documentation persists "just in
+case".
+
+
+Why isn't the most recent PyPE available as deb or RPM?
+=======================================================
+Short answer: it's a pain in the ass.
+
+Longer answer: I'm not the maintainer for the PyPE package, but have recently
+discovered that PyPE has a new debian maintainer.  Whether or not the new
+debian maintainer keeps PyPE up-to-date is up to him.  Personal attempts to
+create .debs have resulted in utter failure, which I can either blame on a
+personal failure to comprehend the documentation, or a failure in the
+documentation to impart the necessary information.  Either way, you are going
+to have to wait for the debian/ubuntu/whatever repositories to update.  You
+can always get the most recent PyPE from http://sourceforge.net/projects/pype
+
+I'm not going to package any RPMs for PyPE, primarily because I'm not going to
+install the RPM build/install stuff into Ubuntu.
 
 
 Why doesn't PyPE work on OSX?
 =============================
-
 I have had no reports of PyPE working or not working on any version of OSX.  I
 don't have a Mac, and I'm not too keen on running a hacked version of OSX on
 X86 hardware, so unless someone is willing to donate or test, I'll continue to
 have no idea of whether it runs or not.
 
 
+--------------------
+Command Line Options
+--------------------
+
+--last
+======
+When PyPE is run with the '--last' command line option, PyPE will attempt to
+load all documents that were opened the last time you shut down PyPE.  This is
+equivalent to starting up PyPE and using File->Open Last .
+
+--unicode and --ansi
+====================
+If PyPE is started up with the --unicode or --ansi command line options, it
+will attempt to use the unicode or ansi versions of wxPython respectively.  On
+failure, it will display to the user with a failure notice.  These options
+have no effect on the Windows distributions of PyPE, or wherever 
+``hasattr(sys, 'frozen')`` is true.
+
+--nothread
+==========
+This command line option will disable the threaded parser, which may cause
+problems on some platforms.  This will reduce the accuracy of the tools in
+the "Tools" menu, due to the faster and not necessarily correct parser.
+
+--macros
+========
+PyPE 2.6 has an almost fully-functioning macro system.  The Python 2.5
+``--macros`` command line option is now ignored because macros are enabled by
+default in 2.6+.
+
+-------------------------------
+PyPE features and functionality
+-------------------------------
+
 What is Sloppy Cut/Copy?
 ========================
-
 When selecting multiple lines for a cut/copy operation, Sloppy Cut/Copy will
 select the entirety of partially selected lines.  This saves the user from
 having to meticulously select the start and end points of multi-line
@@ -173,7 +192,6 @@ selections.
 
 What is Smart Paste?
 ====================
-
 Smart Paste is two functionalities in one.
 
 1. When pasting multiple lines into a currently indented region, it will
@@ -182,10 +200,57 @@ Smart Paste is two functionalities in one.
    relative to the current/minimum.
 
 2. When the cursor is in a non-indent portion of a line, and you paste, Smart
-   Paste will automatically paste to the next line, automatically indenting
-   one level deeper as necessary if you had selected the start of a new block
-   (like if, for, while, def, etc., for Python, open curly braces '{' in C,
-   etc.).
+   Paste will automatically paste to the next line, indenting one level deeper
+   as necessary if you had selected the start of a new block (like if, for,
+   while, def, etc., for Python, open curly braces '{' in C, etc.).
+
+
+What do the different options in the Filter tool do?
+====================================================
+
+subsequence
+    will match things like ``us.et`` to ``UserString.ExpandTabs``
+
+no context
+    will not provide any context in the display or search
+
+long
+    will provide a 'verbose' display and search context, like
+    ``class foo: def bar(self)`` .
+
+short
+    will provide a concise display and search context, like
+    ``def foo.bar(self)``
+
+exact
+    will find entries that include *exactly* what you typed in.
+
+any
+    will find entries that include *any* of the 'words' you provide.
+
+all
+    will find the entries that include *all* of the 'words' you provide
+
+Given the following three definitions and the ``no context`` option without
+subsequence searching::
+
+    def abc(ghi, jkl)
+    def jkl(mno, pqr)
+    def stu(vwx, yz)
+
+...the following searches are true::
+
+    exact 'def abc' -> #1
+    any 'def abc' -> #1, #2, #3
+    all 'def abc' -> #1
+    
+    exact 'abc ghi' -> Nothing
+    any 'abc ghi' -> #1
+    all 'abc ghi' -> #1
+    
+    exact 'jkl stu' -> Nothing
+    any 'jkl stu' -> #1, #2, #3
+    all 'jkl stu' -> Nothing
 
 
 Dictionaries and alphabets for the Spell checker
@@ -209,6 +274,11 @@ you can create an 'alphabet.txt' file that is utf-8 encoded, where alphabet
 characters separated by commas ',', and place it into the same path that PyPE
 is.
 
+Please note that the spell checker is very simple.  After discovering "words",
+which are contiguous sequences of letters, suggestions are created by removing
+single letters, inserting single letters, and swapping pairs of letters
+internally.  It then checks these suggestions against the user-supplied
+dictionaries, and any that match become suggestions.
 
 
 How does "One PyPE" work?
@@ -232,7 +302,6 @@ If you want to prevent new instances of PyPE from ever creating or using
 sockets, create a file called 'nosocket' and make it read-only to PyPE.
 
 
-
 What the heck is a Trigger?
 ===========================
 Let us say that you writing a web page from scratch.  Let us also say that
@@ -243,25 +312,27 @@ a few macro-like expansions, like 'img' -> '<img src="">'.
 
 2. Click on 'New Trigger'.
 
-3. In the 'enter' column of the new trigger, type in 'img' (without quotes).
+3. In the 'input' column of the new trigger, type in ``img``
 
-4. In the 'left' column, type in '<img src="' (without single-quotes).
+4. In the 'output' column, type in ``<img src="%C">``
 
-5. In the 'right' column, type in '">' (without single quotes).
 
-In the future, if you type in 'img' (without quotes) and use
-Edit->Perform Trigger, it will expand itself to '<img src="">' (without single
-quotes) with your cursor between the two double quotes.
+In the future, if you type in ``img`` and use Transforms->Perform Trigger, it
+will expand itself to ``<img src="">`` with your cursor between the two double
+quotes.
 
 What other nifty things are possible?  How about automatic curly and square
-brace matching with [, [, ] and {, {, }?  Note that triggers with a single
+brace matching with [, [%C] and {, {%C}?  Note that triggers with a single
 character in the 'enter' column are automatically done as you type, but
-triggers with multiple characters in the 'enter' column require using
-Edit->Perform Trigger (or its equivalent hotkey if you have assigned one).
+triggers with multiple characters in the 'input' column require using
+Transofrms->Perform Trigger (or its equivalent hotkey if you have assigned
+one via Options -> Change Menus and Hotkeys).
 
-The semantics for string escapes are identical to that of standard string
-escapes in Python.
-
+As described, there is a ``%C`` directive that defines where the cursor will
+end up.  There is also a ``%L`` directive that inserts a line break with
+autoindentation.  The semantics for string escapes are the same as in the
+Find/Replace bar, and a non-indenting line break can be inserted with the
+standard ``\n``.
 
 
 Find/Replace bars
@@ -269,22 +340,20 @@ Find/Replace bars
 If you have ' or " as the first character in a find or find/replace entry, and
 what you entered is a proper string declaration in Python, PyPE will use the
 compiler module to parse and discover the the string.  For example, to
-discover LF characters, use ``"\\n"``, including quotes.
+discover LF characters, use ``"\n"``, including quotes.
 
 
-
-What the heck is going on with string escapes in regular expressions and/or multiline searches?
-===============================================================================================
+String escapes in regular expressions and multiline searches?
+=============================================================
 You can use standard Python strings with escapes and quote marks just like
 when you use the find/replace bars with one minor difference; all searched
-data is normalized to have ``\\n`` line endings regardless of the input.  This
+data is normalized to have ``\n`` line endings regardless of the input.  This
 means that if you want to find a colon followed by a line ending followed by
-a space, you would use ``":\\n "``, including quotes.
+a space, you would use ``":\n "``, including quotes.
 
 If you include line endings in your search string, then multiline searching
 will be automatically enabled during the search (but the box will remain
 checked or unchecked).
-
 
 
 What happens when "Smart Case" is enabled during a replace?
@@ -316,7 +385,6 @@ Otherwise if the first letter of the found string is upper or lowercase, then
 its replacement will have the first letter be upper or lowercase respectively.
 
 
-
 What is up with the "Enable File Drops" checkbox in the 'Edit' menu?
 ====================================================================
 1. Select some text.
@@ -339,20 +407,21 @@ checked, you can drop files on the editor portion, if unchecked, you won't be
 able to drop files on the text editor portion.
 
 
-
 How do I use the 'Todo' list?
 =============================
 On a line by itself (any amount of leading spaces), place something that
-matches the following regular expression: ``#([a-zA-Z0-9 ]+):(.*)``
+matches the following regular expression: ``([a-zA-Z0-9 ]+):(.*)`` and is
+immediately preceeded with a language-specific single-line comment (``#``,
+``//``, ``%``, or ``<!--``).
 
 The first group (after a .strip().lower() translation) will become category in
 the 'Category' column, the second group (after a .strip()) becomes the todo in
 the 'Todo' column, and the number of exclamation points will become the number
 in the '!' column.
 
-Well, it is a bit smarter, it tosses all entries with a 'Category' that is
-also a keyword (keyword.kwlist), or one of the following: http, ftp, mailto,
-news, gopher, and telnet.
+PyPE also tosses all entries with a 'Category' that is also a keyword
+(keyword.kwlist), or one of the following: http, ftp, mailto, news, gopher,
+and telnet.
 
 The following lines are all valid todos ::
 
@@ -365,21 +434,20 @@ The following lines are all valid todos ::
     #I am not a valid todo...: because there is punctuation on the left
 
 
-
-What are the currently known issues within PyPE's parser?
-=========================================================
+What are the known issues within PyPE's parser?
+===============================================
 If given a syntactically correct Python source file, the Python parser should
 work without issue (as long as --nothread is not provided), though it may not
 be fast (where fast is < .1 seconds).
 
 If not given a syntactically correct Python source file (or if --nothread was
 provided as a command line option), the parser splits the file into lines,
-doing a check to see if there is a function, class, or comment on that line,
-then saves the hierarchy information based on the level of indentation and
-what came before it.  This can be inaccurate, as it will mistakenly believe
-that the below function 'enumerate' is a method of MyException. ::
+performing a check to see if there is a function, class, or comment on that
+line, then saves the hierarchy information based on the level of indentation
+and what came before it.  This can be inaccurate, as it will mistakenly
+believe that the below function 'enumerate' is a method of MyException. ::
 
-    class MyException(exceptions.Exception):
+    class MyException(Exception):
         pass
     try:
         enumerate
@@ -388,20 +456,20 @@ that the below function 'enumerate' is a method of MyException. ::
             return zip(range(len(inp)), inp)
 
 It also doesn't know anything about multi-line strings, so the definition nada
-in the following line would be seen as a function, and not part of a string. ::
+in the following lines would be seen as a function, and not part of a string. ::
 
-    old = 'this used to be a function\
-    def nada(inp):\
-        return None'
+    '''
+    this used to be a function
+    def nada(inp):
+        return None
+    '''
 
-Ah well, one has to give up something for speed.  Another thing given up is
-that the parser will not pull out doc strings or handle multi-line function
+This parser will also not pull out doc strings or handle multi-line function
 definitions properly.
 
-I don't have a real parser for the C, so it only really extracts //todo:
-items.  I also don't have a real parser for TeX, so it only extracts
-\*section{} and \label definitions, along with %todo: items.
-
+PyPE still needs a real parser for C, so it only extracts \\todo: items.  What
+precisely a parser would do on TeX/LaTeX, HTML or XML is beyond me, so they
+also only extract %todo: and <!-- todo: --> items respectively.
 
 
 How do you get usable Calltips?
@@ -410,13 +478,11 @@ Hit F5.  This will also rebuild the browsable source tree, autocomplete
 listing, and todo list.
 
 
-
 How do you get autocompletion?
 ==============================
 Easy.  In the 'Document' menu, there is an entry for 'Show autocomplete'.
 Make sure there is a check by it, and you are set.  If you want to get a new
 or updated listing of functions, hit the F5 key on your keyboard.
-
 
 
 CRLF/LF/CR line endings
@@ -436,7 +502,6 @@ Converting between line endings is a menu item that is available in the
 'Document' menu.
 
 
-
 STCStyleEditor.py
 =================
 As I didn't write this, I can offer basically no support for it.  It seems to
@@ -447,7 +512,6 @@ are included.
 If it doesn't work for you, I suggest you revert to the copy of the editor and
 stc-styles.rc.cfg that is included with the distribution of PyPE you received.
 As it is a known-good version, use it.
-
 
 
 Expandable/collapsable/foldable code
@@ -488,7 +552,185 @@ Both should INCLUDE the quotation marks.
 To convert from tabs to 8 spaces per tab; replace ``"\\t"`` with ``"        "``
 To convert from 8 spaces to one tab; replace ``"        "`` with ``"\\t"``
 
+Note that you don't need to use the double quotes for the spaces, but it
+allowed me to be explicit in this documentation.
 
+
+-------------------------------
+How do I program my own macros?
+-------------------------------
+
+Users of PyPE 2.5.1 (a test release) and later will have the ability to
+record, edit, playback, and delete macros.  Most keyboard related tasks are
+recorded (typing, keyboard movement, selection, cut, copy, paste, etc.), as
+are all items in the Transforms menu; including automatic and manual triggers.
+
+Any macro without any action performed will not be recorded.  That is, if you
+hit "Start Recording" and do nothing other than hit "Stop Recording", a macro
+will not be created.  If you would like to create an initially empty macro,
+you can use "Empty Macro" and it will get everything all set up for you.
+
+Before you execute your macro, I encourage you to save all currently open
+documents.  While I haven't experienced any recent crashes or segfaults while
+using macros, I may not be able to replicate your particular crash condition
+even if given the macro source, so may not be able to fix your problem.  Be
+careful!
+
+
+Let us assume that you have created an initially empty macro with the "Empty
+Macro" button, whose contents are something like the following::
+    
+        creation_date = 'Wed Jul 12 21:35:34 2006'
+        name = 'macro: Wed Jul 12 21:35:34 2006'
+        
+        def macro(self):
+            pass
+    
+
+``creation_date``
+    is merely for reference purposes
+
+``name``
+    is the name you will see in the macro list.  If this value is
+    missing, you will see the file name instead.
+
+``def macro(self):``
+    is the initial definition of the macro.  You can have any number of helper
+    functions, extra data, etc., but the macro itself must be named ``macro``,
+    and must take at least one argument, the first of which being the
+    ``wxStyledTextCtrl`` instance that contains the current document.  You can
+    also import any module that is available (which may be limited on systems
+    using the Windows binary).
+
+The ``self`` parameter will actually be my own custom subclass of the
+``StyledTextCtrl``.  You will never recieve a shell or interpreter, and you
+will not be able to execute macros on shells or interpreters. 
+
+Generally speaking, the ``wxStyledTextCtrl`` subclass has everything that the
+normal control subclass has, with a few caveats.
+
+1.  ``self.GetText()`` and ``self.SetText()`` will return and set the content
+    of the document, paying attention to encodings as necessary.  That is, if
+    you perform ``y = self.GetText()`` inside a macro on a document including
+    unicode characters, or a document defining one of the standard Python
+    document encoding methods, you will recieve the encoded version of your
+    document.  Strictly ASCII documents or those without any encodings will
+    produce the document as-is.
+    
+    If you would like to acquire the contents of the file as-is, unicode on
+    unicode platforms, etc.::
+    
+        import wx.stc
+        
+        def macro(self):
+            content = wx.stc.StyledTextCtrl.GetText(self)
+
+2.  ``self.lines`` is a special property that gives you a line-based view of
+    the current document.::
+
+        line = self.lines[i]        # will return line "i" including whitespace
+        lines = self.lines[i:j]     # will return lines i...j-1, using standard Python slice semantics
+        bad = self.lines[i:j:-1]    # will raise an exception (only steps == 1 are acceptable)
+        
+        self.lines[0] = 'hello world\n' # will set the first line to be "hello world"
+        self.lines[0] = 'hello world '  # will set the first line to be "hello world ",
+                                        # and the next line will become the tail end of the first line
+        
+        del self.lines[i] # same as self.lines[i] = ''
+    
+        #other special properties of self.lines:
+        self.lines.curline          # manipulation of the line the cursor is on
+        self.lines.curlinei         # manipulation of the index where the cursor is
+        self.lines.curlinep         # manipulation of the column in the line where the cursor is
+        self.lines.selectedlines    # manipulation of the lines where a selection exists
+        self.lines.selectedlinesi   # manipulation of the indices where a selection exists
+        
+        #to force the selection of all of all lines where a selection currently exists:
+        self.lines.selectedlinesi = self.lines.selectedlinesi
+        
+        #to iterate over the indices of all selected lines:
+        for i in xrange(*self.lines.selectedlinesi):
+            ...
+    
+        #etcetera.
+
+3.  ``self.InterpretTrigger(text)`` will interpret the text you provide as it
+    would interpret a trigger, with a small change.  That is,::
+   
+        self.InterpretTrigger('def foo(%C):\npass')
+
+    will produce the following, with the cursor where the ``@`` is, without
+    the ``@`` sign.::
+   
+        def foo(@):
+            pass
+
+    If you want your ``'\n'`` line endings to not include auto-indenting (as
+    is the default for normal triggers), use ``self.InterpretTirgger(text, 1)``.
+
+4.  ``self._autoindent(0)`` will perform the equivalent of
+    ``self.InterpretTrigger('\n')``.
+
+
+An example nontrivial macro
+===========================
+When I was writing macro support, I would have found macros to be quite
+convenient for developing macros.  What do I mean?  Let us say that I wanted
+to turn a line that read (from main_window_callback.c in the gPHPedit sources)::
+
+        case (2316) : gtk_scintilla_document_start(GTK_SCINTILLA(main_window.current_editor->scintilla)); break;
+
+Into a line that read::
+
+        2316: 'DocumentStart',
+
+As I ended up doing by hand.  Well, I could write the following macro, select
+those lines I wanted to update, and execute the macro.::
+
+        def macro(self):
+            lines = self.lines
+            newlines = []
+            for i in xrange(*lines.selectedlinesi):
+                line = lines[i]
+                pieces = line.split()
+                num = pieces[1].strip('()')
+                name = pieces[3]
+                name = name.split('(', 1)[0].title()
+                name = ''.join(name.split('_')[2:])
+                newlines.append("    %s: '%s',"%(num, name))
+            lines.selectedlines = newlines
+    
+Presumably one would want to include error handling in your nontrivial macros,
+but they shouldn't be terribly difficult.
+
+
+Using macros as code snippets
+=============================
+
+1. Create a macro.
+
+2.  Paste the content of your snippet into a global variable in the macro and
+    call it something like ``snippet``.
+
+3. Use ``self.InterpretTrigger(snippet)``.
+
+That is, let us say that you wanted a snippet that inserted the following
+content::
+
+    def foo(bar):
+        pass
+
+You would create the following macro::
+
+    name = 'Code Snippet foo()'
+    
+    snippet = '''
+    def foo(bar):
+        pass
+    '''
+    
+    def macro(self):
+        self.InterpretTrigger(snippet, 1)
 
 ---
 FAQ
@@ -586,3 +828,4 @@ any other language using any other GUI toolkit or bindings.
 And my wife - because without her, I would likely be a pathetic shell of a
 man...or at least single, bored, and uncouth.  Well, I'm probably still
 uncouth, but there's only so much a good woman can fix.
+

@@ -13,7 +13,7 @@ class docstate:
         self.tree1 = codetree.hierCodeTreePanel(root, root.leftt, 1)
         self.tree2 = codetree.hierCodeTreePanel(root, root.rightt, 0)
         self.todo = todo.VirtualTodo(root.todot, root)
-        self.filter = filtertable.DefinitionList(root.filterl, root)
+        self.filter = filtertable.DefinitionList(root.filterl, root, stc)
         
         self.items = (self.tree1, self.tree2, self.todo, self.filter)
         

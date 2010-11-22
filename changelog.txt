@@ -1,3 +1,87 @@
+#--------------------------------- PyPE 2.6 ----------------------------------
+(fixed) added initialization to the filter tool to prevent errors if a user
+attempts to filter a list that hasn't been filled by the parser yet.
+(fixed) using the edit menu items (or their equivalent hotkeys) for: Undo,
+Redo, Select All, Cut, Copy, Paste, Delete, will now work properly when you
+are typing in a text edit control (findbar, filter, etc.)  This extends a
+previous fix originally written for entries with history (the search tab,
+etc.)
+(fixed) name error when playing back macros.
+(added) filter tool now has context displaying and sensitive search, where
+"context" is the class/method hierarchy.
+(removed) "Hierarchy" column from the filter table, including it made the
+listing far too cramped.
+(changed) layout of the filter tool slightly to be more reasonable on smaller
+displays.
+(removed) all unnecessary first columns in all list controls that caused a
+less-than-attractive initial column on wxGTK platforms (linux and maybe OSX).
+Should not affect functionality.
+(fixed) exception during macro execution if the last command in the recorded
+macro was a user typing.
+(added) macro support for all items in the 'Transforms' menu.
+(added) macro support for automatic triggers.
+(added) rudimentary autoindent support for xml, html, and tex/latex.
+(fixed) language detection for autoindent when editing files with
+user-specified non-default syntax highlighting language.
+(added) <!-- todo: stuff --> support for XML and HTML.
+(fixed) over-zealous todo discovery in some cases.
+(added) autoindent support for trigger items.
+(changed) made triggers filetype global (triggers defined for a Python file
+will be shared among all Python files, etc.)  Previously existing individual
+file triggers will be lost.
+(added) macro support for View -> Jump forward/backward .
+(added) View -> Find Definition , which will pop up the filter tool, enter in
+the current word (if any), and set the focus to the filter tool.
+(added) hitting 'Alt+enter' or the number pad enter while focus is on the
+filter tool text entry will automatically go to the selected definition in the
+"Definition" list, selecting the first if none are selected.
+(added) hitting 'Ctrl+UP/DOWN' while focus is on the filter tool text entry
+will change the definition selection to the direction of the arrow pressed.
+(added) macro support for 'Select All'.
+(added) 'lines' property to editor controls for line-based macros.
+(added) option to allow for different context displays for the filter tool.
+(added) approximate line count information for each item in the filter tool.
+(fixed) sorting in the filter tool to be accurrate depending on what context
+you have selected.
+(changed) extracted trigger interpretation code so that macros can get the
+same cursor and auto-indent code for text insertion as triggers.  Usable via
+stc.InterpretTrigger(text) .
+(added) macro tab with support for recording, editing, playing back, and
+deleting macros.  Recursive macros won't work (playing back a macro while
+recording another macro will not cause recording of the played back macro to
+occur), and a user can crash (or lock up) PyPE if they aren't careful.  Note
+that strictly recording and playing back macros shouldn't break PyPE, only if
+you customize the macro recording.
+(updated) documentation to include information about macros.
+(updated) the information about the now ignored --macros command line option.
+(fixed) error when autocomplete was turned on that prevented autocomplete from
+working at all.
+(changed) help information is now available in the "wide tools".
+(changed) "Help -> PyPE Help" will now make sure that the "wide tools" are at
+least half the height of the PyPE window and bring into focus the "Help" tab.
+The Help dialog will no longer be available.
+(added) longest-common subsequence matching to the filter tool along with
+relevant documentation.
+(changed) filter search options will now be shared among all documents.
+(added) option to disable the writing of a BOM if a coding: directive is found
+when writing to disk when using a unicode-enabled PyPE.
+(added) the ability to choose what information is displayed in the document
+listing tab (that sits between "Macros" and "Browse"); Filename or Filename,
+Path or Path or Path, Filename.
+(changed) made macro buttons images for better visibility when the toolbar is
+narrow.
+(fixed) opening files with the file system browser on (I believe) all
+platforms, Windows and Ubuntu at least.
+(added) try/finally blocks around BeginUndoAction/EndUndoAction as a
+precaution against a function failing and leaving the editor in a state where
+undo/redo were just about useless.
+(fixed) macro playback error caused by using wx.SafeYield() rather than
+wx.Yield().
+(added) Filter table options for TeX/LaTeX.
+(note) made filtering essentially a no-op for non-Python/TeX/LaTeX.
+
+
+
 #--------------------------------- PyPE 2.5 ----------------------------------
 (fixed) embedded Python shell and embedded command shell kill on Windows (and
 likely other platforms).

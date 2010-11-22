@@ -367,43 +367,45 @@ class ReplaceBar(wx.Panel):
         
         #ris = self.replinsel.GetValue()
         win.BeginUndoAction()
-        if ris:
-            win.SetSelection(ostart, ostart)
-        else:
-            win.SetSelection(0, 0)
-        
-        self.loop = 0
-        failed = 0
-        while not self.loop and failed < 2:
-            #check for range...
-            sel = win.GetSelection()
-            if ris and (sel[0] < ostart or sel[1] > oend):
-                break
-            #find/replace next item
-            (lsel, rsel), delta = self.OnReplace(evt)
-            ## print (lsel, rsel), delta, repr(win.GetTextRange(lsel, rsel)), self.loop
-            #if nothing found, continue
-            if lsel == -1:
-                continue
-            #if change was entirely in the old selection...
-            elif ostart <= lsel and rsel <= oend:
-                oend -= delta
-            #original selection is encompassed by the replacement.
-            elif lsel <= ostart and rsel >= oend:
-                ostart = oend = lsel
-            #replaced portion is to the left of the original selection
-            elif rsel < ostart:
-                ostart -= delta
-                oend -= delta
-            try:
-                wx.Yield()
-            except:
-                pass
-        ## print self.loop, failed
-        
-        self.sel(ostart, oend, '', win)
-        win.SetFocus()
-        win.EndUndoAction()
+        try:
+            if ris:
+                win.SetSelection(ostart, ostart)
+            else:
+                win.SetSelection(0, 0)
+            
+            self.loop = 0
+            failed = 0
+            while not self.loop and failed < 2:
+                #check for range...
+                sel = win.GetSelection()
+                if ris and (sel[0] < ostart or sel[1] > oend):
+                    break
+                #find/replace next item
+                (lsel, rsel), delta = self.OnReplace(evt)
+                ## print (lsel, rsel), delta, repr(win.GetTextRange(lsel, rsel)), self.loop
+                #if nothing found, continue
+                if lsel == -1:
+                    continue
+                #if change was entirely in the old selection...
+                elif ostart <= lsel and rsel <= oend:
+                    oend -= delta
+                #original selection is encompassed by the replacement.
+                elif lsel <= ostart and rsel >= oend:
+                    ostart = oend = lsel
+                #replaced portion is to the left of the original selection
+                elif rsel < ostart:
+                    ostart -= delta
+                    oend -= delta
+                try:
+                    wx.Yield()
+                except:
+                    pass
+            ## print self.loop, failed
+            
+            self.sel(ostart, oend, '', win)
+            win.SetFocus()
+        finally:
+            win.EndUndoAction()
     
     def replaceAll(self, evt, ris):
         win = self.parent.GetWindow1()
@@ -422,6 +424,9 @@ class ReplaceBar(wx.Panel):
 
     def ReentrantReplace(self, state):
         ostart, oend, ris, win = state
+        
+        if not win:
+            return
         
         try:
             self.loop

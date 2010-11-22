@@ -13,6 +13,7 @@ class MyHtmlWindow(html.HtmlWindow):
             style=wx.NO_FULL_REPAINT_ON_RESIZE|wx.SUNKEN_BORDER)
         if "gtk2" in wx.PlatformInfo:
             self.SetStandardFonts()
+        wx.CallAfter(self.LoadPage, a)
         
     def OnLinkClicked(self, link):
         a = link.GetHref()
@@ -37,8 +38,6 @@ class HtmlHelpDialog(wx.Dialog):
         s = wx.BoxSizer(wx.VERTICAL)
         
         self.html = MyHtmlWindow(p)
-        if "gtk2" in wx.PlatformInfo:
-            self.html.SetStandardFonts()
         
         s.Add(self.html, 1, wx.EXPAND|wx.ALL, 5)
         
@@ -52,5 +51,3 @@ class HtmlHelpDialog(wx.Dialog):
         p.SetSizer(s)
         p.SetAutoLayout(1)
         p.Layout()
-        
-        wx.CallAfter(self.html.LoadPage, a)

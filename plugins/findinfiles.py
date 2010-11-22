@@ -42,11 +42,10 @@ def namematches(name, include, exclude):
     return 0
 
 columns = (
-    (0, "", 0, 0),
-    (1, "Path", 200, 0),
-    (2, "Filename", 100, 0),
-    (3, "L#", 40, wx.LIST_FORMAT_RIGHT),
-    (4, "Item", 15, 0))
+    (0, "Path", 200, 0),
+    (1, "Filename", 100, 0),
+    (2, "L#", 40, wx.LIST_FORMAT_RIGHT),
+    (3, "Item", 15, 0))
 
 OP = tokenize.OP
 NAME = tokenize.NAME
@@ -144,6 +143,7 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
         #self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnItemDeselected)
         self.pattern = None
+        self.currentItem = 0
 
     def setData(self, arrayOfTuples, copy=1):
         if copy:
@@ -219,18 +219,16 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
 
     def OnItemActivated(self, event):
         self.currentItem = event.m_itemIndex
-        path = self.GetItem(self.currentItem, 1).GetText()
-        file = self.GetItem(self.currentItem, 2).GetText()
-        line = self.GetItem(self.currentItem, 3).GetText()
-        data = self.GetItem(self.currentItem, 4).GetText()
+        path = self.GetItem(self.currentItem, 0).GetText()
+        file = self.GetItem(self.currentItem, 1).GetText()
+        line = self.GetItem(self.currentItem, 2).GetText()
+        data = self.GetItem(self.currentItem, 3).GetText()
         self.parent.OpenFound(os.path.join(path, file), int(line), self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
 
     def OnGetItemText(self, item, col):
-        if col == 0:
-            return ''
-        if col in (1,2):
-            return self.cache[item][col-1]
-        return "%s" % (self.data[item][col-2],)
+        if col in (0,1):
+            return self.cache[item][col]
+        return "%s" % (self.data[item][col-1],)
 
 #-----------------------------------------------------------------------------
 

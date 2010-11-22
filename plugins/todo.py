@@ -7,16 +7,15 @@ from findinfiles import FoundTable
 
 class vTodo(FoundTable):
     def OnGetItemText(self, item, col):
-        if col == 0:
-            return ""
-        return "%s" % (self.data[item][col-1],)
+        return "%s" % (self.data[item][col],)
+
 
 columns = (
-    (0, "", 0, 0),
-    (1, "Category", 100, 0),
-    (2, "Line", 60, wx.LIST_FORMAT_RIGHT),
-    (3, "!", 25, wx.LIST_FORMAT_RIGHT),
-    (4, "Todo", 5, 0))
+    (0, "Category", 100, 0),
+    (1, "Line", 60, wx.LIST_FORMAT_RIGHT),
+    (2, "!", 25, wx.LIST_FORMAT_RIGHT),
+    (3, "Todo", 5, 0)
+)
 
 class VirtualTodo(wx.Panel):
     def __init__(self, parent, root):
@@ -41,3 +40,4 @@ class VirtualTodo(wx.Panel):
             win.EnsureVisible(sel)
             win.SetSelection(linepos-len(win.GetLine(sel))+len(win.format), linepos)
             win.ScrollToColumn(0)
+  

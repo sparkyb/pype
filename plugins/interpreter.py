@@ -187,6 +187,14 @@ class MyShell(stc.StyledTextCtrl):
         except AttributeError:
             pass
     
+    def getshort(self):
+        if self.filter:
+            return "<Python Shell %i>"%self.NEWDOCUMENT
+        else:
+            return "<Command Shell %i>"%self.NEWDOCUMENT
+    def getlong(self):
+        return ''
+    
     def SetSaveState(self, state):
         state['FOLD'] = state['BM'] = []
         self._SetSaveState(state)

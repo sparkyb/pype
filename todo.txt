@@ -60,8 +60,8 @@ external process support to run the shell in another process.  Caveat:
 (used thread in 2.4) ? Use external command support to spawn persistant slow
 parser for tooltips, calltips, and better parsing.
 (done in 2.3) ? Use optional listening socket to support later callings of
-PyPE pushing document opening into a single PyPE instance ("only single
-instance")
+(done in 2.2.2) PyPE pushing document opening into a single PyPE instance
+("One PyPE")
 
 
 2.5:
@@ -71,15 +71,33 @@ instance")
 * Fix hotkeys for alt+key
 * class/function filtering in the tree stuff
 ? See about using XML-RPC, like idle.
-? Look into macro recording/playback functionality.
+* Look into macro recording/playback functionality.
   * Partially implemented, includes:
     * cut/copy/paste, typing, most built-in scintilla functionality, keyboard
       navigation with arrows, home, end, etc., backspace, delete, ...
-  * Not implemented:
-    ? Most menu commands with or without shortcuts
-    ? will need to come up with a reasonably macro'd list.
-? Document abstraction for modifying documents via script in debug mode.
+    * Most menu commands with or without shortcuts
+    * will need to come up with a reasonably macro'd list.
+- Document abstraction for modifying documents via script in debug mode.
 ? Something like keymap["ctrl-d"] = lambda doc:doc.delete_current_line()
 
+2.6:
+* Add indicator for macro recording.
+* Update filter list columns/save column width.
+* Add line-based document abstraction.
+* Move all document modification to PythonSTC definition, use metaprogramming
+techniques.
+* Document filtertable semantics
+* Add optional context-sensitive filter
+* Add "find definition" menu item/hotkey: switches to the filter tool, and
+enters in the "current word".
+* Remove all unnecessary 0-width columns in list controls.
+* Need a method to allow for better/easier trigger expansions (autoindent,
+easier cursor positioning, etc.).
+* Option to not save BOM to UTF encoded files when a coding line is in the
+Python source.
+* Option to do nothing/open for editing/run macro on double click.
+Move PythonSTC definition out of pype.py
 
+2.6+/2.7:
+Hotkey support for macros.
 

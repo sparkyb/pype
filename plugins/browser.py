@@ -21,7 +21,8 @@ class FilesystemBrowser(wx.Panel):
         wx.EVT_BUTTON(self, self.button.GetId(), self.OnButton)
         sizer.Add(self.button, 0, wx.EXPAND)
         
-        self.browser = wx.GenericDirCtrl(self, -1, style=wx.DIRCTRL_SHOW_FILTERS, filter=sys.modules['configuration'].wildcard, defaultFilter=4)
+        self.browser = wx.GenericDirCtrl(self, -1, style=wx.DIRCTRL_SHOW_FILTERS, filter=sys.modules['configuration'].wildcard, defaultFilter=0)
+        self.browser.ShowHidden(1)
         tree = self.browser.GetTreeCtrl()
         tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.OnActivate, tree)
         sizer.Add(self.browser, 1, wx.EXPAND)
@@ -48,26 +49,13 @@ class FilesystemBrowser(wx.Panel):
         self.root.config.pop('lastpath', None)
         os.chdir(path)
     
-    def getheir(self):
-        tree = self.browser.GetTreeCtrl()
-        root = tree.GetRootItem()
-        item = tree.GetSelection()
-        
-        h = []
-        while item != root:
-            h.append(tree.GetItemText(item))
-            item = tree.GetItemParent(item)
-        h.reverse()
-        
-        if len(h) == 1 and ':' in h[0]:
-            h.append('')
-        
-        p = os.sep.join(h)
-        #print "Path:", p
+    def gethier(self):
+        p = self.browser.GetFilePath()
+        ## print "Path:", p
         return p
 
     def OnActivate(self, evt):
-        fn = self.getheir()
+        fn = self.gethier()
         try:
             st = os.stat(fn)[0]
             if stat.S_ISREG(st):
@@ -76,7 +64,7 @@ class FilesystemBrowser(wx.Panel):
             evt.Skip()
     
     def OnNewPathmark(self, evt):
-        fn = self.getheir()
+        fn = self.gethier()
         try:
             st = os.stat(fn)[0]
             if stat.S_ISDIR(st):

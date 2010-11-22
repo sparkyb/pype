@@ -10,7 +10,7 @@ import token
 from compiler import ast
 from compiler import consts
 
-todoexp = re.compile('#([a-zA-Z0-9 ]+):(.*)', re.DOTALL)
+todoexp = re.compile('([a-zA-Z0-9 ]+):(.*)', re.DOTALL)
 
 nam = '[a-zA-Z_][a-zA-Z0-9_]+'
 typ = '(?:' + nam + '(?:\s+%s)*'%nam + '(?:\s*\[\])*' + '(?:\s*\*)*' + ')*'
@@ -52,16 +52,18 @@ def c_parser(source, line_ending, flat, wxYield):
     for line in source.split(line_ending):
         line_no += 1
         ls = line.strip()
-        if ls[:2] == '\\':
-            r = texp.search(ls)
-            if r:
-                tpl = r.groups()
-                if is_url(*tpl):
-                    continue
-                todo.append((tpl[0].strip().lower(),
-                             line_no,
-                             tpl[1].count('!'),
-                             tpl[1].strip()))
+        if ls[:2] == '\\\\':
+            r = texp.match(ls, 2)
+            if not r:
+                continue
+            
+            tpl = r.groups()
+            if is_url(*tpl):
+                continue
+            todo.append((tpl[0].strip().lower(),
+                      line_no,
+                      tpl[1].count('!'),
+                      tpl[1].strip()))
         #elif ...
     if flat == 0:
         return [], []
@@ -130,7 +132,6 @@ class Visitor:
 Visitor = Visitor()
 
 def slower_parser(source, _1, flat, _2):
-    source = source.replace('\r\n', '\n').replace('\r', '\n')
     try:
         x = compiler.parse(source)
     except:
@@ -200,7 +201,7 @@ def slower_parser(source, _1, flat, _2):
     for line_no, line in enumerate(lines):
         ls = line.lstrip()
         if ls[:1] == '#':
-            r = texp.match(ls)
+            r = texp.match(ls, 1 + ls.startswith('##'))
             if r:
                 tpl = r.groups()
                 if tpl[0].split()[0] not in bad_todo and not is_url(*tpl):
@@ -317,7 +318,7 @@ def faster_parser(source, line_ending, flat, wxYield):
         elif ls[:6] == 'class ':
             fun('class ', line, ls, line_no, stk)
         elif ls[:1] == '#':
-            r = texp.search(ls)
+            r = texp.match(ls, 1 + ls.startswith('##'))
             if r:
                 tpl = r.groups()
                 if tpl[0].split()[0] not in bad_todo and not is_url(*tpl):
@@ -400,7 +401,7 @@ def latex_parser(source, line_ending, flat, _):
         ls = line.lstrip()
         
         if ls[:1] == '%':
-            r = texp.search(ls, 1)
+            r = texp.match(ls, 1)
             if r:
                 tpl = r.groups()
                 if is_url(*tpl):
@@ -431,6 +432,44 @@ def latex_parser(source, line_ending, flat, _):
         return out, [], {}
     else:
         return out, [], {}, todo
+
+def ml_parser(source, line_ending, flat, _):
+    todo = []
+    texp = todoexp
+    bad_todo = _bad_todo
+    for line_no, line in enumerate(source.split(line_ending)):
+        if '<!-- ' in line and ' -->' in line:
+            pass
+        else:
+            continue
+        
+        posn1 = line.find('<!-- ')
+        posn2 = line.find(' -->')
+        if posn1 > posn2:
+            continue
+        
+        r = texp.match(line, posn1+5, posn2)
+        
+        if not r:
+            continue
+        
+        tpl = r.groups()
+        if is_url(*tpl):
+            continue
+        
+        todo.append((tpl[0].strip().lower(),
+                    line_no+1,
+                    tpl[1].count('!'),
+                    tpl[1].strip()))
+    
+    if flat == 0:
+        return [], []
+    elif flat==1:
+        return {}
+    elif flat==2:
+        return [], [], {}
+    else:
+        return [], [], {}, todo
 
 if __name__ == '__main__':
     a = '''import a, b, c
