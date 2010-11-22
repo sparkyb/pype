@@ -134,7 +134,7 @@ class MyShell(stc.StyledTextCtrl):
                 pypestc = _pypestc
         
         if trees:
-            self.tree1, self.tree2 = trees
+            self.tree1, self.tree2, self.todo = trees
         
         self.root = root
         self.parent = parent
@@ -171,6 +171,7 @@ class MyShell(stc.StyledTextCtrl):
         wx.FutureCall(pushlines_t, self.pushlines)
         wx.FutureCall(poll_t, self.OnPoll)
         self.MakeClean = self.MakeDirty
+        self.noteMode = 0
         wx.stc.StyledTextCtrl.SetText(self, "def foo():\n...     pass")
     
     def _config(self):
@@ -344,6 +345,7 @@ class MyShell(stc.StyledTextCtrl):
         pos, anc = self.GetSelection()
         lp = self.promptPosEnd
         x = self.GetTextLength() #to handle unicode and line endings
+        self.SetSelection(lp, lp)
         self.AddText(data)
         ld = self.GetTextLength()-x #to handle unicode and line endings
         

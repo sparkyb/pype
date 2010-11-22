@@ -6,11 +6,11 @@
 #      python setup.py py2exe
 
 from distutils.core import setup
+import pype
 try:
     import py2exe
 except:
     pass
-import pype
 import glob
 import os
 
@@ -23,8 +23,9 @@ setup(name=nam,
       windows=[{"script": "pype.py",
                 "icon_resources": [(1, os.path.join("icons", "pype.ico"))]}],
       data_files=[('', glob.glob('*.txt')+\
-                   ['stc-styles.rc.cfg', 'pype.pyw', 'nosocket']),
+                   ['stc-styles.rc.cfg', 'pype.pyw', 'nosocket', 'readme.html']),
                    ('icons', glob.glob(os.path.join('icons', '*.*')),
                   )],
-      options = {"py2exe": {"packages": ["encodings"]}}
+      options = {"py2exe": {"packages": ["encodings"],
+                            "compressed": 1}}
 )

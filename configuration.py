@@ -54,7 +54,7 @@ else:
     runpath = __file__
 
 #toss all the " marks in path names if necessary
-runpath = ''.join(runpath.split('"'))
+runpath = runpath.replace('"', '')
 runpath = os.path.dirname(os.path.normpath(os.path.abspath(runpath)))
 
 nosocket = os.path.exists(os.path.join(runpath, 'nosocket'))

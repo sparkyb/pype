@@ -1,3 +1,53 @@
+#--------------------------------- PyPE 2.4 ----------------------------------
+(fixed) Help text for Transforms->Dedent Region.
+(fixed) Radio items in the menus by simulating them with check items.  For
+some reason, trying to check radio items wasn't working...Ah well.
+(fixed) When a Python or Command shell recieves data from the running shell,
+it will now place the recieved data just before the previously being edited
+command (if any).  It was always supposed to work this way, but I messed it up
+during my effort to change the color of all recieved data.
+(fixed) shells for the 2.6.3 release of wxPython.
+(fixed) shell behavior when sending large blocks of data to the client if
+the user is running wxPython 2.6.3 or later through the use of
+client_stdin.LastWrite(), which wasn't previously wrapped (Thanks Robin Dunn!)
+(fixed) editor control stealing cut/copy/paste/etc. keyboard events from
+the combo boxes in the search tab, as well as the find/replace bars when
+Options->Use Findbar History is turned on.  Your cut/copy/paste should work
+correctly now.
+(fixed) when you modify a line that can be expanded (later lines are hidden
+due to code folding), the fold will be expanded one level.  Fix thanks to
+Paul McNett in the wxPython-users mailing list.
+(fixed) PyPE now uses absolute paths to read the contents of icons for that
+represent file types.  This was causing problems whenever PyPE wasn't run from
+the same path as it was installed.
+(fixed) some users of various linux systems were having problems loading
+documents.  This seems to have been caused by either the above icon path
+issue, or merely the existance of these icons in either of the two open
+document lists (along the top, or in the "Documents" tab on the (by default)
+right side of the editor).  I have added Options -> Use Icons to toggle their
+use.  You must use this option before opening any documents for it to work
+correctly.  As Florian Ludwig said, "ugly but working!"
+(fixed) The todo list was not updating if one was using the threaded option
+for parsing.  This was an unintentional side-effect from switching to the
+parser running in a thread and has been corrected.
+(fixed) auto-sizing of the last column in the Todo tab.
+(fixed) auto-sizing of the last column of the results in the Search tab, when
+viewing results as a table.
+(changed) readme.txt format to be valid reStructured Text, added html
+generated from reST source, and replaced the text help/readme dialog with a
+new Html browser window.  This window will only show the content of the help
+file, using webbrowser.open(url) for all external links.ernal links.
+(changed) started using -b 2 and compression for py2exe Windows distributions.
+(added) command-line option for the source version which allows for choosing
+whether to use ansi or unicode versions of wxPython. See the section labeled
+"Using PyPE with ansi or unicode wxPython" in the help/readme.
+(fixed) Transforms->Wrap Selected Text now wraps all of the text in the lines
+selected, fixing a problem in previous versions where the first line, if
+partially selected, would have all non-selected text duplicated at the
+beginning of the line; thus ruining the desired wrap effect, while also
+changing the content of the text.
+
+
 #-------------------------------- PyPE 2.3.2 ---------------------------------
 (fixed) bug where PyPE would fail to load if there existed a correctly-formed
 dictionary.txt file to be used as a main dictionary.  I forgot a 'break'

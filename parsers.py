@@ -128,20 +128,6 @@ class Visitor:
 
 Visitor = Visitor()
 
-def compiler_parse(source):
-    import threading
-    x = []
-    def foo():
-        x.append(compiler.parse(x))
-    
-    _ = threading.Thread(target=foo)
-    _.setDaemon(1)
-    _.start()
-    while not x:
-        time.sleep(.1)
-    return x[0]
-    
-
 def slower_parser(source, _1, flat, _2):
     source = source.replace('\r\n', '\n').replace('\r', '\n')
     try:
@@ -213,12 +199,12 @@ def slower_parser(source, _1, flat, _2):
     for line_no, line in enumerate(lines):
         ls = line.lstrip()
         if ls[:1] == '#':
-            r = texp.search(ls)
+            r = texp.match(ls)
             if r:
                 tpl = r.groups()
                 if tpl[0].split()[0] not in kwl:
                     todo.append((tpl[0].strip().lower(),
-                            line_no,
+                            line_no+1,
                             tpl[1].count('!'),
                             tpl[1].strip()))
     

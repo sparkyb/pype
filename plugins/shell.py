@@ -88,12 +88,14 @@ class StartupError(Exception):
     pass
 
 close_stdin = "<CLOSE STDIN>"
+blocksize = 512
 
 class process:
     def __init__(self, parent, cmd, end_callback):
         self.process = wx.Process(parent)
         self.process.Redirect()
         self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC, self.process)
+        self.b = []
         if self.process.pid:
             #what was up with wx.Process.Get*Stream names?
             self.process._stdin_ = self.process.GetOutputStream()
@@ -101,15 +103,23 @@ class process:
             self.process._stderr_ = self.process.GetErrorStream()
             self.process.Bind(wx.EVT_END_PROCESS, end_callback)
             return
-        self.b = []
         raise StartupError
             
     def Poll(self, input=''):
-        if input and self.process and self.process._stdin_:
+        if (input or self.b) and self.process and self.process._stdin_:
+            if self.b or len(input) > blocksize:
+                if input:
+                    #if we don't chop up our input into resonably sized chunks,
+                    #some platforms (like Windows) will send some small number
+                    #of bytes per .write() call (sometimes 2 in the case of
+                    #Windows).
+                    self.b.extend([input[i:i+blocksize] for i in xrange(0, len(input), blocksize)])
+                input = self.b.pop(0)
             self.process._stdin_.write(input)
-            ## y = self.process._stdin_.LastWrite()
-            ## if y != len(input):
-                ## print "sent %s of %s"%(y, len(input))
+            if hasattr(self.process._stdin_, "LastWrite"):
+                y = self.process._stdin_.LastWrite()
+                if y != len(input):
+                    self.b.insert(0, input[y:])
         x = []
         for s in (self.process._stderr_, self.process._stdout_):
             if s and s.CanRead():

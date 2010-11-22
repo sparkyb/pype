@@ -46,7 +46,7 @@ columns = (
     (1, "Path", 200, 0),
     (2, "Filename", 100, 0),
     (3, "L#", 40, wx.LIST_FORMAT_RIGHT),
-    (4, "Item", 550, 0))
+    (4, "Item", 15, 0))
 
 OP = tokenize.OP
 NAME = tokenize.NAME
@@ -110,7 +110,7 @@ def find_imports(txt):
 
 #-----------------------------------------------------------------------------
 
-class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAutoWidthMixin):
+class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWidthMixin):
     def __init__(self, parent, columns = columns):
         wx.ListCtrl.__init__(
             self, parent, -1,
@@ -139,7 +139,7 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
         self.data=[]
         self.cache=[]
         listmix.ColumnSorterMixin.__init__(self, len(columns))
-
+        listmix.ListCtrlAutoWidthMixin.__init__(self)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
         #self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnItemDeselected)
