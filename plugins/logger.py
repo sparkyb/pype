@@ -95,9 +95,7 @@ class logger(wx.TextCtrl):
     def handle_writes(self):
         while self.data.qsize():
             self.SetInsertionPointEnd()
-            data = []
-            for i in xrange(self.data.qsize()):
-                data.append(self.data.get())
+            data = [self.data.get() for i in xrange(self.data.qsize())]
             self.WriteText(''.join(data))
         lc = linecount = self.GetNumberOfLines()
         lp = lastpos = self.GetLastPosition()

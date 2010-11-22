@@ -7,7 +7,7 @@ It is also included with this archive as `gpl.txt <gpl.txt>`_.
 '''
 
 #------------ User-changable settings are available in the menus -------------
-from __version__ import *
+from __version__ import VERSION_, VERSION
 
 #------------------------ Startup/restart information ------------------------
 import sys, os
@@ -15,46 +15,57 @@ import sys, os
 if sys.platform == 'linux2' and 'DISPLAY' not in os.environ:
     raise SystemError('DISPLAY not set when importing or running pype')
 
+from optparse import OptionParser
+_options = OptionParser()
+_options.add_option('--version', dest='version', default='2.8',
+    help='This sets the minimal version of wxPython you would like to use')
+_options.add_option('--ansi', dest='use_ansi', action='store_true', default=None,
+    help='This tells PyPE to use an ansi version of wxPython')
+_options.add_option('--unicode', dest='use_unicode', action='store_true', default=None,
+    help='This tells PyPE to use a unicode version of wxPython')
+_options.add_option('--debug', dest='debug', action='store_true', default=False,
+    help='Enable the debugger shell within PyPE')
+_options.add_option('--standalone', dest='standalone', action='store_true', default=False,
+    help='Uses the local .pype for preferences')
+_options.add_option('--fontsize', dest='fontsize', action='store', type=int, default=None,
+    help='Sets the base font size')
+_options.add_option('--port', dest='port', action='store', type=int, default=None,
+    help='Sets the port on which to listen/check for the other PyPE instance')
+_options.add_option('--font', dest='font', default=None,
+    help='Sets the font for PyPE to use instead of it\'s default font')
+_options.add_option('--use_old_parser', '--use-old-parser', dest='use_old', action='store_true', default=False,
+    help='Use the older parser instead of the Python 2.6 and later AST parser')
+_options.add_option('--last', dest='last', action='store_true', default=False,
+    help='Load the documents that were open when PyPE last closed')
+
+_options, _args = _options.parse_args()
+
 if not hasattr(sys, 'frozen'):
-    v = '2.8'
+    v = _options.version
     import wxversion
-    if '--unicode' in sys.argv:
-        wxversion.ensureMinimal(v+'-unicode', optionsRequired=True)
-    elif '--ansi' in sys.argv:
-        wxversion.ensureMinimal(v+'-ansi', optionsRequired=True)
-    else:
-        wxversion.ensureMinimal(v)
+    if _options.use_ansi and _options.use_unicode:
+        print 'You can only enable ansi OR unicode, not both'
+        raise SystemExit
+    
+    if _options.use_ansi or _options.use_unicode:
+        v = v.split('-')[0]
+    if _options.use_ansi:
+        v += '-ansi'
+    if _options.use_unicode:
+        v += '-unicode'
+    wxversion.ensureMinimal(v, optionsRequired=('-' in v))
 
-DEBUG = '--debug' in sys.argv
-_standalone = '--standalone' in sys.argv
-USE_THREAD = 1#'--nothread' not in sys.argv
-
+DEBUG = _options.debug
+_standalone = _options.standalone
+USE_THREAD = True
 PRINTMACROS = 0
-#get font size modifications
-for i in sys.argv:
-    if i.startswith('--fontsize='):
-        try:
-            FONTSIZE = int(i[11:])
-        except:
-            pass
-        else:
-            break
-
-for i in sys.argv:
-    if i.startswith('--port='):
-        try:
-            PORTNUM = int(i[11:])
-        except:
-            pass
-        else:
-            break
-
-for i in sys.argv:
-    if i.startswith('--font='):
-        FONT = i[7:].replace('_', ' ').replace('-', ' ')
-        break
-
-USE_NEW = '--use_old_parser' not in sys.argv
+if _options.fontsize:
+    FONTSIZE = _options.fontsize
+if _options.port:
+    PORTNUM = _options.port
+if _options.font:
+    FONT = _options.font.replace('_', ' ').replace('-', ' ')
+USE_NEW = not _options.use_old
 
 def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
     os.chdir(orig_path)
@@ -64,14 +75,6 @@ def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
 
     os.execvp(args[0], args + ['--last'])
 
-def keep(i):
-    if i in ('--ansi', '--unicode', '--debug', '--nothread', '--macros', '--standalone'):
-        return 0
-    if i.startswith('--font=') or i.startswith('--fontsize=') or i.startswith('--port='):
-        return 0
-    return 1
-
-sys.argv = [i for i in sys.argv if keep(i)]
 #-------------- Create reference to this module in __builtins__ --------------
 if isinstance(__builtins__, dict):
     __builtins__['_pype'] = sys.modules[__name__]
@@ -88,9 +91,7 @@ import imp
 import md5
 import pprint
 import Queue
-import random
 import re
-import stat
 import string
 import textwrap
 import threading
@@ -114,8 +115,6 @@ _style = aui.AUI_NB_SCROLL_BUTTONS|aui.AUI_NB_TOP
 from wx import stc
 wxstc = stc
 from wx.lib.dialogs import ScrolledMessageDialog
-from wx.lib.mixins import listctrl
-from wx.lib.rcsizer import RowColSizer
 if DEBUG:
     try:
         from wx.py import crust
@@ -127,7 +126,11 @@ EFFECTUAL_NORMCASE = os.path.normcase('AbCdEf') == 'abcdef'
 UNICODE = wx.USE_UNICODE
 
 #--------------------- configuration and plugins imports ---------------------
-from configuration import *
+from configuration import (
+    REM_SWAP, collapse_style, eol, extns, fmt_Rmode, fmt_mode, getData,
+    homedir, nosocket, runpath, spawnargs, str_unrepr, stylefile,
+    unrepr, validate, wildcard
+)
 
 MAX_SAVE_STATE_DOC_SIZE = 0x400000 #2**22 bytes, a little over a 4 megs
 MAX_SAVE_STATE_LINE_COUNT = 20000  #anything more than 4 megs or 20k lines
@@ -155,6 +158,7 @@ from plugins import lru
 from plugins import macro
 from plugins import methodhelper
 from plugins import parsers
+from plugins import pubsub
 from plugins import scheduler
 from plugins import shell
 from plugins import single_instance
@@ -395,8 +399,11 @@ if 1:
 
 #checkbox ids
 if 1:
+    MIDDLE_CL = wx.NewId()
     AUTO = wx.NewId()
     FETCH_M = wx.NewId()
+    AC_KEYWORDS = wx.NewId()
+    AC_LENGTH = wx.NewId()
     NUM = wx.NewId()
     MARGIN = wx.NewId()
     USETABS = wx.NewId()
@@ -572,7 +579,11 @@ if 1:
     #bookmark support
     BOOKMARKNUMBER = 1
     BOOKMARKSYMBOL = stc.STC_MARK_CIRCLE
-    BOOKMARKMASK = 2
+    NOTIFICATIONNUMBER = 2
+    NOTIFICATIONSYMBOL = stc.STC_MARK_SHORTARROW
+    BOOKMARKMASK = 6
+    NOTIFICATIONMASK = 4
+    
 
 
 #unicode BOM stuff
@@ -663,8 +674,14 @@ def GDI(name):
 def get_filetype(fn):
     return extns.get(fn.split('.')[-1].lower(), 'python')
 
-def GetClipboardText():
+fake_primary_clipboard = ''
+def GetClipboardText(use_primary=False):
     success = False
+    if not sys.platform.startswith('win'):
+        wx.TheClipboard.UsePrimarySelection(use_primary)
+    elif use_primary:
+        return fake_primary_clipboard
+
     do = wx.TextDataObject()
     if wx.TheClipboard.Open():
         success = wx.TheClipboard.GetData(do)
@@ -674,14 +691,20 @@ def GetClipboardText():
         return do.GetText()
     return None
 
-def SetClipboardText(txt):
+def SetClipboardText(txt, use_primary=False):
+    if not sys.platform.startswith('win'):
+        wx.TheClipboard.UsePrimarySelection(use_primary)
+    elif use_primary:
+        global fake_primary_clipboard
+        fake_primary_clipboard = txt
+        return True
     do = wx.TextDataObject()
     do.SetText(txt)
     if wx.TheClipboard.Open():
         wx.TheClipboard.SetData(do)
         wx.TheClipboard.Close()
-        return 1
-    return 0
+        return True
+    return False
 
 RESET = {'cursor_posn':0,
          'BM':[],
@@ -1032,6 +1055,7 @@ class MainWindow(wx.Frame):
             menuAdd(self, editmenu, "Copy\tCtrl+C",         "Copy selected text", self.OnCopy, wx.ID_COPY)
             menuAdd(self, editmenu, "Paste\tCtrl+V",        "Paste clipboard text", self.OnPaste, wx.ID_PASTE)
             menuAdd(self, editmenu, "Delete",               "Delete selected text", self.OnDeleteSelection, pypeID_DELETE)
+            
             editmenu.AppendSeparator()
             menuAdd(self, editmenu, "PasteAndDown",         "Paste clipboard text and move cursor down", self.OnPasteAndDown, wx.NewId())
             menuAdd(self, editmenu, "Paste Rectangular",    "Paste clipboard text as a rectangle", self.OnPasteRectangular, wx.NewId())
@@ -1133,6 +1157,8 @@ class MainWindow(wx.Frame):
             setmenu.AppendSeparator()
             menuAdd(self, setmenu, "Show Autocomplete", "Show the autocomplete dropdown while typing", self.OnAutoCompleteToggle, AUTO, wx.ITEM_CHECK)
             menuAdd(self, setmenu, "Use Methods", "Try to only display methods of classes during autocomplete", self.OnUseMethodsToggle, FETCH_M, wx.ITEM_CHECK)
+            menuAdd(self, setmenu, "Autocomplete Keywords", "Include standard Python keywords and names in the autocomplete list", self.OnUseKeywordsToggle, AC_KEYWORDS, wx.ITEM_CHECK)
+            menuAdd(self, setmenu, "Set Autocomplete Length", "The number of characters necessary to produce an autocomplete list", self.OnAutocompleteLength, AC_LENGTH)
             menuAdd(self, setmenu, "Show line numbers", "Show or hide the line numbers on the current document", self.OnNumberToggle, NUM, wx.ITEM_CHECK)
             menuAdd(self, setmenu, "Show margin", "Show or hide the bookmark signifier margin on the current document", self.OnMarginToggle, MARGIN, wx.ITEM_CHECK)
             menuAdd(self, setmenu, "Show Indentation Guide", "Show or hide gray indentation guides in indentation", self.OnIndentGuideToggle, INDENTGUIDE, wx.ITEM_CHECK)
@@ -1199,6 +1225,8 @@ class MainWindow(wx.Frame):
             menuAdd(self, optionsmenu, "Method Colors", "When checked, the editor will use colored icons next to functions and methods based on how 'public' a method is (requires refresh)", self.OnMethodColorToggle, METH_C_ID, wx.ITEM_CHECK)
             if UNICODE:
                 menuAdd(self, optionsmenu, "Always Write BOM", "If checked, will write BOM when coding: directive is found, otherwise not", self.OnBOMToggle, USEBOM_ID, wx.ITEM_CHECK)
+            if sys.platform.startswith('win32'):
+                menuAdd(self, editmenu, "Enable Middle Paste", "Allows PyPE-centric middle-paste in Windows", self.OnMiddleClickToggle, MIDDLE_CL, wx.ITEM_CHECK)
             menuAdd(self, optionsmenu, "Strict Todo", "When checked, todos must also begin with > character (except xml/html)", self.OnStrictTodoToggle, STRICT_TODO_ID, wx.ITEM_CHECK)
             menuAdd(self, optionsmenu, "Set Line Color", "The color of the current line when 'Highlight Current Line' is enabled", self.OnLineColor, wx.NewId())
 
@@ -1385,6 +1413,7 @@ class MainWindow(wx.Frame):
                 self.menubar.Check(DOCUMENT_LIST_OPTION_TO_ID2[document_options2], 1)
             self.menubar.Check(SHOW_RECENT, show_recent)
             self.menubar.Check(SHOW_SEARCH, show_search)
+            self.menubar.Check(MIDDLE_CL, MIDDLE_PASTE)
 
             for i in TOOLS_ENABLE_L:
                 if i[4] in window_management.enabled:
@@ -1449,6 +1478,8 @@ class MainWindow(wx.Frame):
             self.Bind(EVT_DONE_PARSING, self.doneParsing)
             wx.CallAfter(parse_thread, self)
             wx.CallAfter(check_files, self)
+
+        subscribe('document.selected', self.OnDocumentChange)
 
     ## def RunEvents(self, evt):
         ## scheduler.GlobalSchedule.run(time.time())
@@ -1589,7 +1620,16 @@ class MainWindow(wx.Frame):
 
         tb.Realize()
 
-    def OnDocumentChange(self, stc, forced=False):
+    def OnDocumentChange(self, stc_or_msg, forced=False):
+        if isinstance(stc_or_msg, dict):
+            for stc in self.control:
+                if id(stc) == stc_or_msg.stc_id:
+                    break
+            else:
+                return
+        else:
+            stc = stc_or_msg
+
         if not forced and not self.starting:
             self.t.Stop()
             self.t2.Stop()
@@ -1767,6 +1807,7 @@ class MainWindow(wx.Frame):
         self.OnCheckMods(force=False)
         self.redrawvisible()
         self.SendSizeEvent()
+        e.Skip()
 
     def OnCheckMods(self, evt=None, force=True):
         try:
@@ -1855,28 +1896,34 @@ class MainWindow(wx.Frame):
 
         doc_def = {}
         #insert global document defaults here
-        dct =     {'use_tabs':0,
-             'spaces_per_tab':8,
-                     'indent':4,
-                   'collapse':1,
-              'marker_margin':1,
-                'line_margin':1,
-                   'col_line':78,
-                   'col_mode':stc.STC_EDGE_LINE,
-               'indent_guide':0,
-               'showautocomp':0,
-              'fetch_methods':1,
-                   'wrapmode':stc.STC_WRAP_NONE,
-                   'sortmode':1,
-                'save_cursor':0,
-                'cursor_posn':0,
-                 'whitespace':0,
-             'show_line_ends':0,
-                ## 'triggers':{},
-               'findbarprefs':{},
-                     'sloppy':0,
-                 'smartpaste':0,
-                   'showline':0}
+        dct = {
+            'use_tabs':0,
+            'spaces_per_tab':8,
+            'indent':4,
+            'collapse':1,
+            'marker_margin':1,
+            'line_margin':1,
+            'col_line':78,
+            'col_mode':stc.STC_EDGE_LINE,
+            'indent_guide':0,
+            'showautocomp':0,
+            'fetch_methods':1,
+            'use_keywords':1,
+            'wrapmode':stc.STC_WRAP_NONE,
+            'sortmode':1,
+            'save_cursor':0,
+            'cursor_posn':0,
+            'whitespace':0,
+            'show_line_ends':0,
+            ## 'triggers':{},
+            'findbarprefs':{},
+            'sloppy':0,
+            'smartpaste':0,
+            'showline':0,
+            'fetch_methods':1,
+            'use_keywords':1,
+            'ac_length':1,
+        }
         for _i in ASSOC:
             doc_def[_i[2]] = dict(dct)
             if _i[2] in ('xml', 'html'):
@@ -1946,6 +1993,7 @@ class MainWindow(wx.Frame):
                             ('extensions_to_watch', list(set(extns))),
                             ('show_search', 1),
                             ('global_filter_table', 0),
+                            ('MIDDLE_PASTE', 0),
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -2045,6 +2093,7 @@ class MainWindow(wx.Frame):
         self.config['extensions_to_watch'] = extensions_to_watch
         self.config['show_search'] = show_search
         self.config['global_filter_table'] = global_filter_table
+        self.config['MIDDLE_PASTE'] = MIDDLE_PASTE
         try:
             if UNICODE:
                 path = os.sep.join([self.configPath, 'history.u.txt'])
@@ -2472,7 +2521,7 @@ class MainWindow(wx.Frame):
             # try to detect the "true" defaults
             state['use_tabs'], state['spaces_per_tab'], state['indent'] = \
                 parsers.detectLineIndent(nwin.lines, state['use_tabs'], state['spaces_per_tab'], state['indent'])
-            print "detected", state['use_tabs'], state['spaces_per_tab'], state['indent']
+            ## print "detected", state['use_tabs'], state['spaces_per_tab'], state['indent']
 
         nwin.SetSaveState(state)
 
@@ -2498,7 +2547,9 @@ class MainWindow(wx.Frame):
         ## self.OnDocumentChange(nwin)
         self.docpanel._refresh()
         wx.CallAfter(self._updateChecks)
+        pubsub.publish('document.open', stc_id=id(nwin))
         return nwin.enc
+    ## newTab = auto_thaw(newTab)
 
     def OnReload(self, e, win=None):
         if win == None:
@@ -2593,6 +2644,7 @@ class MainWindow(wx.Frame):
         if hasattr(win, 't'):
             win.t.Stop()
             win.t2.Stop()
+        pubsub.publish('document.close', stc_id=id(win))
         self.control.DeletePage(wnum)
         self.updateWindowTitle()
         self.docpanel._refresh()
@@ -2701,6 +2753,10 @@ class MainWindow(wx.Frame):
             e.Skip()
         raise cancelled
 
+    def OnMiddleClickToggle(self, evt):
+        global MIDDLE_PASTE
+        MIDDLE_PASTE = not MIDDLE_PASTE
+
     def OnShowFindbar(self, evt):
         num, win = self.getNumWin(evt)
         if win.parent.IsSplit() and not isinstance(win.parent.GetWindow2(), findbar.FindBar):
@@ -2760,6 +2816,15 @@ class MainWindow(wx.Frame):
         num, win = self.getNumWin(evt)
         if win.parent.IsSplit():
             win.parent.GetWindow2().OnFindN(evt)
+        else:
+            try:
+                prefs = win.findbarprefs
+            except:
+                prefs = {}
+            if prefs.get('find',[]):
+                bar = findbar.FindBar(win.parent, self)
+                win.parent.SplitHorizontally(win, bar, -(bar.GetBestSize())[1]-5, 1-findbar_location)
+                win.parent.GetWindow2().OnFindN(evt)
         win.SetFocus()
 
 #----------------------------- View Menu Methods -----------------------------
@@ -2796,15 +2861,17 @@ class MainWindow(wx.Frame):
             num, win = self.getNumWin(e)
         self.OnDocumentChange(win, True)
 
-    def OnToggleBookmark (self, e):
+    def OnToggleBookmark(self, e):
         wnum, win = self.getNumWin(e)
         lineNo = win.GetCurrentLine()
-        if win.MarkerGet(lineNo) & BOOKMARKMASK:
+        if win.MarkerGet(lineNo) & NOTIFICATIONMASK:
+            win.MarkerDelete(lineNo, NOTIFICATIONNUMBER)
+        elif win.MarkerGet(lineNo) & BOOKMARKMASK:
             win.MarkerDelete(lineNo, BOOKMARKNUMBER)
         else:
             win.MarkerAdd(lineNo, BOOKMARKNUMBER)
 
-    def OnNextBookmark  (self, e):
+    def OnNextBookmark(self, e):
         wnum, win = self.getNumWin(e)
         lineNo = win.GetCurrentLine()
         newLineNo = win.MarkerNext(lineNo + 1, BOOKMARKMASK)
@@ -2818,7 +2885,7 @@ class MainWindow(wx.Frame):
         win.EnsureVisible(win.GetCurrentLine())
         win.EnsureCaretVisible()
 
-    def OnPreviousBookmark (self, e):
+    def OnPreviousBookmark(self, e):
         wnum, win = self.getNumWin(e)
         lineNo = win.GetCurrentLine()
         newLineNo = win.MarkerPrevious(lineNo - 1, BOOKMARKMASK)
@@ -2833,10 +2900,17 @@ class MainWindow(wx.Frame):
         win.EnsureCaretVisible()
 
     def OnLeft(self, e):
-        self.control.AdvanceSelection(False)
+        if self.control.GetSelection() == 0:
+            self.control.SetSelection(self.control.GetPageCount() - 1)
+        else:
+            self.control.AdvanceSelection(False)
 
     def OnRight(self, e):
-        self.control.AdvanceSelection(True)
+        pc = self.control.GetPageCount()
+        if pc and self.control.GetSelection() == (pc - 1):
+            self.control.SetSelection(0)
+        else:
+           self.control.AdvanceSelection(True)
 
     def OnFindDefn(self, e):
         if 'filter' not in window_management.enabled:
@@ -2940,6 +3014,19 @@ class MainWindow(wx.Frame):
     def OnUseMethodsToggle(self, e):
         n, win = self.getNumWin(e)
         win.fetch_methods = not win.fetch_methods
+
+    def OnUseKeywordsToggle(self, e):
+        n, win = self.getNumWin(e)
+        win.use_keywords = not win.use_keywords
+
+    def OnAutocompleteLength(self, e):
+        n, win = self.getNumWin(e)
+        rslt = self.getInt("Autocomplete Length",
+                           "How many characters must be typed in order for\n"\
+                           "autocomplete to offer suggestions? Enter an integer > 0.",
+                           win.ac_length)
+        
+        win.ac_length = rslt
 
     def OnNumberToggle(self, e):
         n, win = self.getNumWin(e)
@@ -3341,11 +3428,8 @@ class MainWindow(wx.Frame):
         HOW_OFTEN2 = REFRESH_DELAY_ID_TO_NUM[e.GetId()]
 
     def SharedCaret(self):
-        _, flags = CARET_OPTION_TO_ID[caret_option]
         for win in self.control:
-            win.SetXCaretPolicy(flags, caret_slop*caret_multiplier)
-            win.SetYCaretPolicy(flags, caret_slop)
-            win.SetSelection(*win.GetSelection())
+            win.SetSlopPolicy()
 
     def OnFinbarDefault(self, e):
         n, win = self.getNumWin()
@@ -3516,7 +3600,7 @@ class MainWindow(wx.Frame):
         wx.PostEvent(self, wx.MenuEvent(wx.wxEVT_COMMAND_MENU_SELECTED, menuid))
 
     def OnKeyPressed(self, event):
-        showpress=0
+        showpress = False
         self._activity()
         keypressed = GetKeyPress(event)
 
@@ -3525,7 +3609,8 @@ class MainWindow(wx.Frame):
             for menuid in (wx.ID_UNDO, wx.ID_REDO, wx.ID_CUT, wx.ID_COPY):
                 self.menubar.Enable(menuid, 1)
 
-        if showpress: print "keypressed", keypressed
+        if showpress:
+            print "keypressed", keypressed
 
         if keypressed in HOTKEY_TO_ID:
             return self.keyboardShortcut(keypressed, event)
@@ -3606,17 +3691,19 @@ class MainWindow(wx.Frame):
 
     def _ac(self, win):
         cur, colpos, word, method = self.getLeftFunct(win)
-        if not word:
+        if not word or len(word) < win.ac_length:
             return win.AutoCompCancel()
 
         ## print "got word:", word
 
         words = None
         if method and win.fetch_methods:
-            ## print "found method!"
             words = win._method_listing(win.lines.curlinei, cur, word) or []
         if not words:
-            words = sorted([i for i in win.kw.split() if i.startswith(word)] + win._name_listing(win.lines.curlinei, cur, word))
+            words = win._name_listing(win.lines.curlinei, cur, word)
+            if win.use_keywords:
+                words.extend(i for i in win.kw.split() if i.startswith(word))
+            words.sort()
 
         if len(words) == 0:
             ## print 'no words!'
@@ -3720,6 +3807,7 @@ class PythonSTC(stc.StyledTextCtrl):
         self.cached = None
         self.loaded = True
         self.MarkerDefine(BOOKMARKNUMBER, BOOKMARKSYMBOL, 'blue', 'blue')
+        self.MarkerDefine(NOTIFICATIONNUMBER, NOTIFICATIONSYMBOL, 'green', 'green')
 
         _, flags = CARET_OPTION_TO_ID[caret_option]
         self.SetXCaretPolicy(flags, caret_slop*caret_multiplier)
@@ -3746,6 +3834,8 @@ class PythonSTC(stc.StyledTextCtrl):
         self.recording = 0
         self.macro = []
         self.fetch_methods = 0
+        self.use_keywords = 0
+        self.ac_length = 1
         self.fetch_methods_cache = [-1, 0, '', []]
 
         #drop file and text support
@@ -3831,6 +3921,9 @@ class PythonSTC(stc.StyledTextCtrl):
         stc.EVT_STC_SAVEPOINTREACHED(self, ID, self.MakeClean)
         stc.EVT_STC_SAVEPOINTLEFT(self, ID, self.MakeDirty)
         stc.EVT_STC_NEEDSHOWN(self, ID, self.OnNeedShown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnSelectionEnd)
+        if not isinstance(self, View):
+            self.Bind(wx.EVT_MIDDLE_UP, self.OnMousePaste)
         self.Bind(stc.EVT_STC_MACRORECORD, self.GotEvent)
         self.SetModEventMask(stc.STC_MOD_INSERTTEXT|stc.STC_MOD_DELETETEXT|stc.STC_PERFORMED_USER|stc.STC_PERFORMED_UNDO|stc.STC_PERFORMED_REDO)
 
@@ -3866,6 +3959,12 @@ class PythonSTC(stc.StyledTextCtrl):
             self.IndicatorSetUnder(1)
         except:
             pass
+
+    def SetSlopPolicy(self):
+        _, flags = CARET_OPTION_TO_ID[caret_option]
+        self.SetXCaretPolicy(flags, caret_slop*caret_multiplier)
+        self.SetYCaretPolicy(flags, caret_slop)
+        self.SetCaretWidth(CARET_WIDTH)
 
     def gotcharacter(self):
         ## self._gotcharacter()
@@ -4198,6 +4297,8 @@ class PythonSTC(stc.StyledTextCtrl):
                 'smartpaste':self.smartpaste,
                 'showline':self.GetCaretLineVisible(),
                 'fetch_methods':self.fetch_methods,
+                'use_keywords':self.use_keywords,
+                'ac_length':self.ac_length,
                }
         if not self.save_cursor and not scp:
             del ret['cursor_posn']
@@ -4229,6 +4330,8 @@ class PythonSTC(stc.StyledTextCtrl):
         self.SetIndentationGuides(saved['indent_guide'])
         self.showautocomp = saved['showautocomp']
         self.fetch_methods = saved['fetch_methods']
+        self.use_keywords = saved['use_keywords']
+        self.ac_length = saved['ac_length']
         self.findbarprefs = dict(saved.get('findbarprefs', {}))
         self.triggers = saved.get('triggers', {})
         self.sloppy = saved['sloppy']
@@ -4543,6 +4646,7 @@ class PythonSTC(stc.StyledTextCtrl):
             self.MakeDirty(None)
         funct(self)
         self.root.redrawvisible(self)
+
     def SelectLines(self, force=0):
         x,y = self.GetSelection()
         if not force and x==y:
@@ -4557,6 +4661,7 @@ class PythonSTC(stc.StyledTextCtrl):
         if self.sloppy and not self.SelectionIsRectangle():
             self.SelectLines()
         interpreter.FutureCall(1, self.do, stc.StyledTextCtrl.Cut)
+
     def Copy(self):
         if self.sloppy and not self.SelectionIsRectangle():
             self.SelectLines()
@@ -4598,14 +4703,14 @@ class PythonSTC(stc.StyledTextCtrl):
 
         return self.format.join(out)
 
-    def Paste(self):
+    def Paste(self, use_primary=False):
+        d = GetClipboardText(use_primary)
         while self.smartpaste:
             if self.recording:
                 self.macro.append((2179, 0, 0))
 
             x,y = self.GetSelection()
             dofirst = x != y
-            d = GetClipboardText()
             if d is None or '\n' not in d:
                 if self.recording:
                     _ = self.macro.pop()
@@ -4636,7 +4741,7 @@ class PythonSTC(stc.StyledTextCtrl):
                 self.EndUndoAction()
             return
 
-        self.do(stc.StyledTextCtrl.Paste)
+        self.do((lambda slf, d=d: slf.ReplaceSelection(d)), True)
 
     def PasteRectangular(self):
         if self.recording:
@@ -5468,9 +5573,9 @@ class PythonSTC(stc.StyledTextCtrl):
 
     def _name_listing(self, curline, curcol, prefix=''):
         cur_scope = self.get_scope(curline, curcol)
+        ## print cur_scope
         available = set()
         while cur_scope:
-            ## print "using scope for the name listing", cur_scope.long, cur_scope.locals
             available.update(name for name in cur_scope.locals if isinstance(name, basestring) and name.startswith(prefix))
             cur_scope = cur_scope.search_list
         return sorted(available)
@@ -5763,6 +5868,51 @@ class PythonSTC(stc.StyledTextCtrl):
         self.m2 = None
         self.gotcharacter()
 
+    def OnMousePaste(self, evt):
+        """Paste the primary selection (on unix) at the mouse cursor location
+        
+        This currently supports only the primary selection.
+        """
+        if sys.platform.startswith('win') and not MIDDLE_PASTE:
+            return evt.Skip()
+
+        pos = self.PositionFromPoint(wx.Point(evt.GetX(), evt.GetY()))
+        if pos != stc.STC_INVALID_POSITION:
+            self.SetSelection(pos, pos)
+            self.Paste(True)
+
+    def OnSelectionEnd(self, evt):
+        """Copy the selected region into the primary selection
+    
+        This currently supports unix only, because it depends on the primary
+        selection of the clipboard.
+        
+        Borrowed and mangled from peppy via the url:
+        http://markmail.org/message/qyvzus77xpjqmxtw
+        """
+        evt.Skip()
+        if MIDDLE_PASTE or sys.platform.startswith('win'):
+            wx.CallAfter(self._OnSelectionEnd)
+
+    def _OnSelectionEnd(self):
+        start, end = self.GetSelection()
+        if start != end:
+            text = self.GetTextRange(start, end)
+            if self.sloppy and not self.SelectionIsRectangle():
+                x,y = self.lines.selectedlinesi
+                if y-x > 1:
+                    self.SelectLines()
+                    text = ''.join(self.lines.selectedlines)
+            SetClipboardText(text, True)
+
+    def UpdateNotifications(self, lines):
+        lineno = self.MarkerNext(0, NOTIFICATIONMASK)
+        while lineno != -1:
+            self.MarkerDelete(lineno, NOTIFICATIONNUMBER)
+            lineno = self.MarkerNext(0, NOTIFICATIONMASK)
+        for lineno in lines:
+            self.MarkerAdd(lineno, NOTIFICATIONNUMBER)
+
 class View(PythonSTC):
     def __init__(self, *args):
         PythonSTC.__init__(self, *args)
@@ -5946,8 +6096,7 @@ class SplitterWindow(wx.SplitterWindow):
 VS = wx.VERSION_STRING
 
 def main():
-    docs = [os.path.abspath(os.path.join(current_path, i))
-            for i in sys.argv[1:]]
+    docs = [os.path.abspath(os.path.join(current_path, i)) for i in _args]
     if single_instance.send_documents(docs):
         return
 
@@ -5967,16 +6116,13 @@ def main():
             il.AddIcon(wx.IconFromBitmap(bmp))
     IMGLIST3.append(IMGLIST3[0])
 
-    opn=0
-    if len(sys.argv)>1 and ('--last' in sys.argv):
-        opn=1
     filehistory.root = root = app.frame = MainWindow(None, -1, "PyPE", docs)
     root.updateWindowTitle()
     app.SetTopWindow(app.frame)
     app.frame.Show()
     app.frame.Hide() #to fix not showing problem on Windows
     app.frame.Show() #
-    if opn:
+    if _options.last:
         app.frame.OnOpenPrevDocs(None)
     app.frame.SendSizeEvent()
     app.MainLoop()

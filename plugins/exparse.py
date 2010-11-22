@@ -612,11 +612,13 @@ def postorder_ast(node, depth):
         ch = list(nodes(node))
         if ch and not isi(node, lam):
             stk.append((node, depth))
-            stk.extend((chi, depth) for chi in rev(ch) if isi(chi, nod))
-        else:
-            if isi(node, new_scope) and has(node, 'lineno') and has(node, 'decorators'):
-                node.lineno += len(node.decorators)
-            yield node, depth
+            adding = [(chi, depth) for chi in rev(ch) if isi(chi, nod)]
+            stk.extend(adding)
+            continue
+        if isi(node, new_scope) and has(node, 'lineno') and has(node, 'decorators'):
+            # I do not believe this ever happens.
+            node.lineno += len(node.decorators)
+        yield node, depth
 
 def iter_tree(entries, include_labels=True):
     stk = []
@@ -636,7 +638,6 @@ def _fixup_extra(entries):
     tcounts = {}
     stk_seq = [list(stk) for stk in iter_tree(entries)]
     for stk in reversed(stk_seq):
-        ## print stk
         last = stk[-1]
         last.olines = last.lines
         if len(stk) > 1:
@@ -783,7 +784,6 @@ def _parse(source):
             names = known.pop(depth)
             for i in xrange(depth-1, max(attrs)+1):
                 names.update(attrs.pop(i, ()))
-            ## print "have module at depth", depth, "with names", names
             out.append(Info(-1, '', '', depth, -1, sorted(names), None, node.doc, last[depth] - (node.lineno or 1) + 1))
     
     out.sort()
@@ -932,6 +932,13 @@ def _get_tree(source, pattern):
         return [i for i in _flatten(i) if isi(i, bas)]
     return []
 
+def _fixdef(source):
+    fd = re.compile('\n\s+def ')
+    m = fd.search(source)
+    if m:
+        source = source.replace(m.group(), '\ndef ', 1)
+    return source
+
 def get_defaults(fnode, source, lines, fcn=1):
     pattern = (CLASS_BASE_PATTERN, FCN_ARG_PATTERN)[fcn]
     start = lines[fnode.lineno-1]
@@ -945,15 +952,16 @@ def get_defaults(fnode, source, lines, fcn=1):
         fc = fnode.body
         fend = lines[fc[0].lineno-1]
     end = lines[fnode.lastlineno]
+    fixdef = re.compile('\n\s+def ')
     try:
         # We'll try the fast version that only visits the function
         # signature...
-        # This will fail if the first non-blank line of a function is a
-        # comment.
-        cur = _get_tree(source[start:fend].strip() + ' pass\n', pattern)
+        # This will be incorrect if the first non-blank line of a function is
+        # a comment.
+        cur = _get_tree(_fixdef(source[start:fend].strip()) + ' pass\n', pattern)
     except:
         # otherwise we'll parse the entire function
-        cur = _get_tree(source[start:end].strip(), pattern)
+        cur = _get_tree(_fixdef(source[start:end].strip()), pattern)
     return ''.join(cur).replace(',', ', ')
 
 def recmatch(data, pattern):

@@ -3,6 +3,7 @@ Key for the todo items:
 - Not going to make it.
 * Done.
 ? Probably didn't make it here, may make it later.
+. We'll see if it happens...
 
 Switch from all-in-one to plugin style (for easier source maintenance).
 Switch to use wx namespace.
@@ -172,7 +173,25 @@ Fix folding state saving/restoring.
 Replace View -> Split * commands with a 'split in second window' command.
 
 2.9:
-Add multi-language support via I18N or equivalent.
-Add -w workspace management.
-Switch to optparse for command line argument parsing.
+- Add multi-language support via I18N or equivalent.
+- Add -w workspace management.
 * Fix fast tree updates and sorting.
+
+2.9.3:
+* autocomplete bugs
+  * caused by improper handling of funcdef definition lines when there were decorators.
+* pyflakes macro
+  * use notification entries in the margin, uses F2
+  - include clicking to go to the file positions
+  . add support for wxPython 2.9/StyledTextCtrl's line annotations
+. pylint macro
+  . switch macro to using some sort of deferred result,as pylint can
+    take a while to run
+
+* autocomplete keywords option
+* autocomplete after X characters
+
+* select + middle click on linux
+* select + middle click option in Windows
+* Switch to optparse for command line argument parsing.
+. find history linux bugs

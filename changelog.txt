@@ -1,10 +1,41 @@
-﻿#-------------------------------- PyPE 2.9.1 ---------------------------------
+﻿#-------------------------------- PyPE 2.9.3 ---------------------------------
+(fixed) hotkey updates, report and patch thanks to Christoph Thielecke.
+(fixed) command shell on Linux.
+(fixed) an autocomplete bug on any Python document that included a decorator,
+thank you to Christoph Thielecke who reported the bug.
+(added) abaility to have "notifications", which are green arrows that overlay
+on top of "bookmarks".  This was added to support the use of 3rd party tools
+for checking source code for errors/warnings/etc.  Navigation is done via the
+standard Bookmark navigation options (View -> [Toggle|Next|Previous] Bookmark)
+(added) macro for PyFlakes checking, requested by Christoph Thielecke.  Any
+line produced by this check will be marked in the document's margin where
+bookmarks are normally placed.
+(added) the option to disable autocomplete on keywords. Requested by Christoph
+Thielecke.
+(added) the ability to select text and middle-click paste on Linux and OSX.
+Requested by Christoph Thielecke.  Implementation based on Rob McMullen's post
+http://goo.gl/zXsN2 .
+(added) the optional ability to select text and middle-click paste on Windows.
+Since this is only from within PyPE, this functionality is optional.  See the
+Edit -> Allow Middle Paste option on Windows.
+(added) the option to require more than one character to autocomplete on,
+requested by Christoph Thielecke.
+(fixed) the --port command line option previously could only have worked on
+accident.
+(changed) the way PyPE parses command line options.  Should have done this
+years ago.
+
+#-------------------------------- PyPE 2.9.2 ---------------------------------
+(changed) Fixed licensing information for PyPE release on Linux.  There are no
+other changes in this revision.
+
+
+#-------------------------------- PyPE 2.9.1 ---------------------------------
 (changed) I have relicensed wxWindows and LGPL v2 code as GPL v2, as is
 allowed in both licenses.  I have removed the relevant wxwindows.txt and
 lgpl.txt files from the distribution.
 (changed) the source release no longer contains the MS VC 9.0 redistributable.
-(not changed) everything else
-
+(not changed) everything else.
 
 
 #--------------------------------- PyPE 2.9 ----------------------------------

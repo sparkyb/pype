@@ -128,6 +128,7 @@ class MyNB(BaseNotebook):
         self.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnClose)
         self.Bind(aui.EVT_AUINOTEBOOK_BEGIN_DRAG, self.OnBeginDrag)
         self.Bind(aui.EVT_AUINOTEBOOK_DRAG_DONE, self.OnDragDone)
+        pubsub.subscribe('document.selected', self.updateChecks)
 
     def OnClose(self, evt):
         evt.Veto()
@@ -188,14 +189,14 @@ class MyNB(BaseNotebook):
                     except:
                         traceback.print_exc()
                         pass
-                wx.CallAfter(self.updateChecks, win)
+                pubsub.publish('document.selected', stc_id=id(win))
                 #width = self.GetClientSize()[0]
                 #split = win.parent
                 #if win.GetWrapMode() == wx.STC_WRAP_NONE:
                 #    self.parent.SetStatusText("", 1)
                 #else:
                 #    self.parent.SetStatusText("WRAP",1)
-                self.root.OnDocumentChange(win, None)
+                ## self.root.OnDocumentChange(win, None)
                 ## win.docstate.Show()
 
                 _, flags = __main__.CARET_OPTION_TO_ID[__main__.caret_option]
@@ -218,7 +219,13 @@ class MyNB(BaseNotebook):
         finally:
             self.calling = 0
 #
-    def updateChecks(self, win):
+    def updateChecks(self, message):
+        for win in self:
+            if id(win) == message.stc_id:
+                break
+        else:
+            # we can't find the proper window... skip the updating process
+            return
         #Clear for non-documents
         for i in __main__.ASSOC:
             self.root.menubar.Check(i[1], 0)
@@ -285,6 +292,10 @@ class MyNB(BaseNotebook):
         self.root.menubar.Check(__main__.AUTO, win.showautocomp)
         self.root.menubar.Check(__main__.FETCH_M, win.fetch_methods)
         self.root.menubar.Enable(__main__.FETCH_M, win.showautocomp)
+        self.root.menubar.Check(__main__.AC_KEYWORDS, win.use_keywords)
+        self.root.menubar.Enable(__main__.AC_KEYWORDS, win.showautocomp)
+        self.root.menubar.Enable(__main__.AC_LENGTH, win.showautocomp)
+        
         self.root.menubar.Check(__main__.WRAPL, win.GetWrapMode() != wx.stc.STC_WRAP_NONE)
         self.root.menubar.Check(__main__.SLOPPY, win.sloppy)
         self.root.menubar.Check(__main__.SMARTPASTE, win.smartpaste)

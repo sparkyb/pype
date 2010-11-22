@@ -20,7 +20,7 @@ License and Contact information
 http://pype.sourceforge.net
 http://come.to/josiah
 
-PyPE is copyright 2003-2006 Josiah Carlson.
+PyPE is copyright 2003-2010 Josiah Carlson.
 Contributions are copyright their respective authors.
 
 This software is licensed under the GPL (GNU General Public License) version 2
@@ -49,80 +49,56 @@ Requirements
 
 Either a machine running Python and wxPython, or a Windows machine that can
 run the binaries should be sufficient.  Initial revisions of PyPE were
-developed on a PII-400 with 384 megs of ram, but it should work on any machine
+developed on a PII-400 with 384 megs of ram, but modern versions have been
+written with more modern machines.  Really, PyPE should work on any machine
 that can run the most recent wxPython revisions.  Some portions may be slow
 (when using Document->Wrap Long Lines especially, which is a known issue with
-the scintilla text editor control), but it should still be usable.
+the scintilla text editor control in wxPython 2.8.*), but it should still be
+usable.
 
-PyPE 2.x has been tested on Python 2.3 and wxPython 2.6.3.0.  It should work
-on later versions of Python and wxPython.  If you are having issues, file a
-bug report on http://sourceforge.net/projects/pype .
+PyPE is usually only tested on my dev machine, which is currently a Windows 7
+64-bit machine running 32 bit Python 2.6 with a somewhat recent wxPython 2.8.
+If you run into issues, please feel free to file a bug report on
+http://sourceforge.net/projects/pype/ .
+
+As this document doesn't get updated all that often, please be aware that
+these version numbers may change during PyPE development.  If those revisions
+of Python or wxPython are out-of-date with the bleeding edge of both pieces of
+software (currently Python 2.7/3.1 and wxPython 2.9.x) either I've not tested
+PyPE on those revisions, or I have, and I've not updated this document.  PyPE
+has not been translated for use with Python 3.x, so it won't work.  When PyPE
+supports Python 3.x, there will be a notification and there will be a special
+version.
 
 ------------
 Installation
 ------------
 
-If you have Python 2.3 or later as well as wxPython 2.6.3 or later, you can
-extract PyPE-X.Y.Z-src.zip anywhere and run it by double-clicking on pype.py
-or pype.pyw .  Note that the 2.6.3.3 ansi build of wxPython has issues with
-pasting, so use some other ansi build, or even the 2.6.3.3 unicode build.
+If you have Python 2.6+ and wxPython 2.8+, you should be able to extract the
+most recent PyPE-X.Y.Z-src.zip anywhere, and if your associations are set up
+correctly, run it by double-clicking on pype.py or pype.pyw .
 
-If you don't have Python 2.3 wxPython 2.6.3 or later, and are running Windows,
-you should (hopefully) be able to run the Windows binaries.  They are provided
-for your convenience (so you don't have to install Python and wxPython).
+If you don't have Python or wxPython installed on your system, and are using
+Windows, you may try to run a recent Windows binary.  They are provided for
+your convenience, so if they don't work, please file a bug report.
 
-At the current time, the Windows binaries are constructed with Python 2.3 and
-wxPython 2.6.3.0 .  I have considered moving to Python 2.5 or even 2.4 with
-wxPython 2.8, but switching to Python 2.4 with wxPython 2.6.x adds 700k to the
-binary distribution, and going with Python 2.5 and wxPython 2.8 (there are
-currently no wxPython 2.6.3.* releases for Python 2.5) adds 2.2 megs to the
-binary distribution, some of which is the Python 2.4-2.5 size difference, much
-of it being the necessity to include the gdi plus dll for non-XP/Vista
-platforms, and even the MSVC 7.1 runtime.  While many users have copies of
-both of these runtimes *somewhere* on their system, PyPE cannot rely on them
-being accessable (on my machine only the MSVC 7.1 runtime is in a system path,
-while the gdi plus dll is in about a dozen places).
-
-If it so happens that the Windows binaries don't work for you, and you have an
-installation of Python and wxPython that fits the requirements, why don't you
-run the source version?  The only difference is a pass through py2exe, and a
-minor loading time speed increase.  Just because the Windows binaries exist,
-doesn't mean that you /have/ to run them.  If you have a Python and wxPython
-installation, you should have the necessary dlls to make PyPE run (Python is
-shipped with the 7.1 runtime, and wxPython 2.7+ ships with the gdi plus dll).
 
 Why doesn't the Windows install work?
 =====================================
-Depending on your platform, it may or may not work.  It works for me on
-Windows 2k and XP.  Most problems people have is that they mistakenly extract
-library.zip, which they shouldn't do (and in recent PyPE binary releases
-may not be able to do).  It could also be due to the lack of some DLL, in
-which case an error message should inform you of which DLL you are missing.
+Depending on your platform, it may or may not work.  Most problems people have
+is that they mistakenly extract library.zip, which they shouldn't do (and in
+recent PyPE binary releases may not be able to do).  It could also be due to
+the lack of some DLL, in which case an error message should inform you of
+which DLL you are missing.  PyPE 2.9.1 for Windows was missing msvcp71.dll
+file, which will be included with subsequent Windows releases.
 
 
 Why doesn't PyPE work on Linux?
 ===============================
-PyPE 2.5+ has been tested on Ubuntu 6.06 with...
-
-* python-wxversion_2.6.1.2ubuntu2_all.deb
-
-* libwxgtk2.6-0_2.6.1.2ubuntu2_i386.deb
-
-* python-wxgtk2.6_2.6.1.2ubuntu2_i386.deb
-
-And 
-
-* libwxgtk2.7-0_2.7.1.3-0_i386.deb
-
-* python-wxgtk2.7_2.7.1.3-0_i386.deb
-
-The only anomalies observed so far is seemingly a bug with some
-wx.ScrolledPanel uses (which have been replaced in more recent releases), and
-when using a pure Kubuntu install (installed via the Kubuntu install, and not
-Ubuntu + Kubuntu core via synaptic), there may be errors and/or warnings
-during PyPE startup.  I have not been able to crash PyPE yet, so I presume it
-is stable.  I have recently switched to using Ubuntu + Kubuntu core + Xubuntu
-core, and I haven't noticed any of aforementioned errors.
+If you aren't running a LTS version of Ubuntu (currently 10.4), I probably
+have not tested PyPE on your particular flavor of Linux.  Assuming that you
+can download and run the wxPython demo from the "wxPython Docs and Demos"
+available from http://www.wxpython.org, then PyPE should also work.
 
 There have previously been reports of PyPE segfaulting in certain Linux
 distributions when opening a file.  This seems to be caused by icons in the
@@ -135,6 +111,9 @@ that it is unchecked.  You should restart PyPE to make sure that the setting
 sticks.  PyPE will be uglier, but it should work.  I believe that this has
 been fixed in PyPE 2.4.1 and later, but this documentation persists "just in
 case".
+
+If you run into other errors, please file a bug report at
+http://sourceforge.net/projects/pype/ .
 
 
 Why isn't the most recent PyPE available as deb or RPM?
@@ -162,17 +141,16 @@ to rpm packages.
 
 Why doesn't PyPE work on OSX?
 =============================
-Aside from "PyPE works on OSX" (or "almost works") from 2 users, I don't know
-what may be causing PyPE to not work in OSX.  If you send bug reports with
-tracebacks, etc., we can probably figure out what is going on and how we can
-fix it.
+PyPE 2.9.1 was released with some OSX-specific optimizations to make my life
+using PyPE on OSX better.  At the time, I had been using OSX with work, which
+was an experiment that lasted only 2 1/2 months, due in part to PyPE's
+slowness at the time on OSX.  This is caused by OSX shenanigans WRT the layers
+that go into rendering GTK on OSX.
 
-In the summer of 2008, I actually had an OS X laptop to use mid June 2008 to
-late August 2008.  I did my best to improve PyPE, but because of how slow PyPE
-is on OS X (I believe it is caused by the way the editor control is wrapped on
-OS X with wxPython), I actually abandoned the platform.  PyPE inside an Ubuntu
-or Windows virtual machine (Virtual Box or Parallels are both good) works
-well on OS X.
+Since I don't have an OSX machine on which to run PyPE, I'm at the mercy of
+those on the system to file bug reports and test my bug fixes.  PyPE works
+well on Linux, Windows, and within a Windows VM on OSX (where it's actually
+faster than in OSX native).
 
 --------------------
 Command Line Options
@@ -455,6 +433,14 @@ Smart Paste is two functionalities in one.
    Paste will automatically paste to the next line, indenting one level deeper
    as necessary if you had selected the start of a new block (like if, for,
    while, def, etc., for Python, open curly braces '{' in C, etc.).
+
+
+What is Middle Paste?
+=====================
+PyPE 2.9.3 and later now supports Unix-style selection + middle clicking on
+OSX and Linux.  Windows versions of PyPE have it as an optional feature for
+use within PyPE only.  These features are derived from Robert McMullen's post:
+http://goo.gl/zXsN2 .
 
 
 What do the different options in the Filter tool do?
@@ -1302,10 +1288,16 @@ is a wonderful editor, has some excellent ideas in terms of functionality, but
 unfortunately does not offer the extended functionality I want, and it hurts
 my brain to use tk, so I cannot add it myself.
 
-The people writing wxWidgets (previously named wxWindows) and wxPython -
-without you, this also would not have been possible.  You have made the most
-self-consistent GUI libraries that I have ever used, made them easy to use,
-and offer them on every platform that I would ever want or need.  You rock.
+Robin Dunn - without Robin Dunn spending countless hours wrapping and building
+Pythonic APIs, I'm not sure that PyPE could have come to be.  Most of the
+other GUI libraries I was looking at the time for doing PyPE development have
+fallen behind, and/or stopped being maintained. Robin deserves more thanks
+than I could possibly express in this blurb.
+
+The people writing wxWidgets (previously named wxWindows) - without you, this
+also would not have been possible.  You have made the most self-consistent GUI
+libraries that I have ever used, made them easy to use, and offer them on
+every platform that I would ever want or need.  You rock.
 
 Neil Hodgson and others who work on Scintilla.  As wx.StyledTextCtrl is a
 binding for scintilla in wxWidgets, which then has bindings for wxPython,
