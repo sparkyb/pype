@@ -1,0 +1,51 @@
+
+To do for Python 2.0:
+- Not going to make it.
+* Done.
+? Maybe, still thinking.
+
+Switch from all-in-one to plugin style (for easier source maintenance).
+Switch to use wx namespace.
+
+Beta 1:
+* browsable source tree (by name)
+* browsable source tree (by line number)
+* this document todo/etc list
+*    (line number, importance, text)
+- global document todo/etc list
+-     (document name, line number, importance, text)
+* find bar for this file
+* logger
+* document ordering
+* document reordering
+* document icons (everywhere)
+* made window remember size and position
+* made subwindows remember size and position
+* tooltips now understand __init__ and __new__
+- interpreter
+? shell command support (open new console, capture output)
+* filesystem browser with pathmarks
+* workspace management
+- project management
+? per-filetype preferences
+
+Beta 2
+* Add a replace workspace mechanism.
+* Find in files as a tab on the bottom.
+* Make the location of both tabs options (right/left, top/bottom).
+* Save search results (as text).
+* Select whole lines on indent/dedent.
+* Better caps support in filenames on windows/mac.
+* Keyboard command for 'close find bar'/'close replace bar'
+* Keyboard command for 'find previous'
+* Make optional drag and drop file support on STC instances.
+* Smart Case
+* Replace In Selection
+? Save/load search criteria (like workspace).
+
+
+Beta 4:
+* per-filetype preferences
+* Fix per-document type saving and such...
+Fix dragging of edited documents in documents tab...
+

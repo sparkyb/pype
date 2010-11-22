@@ -7,9 +7,18 @@
 from distutils.core import setup
 import py2exe
 import pype
+import glob
 
-setup(name="PyPE-win32",
-      version=pype.VERSION,
-      scripts=["pype.py"],
-      data_files=[('', ('stc-styles.rc.cfg', 'readme.txt', 'gpl.txt', 'changelog.txt', 'wxProject.py'))],
+nam = "PyPE-win32"
+if pype.VS[-1] == 'u':
+    nam += '-unicode'
+
+setup(name=nam,
+      version=pype.VERSION_,
+      windows=[{"script": "pype.py",
+                "icon_resources": [(1, "icons\\pype.ico")]}],
+      data_files=[('', glob.glob('*.txt')+['stc-styles.rc.cfg', 'pype.pyw']),
+                  ('icons', glob.glob('icons\\*.*'),
+                  )],
+      options = {"py2exe": {"packages": ["encodings"]}}
 )

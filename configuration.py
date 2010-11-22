@@ -3,12 +3,6 @@
 
 collapse_style = 0
 
-#if the following is set to 1, then drag and drop TEXT support will not work
-#in the editor control, but will enable drag and drop FILE support in the
-#editor control.  Enabled by default.  Why?  Because I drag files, I cut and
-#paste text.
-dnd_file = 1
-
 #CTRL-T swaps two lines.  Setting the below to 1 disables this hotkey.
 REM_SWAP = 1
 
@@ -38,6 +32,14 @@ def fp(path):
 def fixpath(path):
     return os.path.normpath(fp(path))
 
+try:
+    sorted
+except NameError:
+    def sorted(foo):
+        a = list(foo)
+        a.sort()
+        return a
+
 se = fixpath(sys.executable)
 spawnargs = [se]
 
@@ -57,59 +59,23 @@ runpath = os.path.dirname(os.path.normpath(os.path.abspath(runpath)))
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
-def command_parser(command):
-    args = []
-    beg = 0
-    cur = 0
-    if os.name == 'nt':
-        while cur < len(command):
-            if command[cur] == ' ':
-                if command[beg] == '"':
-                    if cur > (beg+1):
-                        if command[cur-1] == '"':
-                            args.append(command[beg:cur])
-                            cur += 1
-                            beg = cur
-                        else:
-                            cur += 1
-                    else:
-                        cur += 1
-                elif cur > beg:
-                    args.append(command[beg:cur])
-                    cur += 1
-                    beg = cur
-                else:
-                    cur += 1
-                    beg = cur
-            else:
-                cur += 1
-    else:
-        while cur < len(command):
-            if command[cur:cur+2] == '\\ ':
-                cur = cur + 2
-            elif command[cur] == ' ':
-                args.append(command[beg:cur])
-                cur += 1
-                beg = cur
-            else:
-                cur += 1
-    if beg != cur:
-        args.append(command[beg:cur])
-    return args
-
 #for open/save dialogs
-wildcard = "All python files (*.py *.pyw)|*.py;*.pyw;*.PY;*.PYW|"\
-           "C/C++ files (*.c* *.h)|*.c*;*.h;*.C*;*.H|"\
-           "HTML/XML files (*.htm* *.shtm* *.xml)|*.htm*;*.shtm*;*.xml;*.HTM*;*.SHTM*;*.XML|"\
-           "All files (*.*)|*.*"
+wildcard = "All python files (*.py *.pyw)|*.py;*.pyw|"\
+           "Pyrex files (*.pyi *.pyx)|*.pyi;*.pyx|"\
+           "C/C++ files (*.c* *.h)|*.c*;*.h|"\
+           "HTML/XML files (*.htm* *.shtm* *.xml)|*.htm*;*.shtm*;*.xml|"\
+           "All Files (*.*)|*.*"
 
 #for style mappings from extensions
 extns = {'py' : 'python',
         'pyw' : 'python',
+        'pyi' : 'python', #I need a new system so that adding new file types isn't such a pain.
+        'pyx' : 'python',
           'c' : 'cpp',
          'cc' : 'cpp',
         'cpp' : 'cpp',
         'c++' : 'cpp',
+        'cxx' : 'cpp',
           'h' : 'cpp',
         'htm' : 'html',
        'html' : 'html',
@@ -165,54 +131,9 @@ for fil in os.listdir(homedir):
         try: os.remove(os.path.join(homedir, fil))
         except: pass
 
-def get_paragraphs(text, l_sep):
-    in_lines = text.split(l_sep)
-    lines = []
-    cur = []
-    for line in in_lines:
-        cur.append(line)
-        if line:
-            if line[-1] != ' ':
-                cur.append(' ')
-        else:
-            if cur:
-                lines.append(cur)
-                cur = []
-            lines.append([])
-    if cur:
-        lines.append(cur)
-    return [''.join(i) for i in lines]
-
-def wrap_paragraph(text, width):
-    words = text.split(' ')
-    lines = []
-    cur = []
-    l = 0
-    for word in words:
-        lw = len(word)
-        if not lw:
-            cur.append(word)
-        elif (l + len(cur) + len(word)) <= width:
-            cur.append(word)
-            l += lw
-        else:
-            if cur[-1]:
-                cur.append('')
-            lines.append(cur)
-            cur = [word]
-            l = lw
-    if cur:
-        lines.append(cur)
-    return '\n'.join([' '.join(i) for i in lines])
-
-def wrap_lines(text, width, lend):
-    paragraphs = get_paragraphs(text, lend)
-    retr = lend.join([wrap_paragraph(i, width) for i in paragraphs])
-    return retr
-
-def validate(dlg, orig):
+def validate(value, orig):
     try:
-        a = int(dlg.GetValue())
+        a = int(value)
     except:
         a = 0
     if a < 1:

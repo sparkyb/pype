@@ -5,7 +5,7 @@
 # Author:      Riaan Booysen
 #
 # Created:     2001/08/20
-# RCS-ID:      $Id: STCStyleEditor.py,v 1.2.2.2 2003/03/11 01:13:15 RD Exp $
+# RCS-ID:      $Id: STCStyleEditor.py,v 1.1 2005/04/24 02:05:52 jcarlson Exp $
 # Copyright:   (c) 2001 - 2002 Riaan Booysen
 # Licence:     wxWindows license
 #-----------------------------------------------------------------------------
