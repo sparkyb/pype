@@ -57,7 +57,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.6.5.1"
+    VERSION = "1.6.5.2"
     VREQ = '2.4.2.4'
 
     import string
@@ -415,9 +415,7 @@ class MainWindow(wxFrame):
 
     def OnDrop(self, fnames, error=1):
         for i in fnames:
-            if (not '\\' in i) and (not '/' in i):
-                i = '/'.join([os.getcwd(), i])
-            i = os.path.normcase(os.path.normpath(os.path.realpath(i)))
+            i = os.path.normcase(os.path.normpath(os.path.realpath(os.path.join(os.getcwd(), i))))
             if self.isAbsOpen(i):
                 if len(fnames)==1:
                     self.selectAbsolute(i)
@@ -656,6 +654,7 @@ class MainWindow(wxFrame):
     def newTab(self, d, fn, switch=0):
         if 'lastpath' in self.config:
             del self.config['lastpath']
+        ctrlwidth = self.control.GetSizeTuple()[0]
         split = wxSplitterWindow(self.control, -1)
         split.parent = self
         nwin = PythonSTC(self.control, wxNewId(), split)
@@ -665,7 +664,7 @@ class MainWindow(wxFrame):
         nwin.changeStyle(stylefile, self.style(fn))
         nwin.tree = hierCodeTreePanel(self, split)
         split.SetMinimumPaneSize(3)
-        split.SplitVertically(nwin, nwin.tree, -10)
+        split.SplitVertically(nwin, nwin.tree, max(ctrlwidth-20, 5))
         if d:
             f=open(os.sep.join([nwin.dirname,nwin.filename]),'rb')
             txt = f.read()
@@ -1553,7 +1552,10 @@ class MainWindow(wxFrame):
                     
                     colon = ord(':')
                     if col <= ind:
-                        win.ReplaceSelection(win.format+(col*' ').replace(spaces_per_tab*' ', '\t'))
+                        if use_tabs:
+                            win.ReplaceSelection(win.format+(col*' ').replace(spaces_per_tab*' ', '\t'))
+                        else:
+                            win.ReplaceSelection(win.format+(col*' '))
                     elif pos:
                         xtra = 0
                         if (line.find(':')>-1):

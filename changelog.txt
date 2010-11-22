@@ -1,3 +1,22 @@
+(PyPE 1.6.5.2)
+(fixed) a bug when creating a newline with tabs disabled and the cursor was in
+or immediately to the right of indentation.
+(fixed) on linux, opening a document would not display the source, this is
+seemingly a bug in wxSplitterWindow on linux.  The split argument I give is
+negative, so it should result in a size for the right panel.  It instead makes
+the left window non-existant.  The negative argument has been replaced with a
+positive argument based on the current notebook size.  No guarantees on
+whether either window will be created when the notebook is smaller than 25
+pixels wide.
+(should have been fixed) seemingly, some of you are having problems opening
+files in the root of a drive as well as opening relative paths (in windows).
+This has been working for me since PyPE 1.6.2, but I've added in one more
+thing.  If you STILL can't open relative paths or a file in the root of a
+drive, then the combination of:
+os.path.normcase(os.path.normpath(os.path.realpath(os.path.join(os.getcwd(), i))))
+is not sufficient to get the real and normalized path on Windows.
+
+
 (PyPE 1.6.5.1)
 (fixed) a small bug with the syntax highlighting submenu not updating what
 highlighting is being used in non-unicode versions.
