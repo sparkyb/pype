@@ -1257,23 +1257,24 @@ class MainWindow(wxFrame):
                         return win.AutoCompComplete()
                     #get information about the current cursor position
                     linenum = win.GetCurrentLine()
-                    line = win.GetLine(linenum)
                     pos = win.GetCurrentPos()
                     col = win.GetColumn(pos)
+                    line = win.GetLine(linenum)[:col]
                     linestart = pos-col
 
                     #get info about the current line's indentation
                     ind = win.GetLineIndentation(linenum)
-                    
+                    colon = ord(':')
                     if col <= ind:
                         win.ReplaceSelection(win.format+col*' ')
                     elif pos:
                         xtra = 0
                         if (line.find(':')>-1):
-                            for i in xrange(linestart, min(pos+1, win.GetTextLength()-1)):
+                            for i in xrange(linestart, min(pos, win.GetTextLength())):
                                 styl = win.GetStyleAt(i)
+                                #print styl, win.GetCharAt(i)
                                 if not xtra:
-                                    if (styl==10) and (win.GetCharAt(i) == ord(':')):
+                                    if (styl==10) and (win.GetCharAt(i) == colon):
                                         xtra = 1
                                 elif (styl == 1):
                                     #it is a comment, ignore the character
@@ -1290,23 +1291,23 @@ class MainWindow(wxFrame):
                             if xtra:
                                 #This deals with ending single and multi-line definitions properly.
                                 while linenum >= 0:
-                                    line = win.GetLine(linenum)
-                                    found = -1
-                                    for i in ['def', 'class', 'if', 'while', 'for']:
+                                    found = []
+                                    for i in ['def', 'class', 'if', 'else', 'while',
+                                              'for', 'try', 'except', 'finally']:
                                         #'elif' is found while searching for 'if'
                                         a = line.find(i)
                                         if (a > -1):
-                                            if (found > -1):
-                                                if (a < found):
-                                                    found = a
-                                            else:
-                                                found = a
+                                            found.append(a)
+                                    #print 'fnd', found
+                                    if found: found = min(found)
+                                    else:     found = -1
                                     if (found > -1) and\
-                                       (win.GetStyleAt(win.GetLineEndPosition(linenum)-len(line)+found)==0) and\
+                                       (win.GetStyleAt(win.GetLineEndPosition(linenum)-len(line)+found)==5) and\
                                        (win.GetLineIndentation(linenum) == found):
                                            ind = win.GetLineIndentation(linenum)
                                            break
                                     linenum -= 1
+                                    line = win.GetLine(linenum)
                         #if we were to do indentation for ()[]{}, it would be here
                         if not xtra:
                             #yep, right here.
@@ -1364,6 +1365,7 @@ class MainWindow(wxFrame):
                                     #print "stack remaining", stk
                                     ind = stk[-1][0]
                         if xtra:
+                            #print ind
                             ind += indent
                         win.ReplaceSelection(win.format+ind*' ')
                     else:

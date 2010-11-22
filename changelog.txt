@@ -1,3 +1,13 @@
+(PyPE 1.5.1)
+(fixed) a little bug with autoindent after [else, try, except, finally]
+statements.  I forgot to add them into the autoindent stuff.
+(fixed) another little bug with autoindent.  It wouldn't autoindent after a
+[if, else, etc.] if the cursor was after the last character in the document.
+(fixed) another little problem with autoindent.  Had to do with certain kinds
+of nested declarations.  Damn, autoindent is almost more trouble than it is
+worth.
+
+
 (PyPE 1.5)
 (fixed) a little problem when finding line endings in some ambiguous files.
 Ambiguous files being files lacking any sort of line endings.
