@@ -3,7 +3,6 @@ import time
 import os
 import re
 import parser
-import keyword
 import compiler
 import traceback
 import symbol
@@ -11,7 +10,7 @@ import token
 from compiler import ast
 from compiler import consts
 
-todoexp = re.compile('([a-zA-Z0-9 ]+):(.*)')
+todoexp = re.compile('#([a-zA-Z0-9 ]+):(.*)', re.DOTALL)
 
 nam = '[a-zA-Z_][a-zA-Z0-9_]+'
 typ = '(?:' + nam + '(?:\s+%s)*'%nam + '(?:\s*\[\])*' + '(?:\s*\*)*' + ')*'
@@ -21,9 +20,13 @@ cfcnre = '(%s)\s+(%s)\s+\(\s*(%s)\s*\)\s*{'%(typ, clsnam, args)
 
 cfcn = re.compile(cfcnre)
 
-_kwl = dict.fromkeys(keyword.kwlist)
-urls = dict.fromkeys('http ftp mailto news gopher telnet'.split())
-_kwl.update(urls)
+_bad_todo = dict.fromkeys('if elif else def cdef class try except finally for while lambda'.split())
+_bad_urls = dict.fromkeys('http ftp mailto news gopher telnet file'.split())
+
+def is_url(left, right):
+    if left.lstrip().lower() in _bad_urls and right[:2] == '//':
+        return 1
+    return 0
 
 def detectLineEndings(text):
     crlf_ = text.count('\r\n')
@@ -46,7 +49,6 @@ def c_parser(source, line_ending, flat, wxYield):
     texp = todoexp
     todo = []
     line_no = 0
-    kwl = urls
     for line in source.split(line_ending):
         line_no += 1
         ls = line.strip()
@@ -54,10 +56,9 @@ def c_parser(source, line_ending, flat, wxYield):
             r = texp.search(ls)
             if r:
                 tpl = r.groups()
-                x = tpl[0].strip().lower()
-                if x in kwl:
+                if is_url(*tpl):
                     continue
-                todo.append((x,
+                todo.append((tpl[0].strip().lower(),
                              line_no,
                              tpl[1].count('!'),
                              tpl[1].strip()))
@@ -194,7 +195,7 @@ def slower_parser(source, _1, flat, _2):
         return faster_parser(source, '\n', flat, _2)
     
     texp = todoexp
-    kwl = _kwl
+    bad_todo = _bad_todo
     todo = []
     for line_no, line in enumerate(lines):
         ls = line.lstrip()
@@ -202,7 +203,7 @@ def slower_parser(source, _1, flat, _2):
             r = texp.match(ls)
             if r:
                 tpl = r.groups()
-                if tpl[0].split()[0] not in kwl:
+                if tpl[0].split()[0] not in bad_todo and not is_url(*tpl):
                     todo.append((tpl[0].strip().lower(),
                             line_no+1,
                             tpl[1].count('!'),
@@ -266,7 +267,7 @@ def get_defs(source, p=0):
 
 def faster_parser(source, line_ending, flat, wxYield):
     texp = todoexp
-    kwl = _kwl
+    bad_todo = _bad_todo
     lines = source.split(line_ending)
     docstring = {} #new_kwl()
     todo = []
@@ -319,7 +320,7 @@ def faster_parser(source, line_ending, flat, wxYield):
             r = texp.search(ls)
             if r:
                 tpl = r.groups()
-                if tpl[0].split()[0] not in kwl:
+                if tpl[0].split()[0] not in bad_todo and not is_url(*tpl):
                     todo.append((tpl[0].strip().lower(),
                                  line_no,
                                  tpl[1].count('!'),
@@ -366,7 +367,6 @@ def fast_parser(*args, **kwargs):
 def latex_parser(source, line_ending, flat, _):
     texp = todoexp
     lines = source.split(line_ending)
-    kwl = urls
     todo = []
     out = []
     stk = []
@@ -403,10 +403,9 @@ def latex_parser(source, line_ending, flat, _):
             r = texp.search(ls, 1)
             if r:
                 tpl = r.groups()
-                x = tpl[0].strip().lower()
-                if x in kwl:
+                if is_url(*tpl):
                     continue
-                todo.append((x,
+                todo.append((tpl[0].strip().lower(),
                              line_no,
                              tpl[1].count('!'),
                              tpl[1].strip()))
@@ -454,4 +453,4 @@ class Baz(object, int):
 '''
     import pprint
     ## pprint.pprint(get_defs(a,1))
-    pprint.pprint(slower_parser(a, '\n', 3, lambda:None))
+    pprint.pprint(slower_parser(a, '\n', 3, lambda:None)[-1])

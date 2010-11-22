@@ -7,6 +7,8 @@ from findinfiles import FoundTable
 
 class vTodo(FoundTable):
     def OnGetItemText(self, item, col):
+        if col == 0:
+            return ""
         return "%s" % (self.data[item][col-1],)
 
 columns = (
@@ -22,7 +24,9 @@ class VirtualTodo(wx.Panel):
         self.root = root
         self.parent = parent
         self.vtd = vTodo(self, columns)
-        wx.EVT_SIZE(self, self.OnSize)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.vtd, 1, wx.EXPAND)
+        self.SetSizer(sizer)
         self.vtd.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
         
     def NewItemList(self, items):
@@ -37,21 +41,3 @@ class VirtualTodo(wx.Panel):
             win.EnsureVisible(sel)
             win.SetSelection(linepos-len(win.GetLine(sel))+len(win.format), linepos)
             win.ScrollToColumn(0)
-    
-    def Show(self):
-        wx.Panel.Show(self, True)
-        try:
-            self.parent.sizer.Add(self, 1, wx.EXPAND|wx.ALL, 0)
-        except:
-            pass
-        self.OnSize(None)
-    def Hide(self):
-        wx.Panel.Hide(self)
-        try:
-            self.parent.sizer.Detach(self)
-        except:
-            pass
-    def OnSize(self, event):
-        w,h = self.GetClientSizeTuple()
-        self.vtd.SetDimensions(0, 0, w, h)
-        self.parent.sizer.Layout()

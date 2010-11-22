@@ -116,12 +116,12 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
             self, parent, -1,
             style=wx.LC_REPORT|wx.LC_VIRTUAL|wx.LC_HRULES|wx.LC_VRULES)
         self.parent = parent
+        self.c = columns
         
         self.imageList = wx.ImageList(16, 16)
         self.sm_up = self.imageList.Add(getSmallUpArrowBitmap())
         self.sm_dn = self.imageList.Add(getSmallDnArrowBitmap())
         self.SetImageList(self.imageList, wx.IMAGE_LIST_SMALL)
-
 
         for i in columns:
             if 0:
@@ -150,7 +150,8 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
             self.data=arrayOfTuples[:]
         else:
             self.data=arrayOfTuples
-        self.cache = [os.path.split(i[0]) for i in self.data]
+        if self.c is columns:
+            self.cache = [os.path.split(i[0]) for i in self.data]
         self.SetItemCount(len(arrayOfTuples))
         self.Refresh()
 
@@ -166,12 +167,14 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
         ((filename, line, line contents, extra), *)
         """
         self.data.append(tuple)
-        self.cache.append(os.path.split(tuple[0]))
+        if self.c is columns:
+            self.cache.append(os.path.split(tuple[0]))
         self.SetItemCount(len(self.data))
     
     def ExtendEntries(self, array):
         self.data.extend(array)
-        self.cache.extend([os.path.split(i[0]) for i in array])
+        if self.c is columns:
+            self.cache.extend([os.path.split(i[0]) for i in array])
         self.SetItemCount(len(self.data))
 
     # Used by the ColumnSorterMixin, see wx/lib/mixins/listctrl.py
@@ -192,18 +195,19 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
         ascending = self._colSortFlag[col]
         col -= 1
         
-        if col in (0,1):
+        if col in (0,1) and self.c is columns:
             ops = os.path.split
             fcn = lambda a:ops(a[0])[col]
         else:
-            fcn = lambda a:a[col-1]
+            fcn = lambda a:a[col]
         
         def cmpf(a,b):
             return cmp(fcn(a), fcn(b))
             
         if ascending:
             self.data.sort(cmpf)
-            self.cache = [os.path.split(i[0]) for i in self.data]
+            if self.c is columns:
+                self.cache = [os.path.split(i[0]) for i in self.data]
         else:
             self.data.reverse()
             self.cache.reverse()

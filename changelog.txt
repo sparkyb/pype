@@ -1,3 +1,79 @@
+#--------------------------------- PyPE 2.5 ----------------------------------
+(fixed) embedded Python shell and embedded command shell kill on Windows (and
+likely other platforms).
+(changed) re-enabled comments for html and xml via the sgml/html/xml standard
+method of <!-- comment --> .
+(fixed) todo sorting.
+(fixed) handling of urls in comments spoofing todo items (it wasn't quite
+right before).
+(fixed) Python keywords in todo items; now will only skip entries that could
+reasonably be commented statements/expressions (if, elif, else, def, cdef (for
+pyrex), class, try, except, finally, for, while, lambda).
+(fixed) menu hotkeys for non-latin characters and non-US keyboard layouts will
+be displayed correctly for all newly updated hotkeys.
+(fixed) menu hotkeys that weren't being discovered with the updated keymapping
+support are now at least partially supported.
+(extracted) hotkey dialog definition into its own module and converted all wx
+use to wx namespace.
+(changed) menu hotkey dialog should now support most every keyboard
+combination you can think up (and may support more than it displays).
+(changed) made autocomplete more "interactive"; will now trim the autocomplete
+list to only include those items that match the prefix of the current word.
+Should work like you expect.  If not, please let me know what you expect.
+(added) sloppy cut/copy.  If enabled and selecting multiple lines to be cut or
+copied, it will automatically change the selection to include all lines with
+any portion selected.
+(added) smart paste.  If enabled and pasting multiple lines, will autoindent
+the newly pasted lines, inserting them on a new line just after the current
+line if it is not empty.
+(fixed) the "name" and "line" listings are now sorted by "name" and "line"
+respectively (their sorting had been reversed for some unknown number of
+revisions).
+(added) command-line option for disabling the parsing thread (--nothread)
+(fixed) PyPE will now open files with uppercase characters from Windows on a
+Samba mount, thank you Walter Dörwald for the bug report!
+(changed) name of the 'Options->Caret Options' menu to 'Options->Caret
+Tracking'
+(added) caret width option in the Options menu.
+(added) 'File->Restart' command for quickly restarting PyPE after settings
+change, etc.  Will pass the same command line arguments to the restarted PyPE.
+(extracted) the hierarchical tree definition from pype.py and placed it in its
+own module and converted all wx use to wx namespace.
+(extracted) the todo definition from pype.py and placed it in its own module
+and converted all wx use to wx namespace.
+(changed) made various per-document settings somewhat more generic.
+(added) filterable definition list (filters as you type), should appear just
+after the line-sorted browsable source tree.
+(extracted) trigger dialog definition into its own file and converted all wx
+use to wx namespace.
+(added) Options->One Tab that will push the Name and Line sorted source trees,
+the filterable definition list, and the todo list into one 'Tools' tab, with
+navagation between the four via dropdown.
+(fixed) at some point I broke bookmark and fold saving, which are now fixed.
+(fixed) at some point I broke todos, which is now fixed.
+(fixed) hidden browsable source trees on GTK/Linux wxPython has been fixed,
+and may very well be a bug on the underlying platform, thank you Ken for the
+bug report!
+(changed) a few bits to make adding new "tools" easier.
+(changed) made the tools tab instead of multiple tabs the default.
+(fixed) last column duplicated on GTK platforms.
+(fixed) borrowed wxPython demo keyboard event code that seems to work better
+than my previously existing code, which fixes tab keypresses in linux.
+(fixed) disappearing tools on linux (and hopefully all platforms).
+(added) various filtering options for the definition filter tool (exact, any,
+all).
+(attempted to fix) various vertical alignment issues with text blocks near
+buttons, text controls, etc.
+(changed) refactored some of the hotkey code and noticed that many hotkeys are
+being handled by the menus, which is bad.  Bad because possible future macro
+functionality is less usable without menus.
+(changed) made menu/hotkey updates only update the menu OR hotkey, depending
+on where you click in the dialog.
+(updated) the documentation/readme.  Included information about command line
+options, Sloppy Cut/Copy, Smart Paste, and others.
+
+
+
 #--------------------------------- PyPE 2.4 ----------------------------------
 (fixed) Help text for Transforms->Dedent Region.
 (fixed) Radio items in the menus by simulating them with check items.  For

@@ -70,6 +70,45 @@ run the source version?  The only difference is a pass through py2exe, and a
 minor loading time speed increase.  Just because the Windows binaries exist,
 doesn't mean that you /have/ to run them.
 
+--------------------
+Command Line Options
+--------------------
+
+--last
+======
+
+When PyPE is run with the '--last' command line option, PyPE will attempt to
+load all documents that were opened the last time you shut down PyPE.  This is
+equivalent to starting up PyPE and using File->Open Last .
+
+--unicode and --ansi
+====================
+
+If PyPE is started up with the --unicode or --ansi command line options, it
+will attempt to use the unicode or ansi versions of wxPython respectively.  On
+failure, it will display to the user with a failure notice.  These options
+have no effect on the Windows distributions of PyPE, or wherever 
+``hasattr(sys, 'frozen')`` is true.
+
+--nothread
+==========
+
+This command line option will disable the threaded parser, which may cause
+problems on some platforms.  This will reduce the accuracy of the tools in
+the "Tools" menu, due to the faster and not necessarily correct parser.
+
+*Experimental* --macros
+=======================
+
+PyPE 2.5 has a partially functional macro system.  Anything involving regular
+typing, keyboard navagation with arrows, etc., should work.  Cut/Copy/Paste
+should work.  At this time, I offer no support for PyPE's macro functionality,
+which is incomplete, and may never be complete.  Due to its experimental
+nature, you only get access to one macro at a time; the most recent macro.
+Macro recording and playback are available in the Document menu as
+"Record Macro" and "Playback Macro".
+
+
 
 ----
 Help
@@ -77,35 +116,76 @@ Help
 
 Why doesn't the Windows install work?
 =====================================
+
 Depending on your platform, it may or may not work.  It works for me on
 Windows 2k, XP and 98.  Most problems people have is that they mistakenly
-extract library.zip, which they shouldn't do.
+extract library.zip, which they shouldn't do.  It could also be due to the
+lack of some DLL, in which case an error message should inform you of what DLL
+you are missing.
 
 
 
 Why doesn't PyPE work on Linux?
 ===============================
-There have been reports of PyPE segfaulting in certain Linux distributions
-when opening a file.  This seems to be caused by icons in the file listing in
-the 'Documents' tab on the right (or left) side of the editor (depending on
-your preferences), or by icons in the notebook tabs along the top of the
-editor.  If You can disable these icons by starting up PyPE, going to
+
+PyPE 2.5 has been tested on Ubuntu 6.06 with...
+
+* python-wxversion_2.6.1.2ubuntu2_all.deb
+
+* libwxgtk2.6-0_2.6.1.2ubuntu2_i386.deb
+
+* python-wxgtk2.6_2.6.1.2ubuntu2_i386.deb
+
+The only anomalies observed so far is seemingly a bug with some
+wx.ScrolledPanel uses, specifically the 'Search' tab along the bottom not
+displaying all of the options for searching within files.  Making the bottom
+set of tools larger, then using a hotkey to show/hide the tools whenever
+necessary is a workable (if not ugly and inconvenient) workaround.
+
+There have previously been reports of PyPE segfaulting in certain Linux
+distributions when opening a file.  This seems to be caused by icons in the
+file listing in the 'Documents' tab on the right (or left) side of the editor
+(depending on your preferences), or by icons in the notebook tabs along the
+top of the editor.  You can disable these icons by starting up PyPE, going to
 Options->Use Icons, and making sure that it is unchecked.  You should restart
 PyPE to make sure that the setting sticks.  PyPE will be uglier, but it should
-work.
+work.  I believe that this has been fixed in PyPE 2.4.1 and later, but this
+documentation persists "just in case".
 
 
+Why doesn't PyPE work on OSX?
+=============================
 
-Using PyPE with ansi or unicode wxPython
-========================================
-If you start PyPE up with --ansi, it will require the ansi version of
-wxPython, informing you if it cannot find it.  If you start PyPE up with
---unicode, it will require the unicode version of wxPython, informing you if
-it cannot find it.  If you don't provide a command-line option, it will use
-the default wxPython version on your platform.  --ansi and --unicode command
-line options will be ignored in the Windows distributions, as well as any
-other distributions of PyPE where ``hasattr(sys, 'frozen')`` is true.
+I have had no reports of PyPE working or not working on any version of OSX.  I
+don't have a Mac, and I'm not too keen on running a hacked version of OSX on
+X86 hardware, so unless someone is willing to donate or test, I'll continue to
+have no idea of whether it runs or not.
 
+
+What is Sloppy Cut/Copy?
+========================
+
+When selecting multiple lines for a cut/copy operation, Sloppy Cut/Copy will
+select the entirety of partially selected lines.  This saves the user from
+having to meticulously select the start and end points of multi-line
+selections.
+
+
+What is Smart Paste?
+====================
+
+Smart Paste is two functionalities in one.
+
+1. When pasting multiple lines into a currently indented region, it will
+   reindent the pasted region such that the least indented line of the pasted
+   region matches the current indentation level, all other indent levels being
+   relative to the current/minimum.
+
+2. When the cursor is in a non-indent portion of a line, and you paste, Smart
+   Paste will automatically paste to the next line, automatically indenting
+   one level deeper as necessary if you had selected the start of a new block
+   (like if, for, while, def, etc., for Python, open curly braces '{' in C,
+   etc.).
 
 
 Dictionaries and alphabets for the Spell checker
@@ -288,15 +368,16 @@ The following lines are all valid todos ::
 
 What are the currently known issues within PyPE's parser?
 =========================================================
-If given a syntactically correct Python source file, the Python parser will
-work without issue, though it may not be fast (where fast is < .1 seconds).
+If given a syntactically correct Python source file, the Python parser should
+work without issue (as long as --nothread is not provided), though it may not
+be fast (where fast is < .1 seconds).
 
-If not given a syntactically correct Python source file, the parser splits the
-file into lines, doing a check to see if there is a function, class, or
-comment on that line, then saves the hierarchy information based on the level
-of indentation and what came before it.  This can be inaccurate, as it will
-mistakenly believe that the below function 'enumerate' is a method of
-MyException. ::
+If not given a syntactically correct Python source file (or if --nothread was
+provided as a command line option), the parser splits the file into lines,
+doing a check to see if there is a function, class, or comment on that line,
+then saves the hierarchy information based on the level of indentation and
+what came before it.  This can be inaccurate, as it will mistakenly believe
+that the below function 'enumerate' is a method of MyException. ::
 
     class MyException(exceptions.Exception):
         pass
@@ -317,9 +398,9 @@ Ah well, one has to give up something for speed.  Another thing given up is
 that the parser will not pull out doc strings or handle multi-line function
 definitions properly.
 
-In the case of C or TeX files, I don't have a real parser for the C, so it
-only really extracts todo items, and it only extracts \*section{} definitions
-and todo items for TeX files.
+I don't have a real parser for the C, so it only really extracts //todo:
+items.  I also don't have a real parser for TeX, so it only extracts
+\*section{} and \label definitions, along with %todo: items.
 
 
 
@@ -334,7 +415,7 @@ How do you get autocompletion?
 ==============================
 Easy.  In the 'Document' menu, there is an entry for 'Show autocomplete'.
 Make sure there is a check by it, and you are set.  If you want to get a new
-listing of functions, hit the F5 key on your keyboard.
+or updated listing of functions, hit the F5 key on your keyboard.
 
 
 
@@ -434,20 +515,20 @@ I realized that it doesn't matter at all, I mean, Emacs is on version 20+.
 \*shrug\*
 
 When PyPE 1.9.3 came out, I had a few other ideas for what I wanted to happen,
-but since major changes needed to happen, it really should get a major number
-bump to 2.0.  After spending 3 months not working on PyPE May-July 2004, I got
-some time to muck around with it here and there.  After another few months of
-trying to rebuild it to only require a single STC (with multiple document
-pointers, etc.) I realized that I'd have to rebuild too much of PyPE to be
-able to get 2.0 out the door by 2010.  So I started modifying 1.9.3.  All in
-all, around 85% of what I wanted made it into PyPE 2.0, the rest was either
-architectural (ick), or questionable as to whether or not anyone would even
-want to use the feature (even me).
+but since major changes to the underlying architecture were required, it
+really should get a major number bump to 2.0.  After spending 3 months not
+working on PyPE May-July 2004, I got some time to muck around with it here and
+there.  After another few months of trying to rebuild it to only require a
+single STC (with multiple document pointers, etc.) I realized that I'd have to
+rebuild too much of PyPE to be able to get 2.0 out the door by 2010.  So I
+started modifying 1.9.3.  All in all, around 85% of what I wanted made it into
+PyPE 2.0, the rest was either architectural (ick), or questionable as to
+whether or not anyone would even want to use the feature (even me).
 
 
 How did PyPE come about?
 ========================
-The beginnings of PyPE was written from 10:30PM on the 2nd of July through
+The beginnings of PyPE were written from 10:30PM on the 2nd of July through
 10:30PM on the 3rd of July, 2003.  Additional features were put together on
 the 4th of July along with some bug fixing and more testing for version 1.0.
 Truthfully, I've been using it to edit itself since the morning of the 3rd of
@@ -463,9 +544,10 @@ On the most part, this piece of software should work exactly the way you
 expect it to...or at least the way I expect it to.  That is the way I wrote
 it.  As a result, you don't get much help in using it (mostly because I am
 lazy).  There was a discussion of a PyPE wiki a long time ago, but that will
-likely never happen.
+likely never happen (I've lost contact with the people who initially put
+forward the wiki idea, and I have no interest in starting or maintaining one).
 
-The majority of the things that this editor can do are in the menus.  Hot-keys
+The majority of the things that this editor can do are in the menus.  Hotkeys
 for things that have them are listed next to their menu items, and you can
 both rename menu items and change their hotkeys via Options->Change Menus and
 Hotkeys.
@@ -479,9 +561,10 @@ piece of software you are using right now, just wouldn't be possible.
 
 Guido van Rossum - without Guido, not only would I not have Python, I also
 wouldn't have had some of the great inspiration that IDLE has offered.  IDLE
-is a great editor, has some excellent ideas in terms of functionality, but it
-unfortunately does not offer the extended functionality I want, and it hurts
-my brain to use tk, so I cannot add it myself.  Guido, my hat goes off to you.
+is a wonderful editor, has some excellent ideas in terms of functionality, but
+it unfortunately does not offer the extended functionality I want, and it
+hurts my brain to use tk, so I cannot add it myself.  Guido, my hat goes off
+to you.
 
 The people writing wxWidgets (previously named wxWindows) and wxPython -
 without you, this also would not have been possible.  You have made the most
@@ -501,4 +584,5 @@ trivial task.  It would have been impossible to go so far so fast by hand in
 any other language using any other GUI toolkit or bindings.
 
 And my wife - because without her, I would likely be a pathetic shell of a
-man...or at least single, bored, and uncouth.
+man...or at least single, bored, and uncouth.  Well, I'm probably still
+uncouth, but there's only so much a good woman can fix.

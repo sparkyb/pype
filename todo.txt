@@ -57,8 +57,29 @@ external process support to run the shell in another process.  Caveat:
   ? PyShell would not get all the really neat introspection capabilities
   without significant additional work (which I probably won't ever have time
   for)
-? Use external command support to spawn persistant slow parser for tooltips,
-calltips, and better parsing.
+(used thread in 2.4) ? Use external command support to spawn persistant slow
+parser for tooltips, calltips, and better parsing.
 (done in 2.3) ? Use optional listening socket to support later callings of
 PyPE pushing document opening into a single PyPE instance ("only single
 instance")
+
+
+2.5:
+* Add caret width setting (global for all editors).
+* Start/end selection menu item/hotkey.
+* Fix hotkeys for ctrl+key
+* Fix hotkeys for alt+key
+* class/function filtering in the tree stuff
+? See about using XML-RPC, like idle.
+? Look into macro recording/playback functionality.
+  * Partially implemented, includes:
+    * cut/copy/paste, typing, most built-in scintilla functionality, keyboard
+      navigation with arrows, home, end, etc., backspace, delete, ...
+  * Not implemented:
+    ? Most menu commands with or without shortcuts
+    ? will need to come up with a reasonably macro'd list.
+? Document abstraction for modifying documents via script in debug mode.
+? Something like keymap["ctrl-d"] = lambda doc:doc.delete_current_line()
+
+
+

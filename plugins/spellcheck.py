@@ -120,7 +120,7 @@ class SpellCheck(scrolled.ScrolledPanel):
         
         s2 = wx.BoxSizer(wx.HORIZONTAL)
         
-        s2.Add(wx.StaticText(self, -1, "Custom Dictionaries:"), 1, wx.RIGHT|wx.ALIGN_LEFT|wx.EXPAND, 4)
+        s2.Add(wx.StaticText(self, -1, "Custom Dictionaries:"), 1, wx.RIGHT|wx.ALIGN_LEFT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 4)
         
         s2.Add(wx.StaticText(self, -1, ""), 0, wx.EXPAND)
         
@@ -150,7 +150,7 @@ class SpellCheck(scrolled.ScrolledPanel):
         s = wx.BoxSizer(wx.VERTICAL)
         
         s2 = wx.BoxSizer(wx.HORIZONTAL)
-        s2.Add(wx.StaticText(self, -1, "Possible Misspellings:"), 1, wx.ALIGN_LEFT|wx.EXPAND, 4)
+        s2.Add(wx.StaticText(self, -1, "Possible Misspellings:"), 1, wx.ALIGN_LEFT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 4)
         
         cha = wx.Button(self, -1, "./ All", style=wx.BU_EXACTFIT)
         cha.SetToolTipString("Make sure all of the 'Possible Misspellings' are checked")
@@ -180,7 +180,7 @@ class SpellCheck(scrolled.ScrolledPanel):
         
         s = wx.BoxSizer(wx.VERTICAL)
         
-        s.Add(wx.StaticText(self, -1, "Possible Corrections:", size=(-1, bs)), 0, wx.ALL|wx.ALIGN_CENTER|wx.EXPAND, 2)
+        s.Add(wx.StaticText(self, -1, "Possible Corrections:", size=(-1, bs)), 0, wx.ALL|wx.ALIGN_CENTER|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 2)
         
         s.Add(wx.StaticLine(self, -1, style=wx.LI_HORIZONTAL), 0, wx.EXPAND|wx.ALL, 2)
         
@@ -299,7 +299,7 @@ class SpellCheck(scrolled.ScrolledPanel):
             doc = doc.encode('ascii')
         except:
             tt = non_word
-        
+        print type(doc), type(tt)
         wrds = doc.translate(tt).split()
         wc = len(wrds)
         for i in wrds:

@@ -143,7 +143,7 @@ class process:
                 return 1, None
             elif wx.Process.Exists(self.process.pid):
                 signal = getattr(wx, ks)
-                r = wx.Process.Kill(self.process.pid, signal)
+                r = wx.Process.Kill(self.process.pid, signal, flags=wx.KILL_CHILDREN)
             else:
                 r = 65535
                 self.CloseInp()

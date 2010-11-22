@@ -120,7 +120,7 @@ class MyShell(stc.StyledTextCtrl):
     if 1:
         dirty = 0
         cached = [], [], {}, []
-    def __init__(self, parent, id, root, trees, filter=1):
+    def __init__(self, parent, id, root, trees=None, filter=1):
         stc.StyledTextCtrl.__init__(self, parent, id)
         
         global pypestc
@@ -132,9 +132,6 @@ class MyShell(stc.StyledTextCtrl):
                 class _pypestc:
                     pass
                 pypestc = _pypestc
-        
-        if trees:
-            self.tree1, self.tree2, self.todo = trees
         
         self.root = root
         self.parent = parent
@@ -172,7 +169,7 @@ class MyShell(stc.StyledTextCtrl):
         wx.FutureCall(poll_t, self.OnPoll)
         self.MakeClean = self.MakeDirty
         self.noteMode = 0
-        wx.stc.StyledTextCtrl.SetText(self, "def foo():\n...     pass")
+        ## wx.stc.StyledTextCtrl.SetText(self, "def foo():\n...     pass")
     
     def _config(self):
         self.setStyles(FACES)
@@ -481,6 +478,7 @@ class MyShell(stc.StyledTextCtrl):
             self.remote = shell.process(self, prefix + 'python -u -i -c "%s"'%console_help, self.Restart)
         else:
             self.remote = shell.process(self, rsplit(prefix), self.Restart)
+        print "Process started, pid:%s"%self.remote.process.pid
         remote.append(self.remote)
         self.restart = 0
 
