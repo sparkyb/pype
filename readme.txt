@@ -169,6 +169,12 @@ what may be causing PyPE to not work in OSX.  If you send bug reports with
 tracebacks, etc., we can probably figure out what is going on and how we can
 fix it.
 
+In the summer of 2008, I actually had an OS X laptop to use mid June 2008 to
+late August 2008.  I did my best to improve PyPE, but because of how slow PyPE
+is on OS X (I believe it is caused by the way the editor control is wrapped on
+OS X with wxPython), I actually abandoned the platform.  PyPE inside an Ubuntu
+or Windows virtual machine (Virtual Box or Parallels are both good) works
+well on OS X.
 
 --------------------
 Command Line Options
@@ -226,6 +232,13 @@ configuration, etc.).  This will allow for 'embedded' applications.
 Providing this command line option will allow you to choose the port number
 that PyPE uses when Options -> One PyPE is checked.  The default port number
 is 9999.
+
+--use_old_parser
+================
+This uses the old parser (PyPE 2.8.8 and a few revisions prior).  It is faster
+than the modern parser, but it's not as accurrate, nor does it provide all of
+the scope introspection capabilities that the new compiler.ast-based parser
+does.
 
 
 -------------------------------
@@ -379,6 +392,10 @@ When using "Run Current File", PyPE will try to find a currently unused output
 document that was previously created.  If it cannot find one, it will open a
 new output document and use that.
 
+Note: as of May 2009, though shells work, there are some bugs, and seem to
+have become quite slow.  There are some things I've been meaning to do to
+improve their functionality, but I've not had time (in over 2 years).
+
 
 Vim options
 ===========
@@ -448,12 +465,16 @@ What do the different options in the Filter tool do?
 subsequence
     will match things like ``us.et`` to ``UserString.ExpandTabs``
 
+score
+    when subsequence is defined, will score the matches and show the best
+    matches at the top of the list
+
 no context
     will not provide any context in the display or search
 
 long
     will provide a 'verbose' display and search context, like
-    ``class foo: def bar(self)`` .
+    ``class foo: def bar(self)`` 
 
 short
     will provide a concise display and search context, like
@@ -489,21 +510,8 @@ subsequence searching::
     any 'jkl stu' -> #1, #2, #3
     all 'jkl stu' -> Nothing
 
-Please note that the line count information can be off significantly.  This is
-due to the simple algorithm that it uses to "count" lines.  Really, all it
-does is to say that the number of lines for definition A is the number of
-lines from the start of definition A to the next definition.
-
-For example, ``cls`` in the following example has 1 line, but ``fcn`` has 5::
-
-    class cls:
-        def fcn(self):
-            pass
-    
-    
-    
-    def foo():
-        pass
+With the new parser introduced in PyPE 2.9, line count information should be
+fairly precise.
 
 
 How do I update the default settings for a particular document type?
@@ -678,7 +686,7 @@ the 'Category' column, the second group (after a .strip()) becomes the todo in
 the 'Todo' column, and the number of exclamation points will become the number
 in the '!' column.
 
-PyPE also tosses all entries with a 'Category' that is also a keyword
+PyPE should also toss all entries with a 'Category' that is also a keyword
 (keyword.kwlist), or one of the following: http, ftp, mailto, news, gopher,
 and telnet.
 
@@ -791,7 +799,8 @@ in the following lines would be seen as a function, and not part of a string. ::
     '''
 
 This parser will not pull out doc strings or handle multi-line function
-definitions properly.
+definitions properly (which can be difficult if not impossible when provided
+with a bad source file).
 
 
 TeX/LaTeX
@@ -967,6 +976,8 @@ To convert from 8 spaces to one tab; replace ``"        "`` with ``"\t"``
 
 Note that you don't need to use the double quotes for the spaces, but it
 allowed me to be explicit in this documentation.
+
+Alternatively, this is available via the "Transforms" menu.
 
 
 -------------------------------
@@ -1290,9 +1301,8 @@ piece of software you are using right now, just wouldn't be possible.
 Guido van Rossum - without Guido, not only would I not have Python, I also
 wouldn't have had some of the great inspiration that IDLE has offered.  IDLE
 is a wonderful editor, has some excellent ideas in terms of functionality, but
-it unfortunately does not offer the extended functionality I want, and it
-hurts my brain to use tk, so I cannot add it myself.  Guido, my hat goes off
-to you.
+unfortunately does not offer the extended functionality I want, and it hurts
+my brain to use tk, so I cannot add it myself.
 
 The people writing wxWidgets (previously named wxWindows) and wxPython -
 without you, this also would not have been possible.  You have made the most
@@ -1310,8 +1320,3 @@ widget that just works?  Who would have figured?
 To everyone who I have already thanked: thank you for making PyPE an almost
 trivial task.  It would have been impossible to go so far so fast by hand in
 any other language using any other GUI toolkit or bindings.
-
-And my wife - because without her, I would likely be a pathetic shell of a
-man...or at least single, bored, and uncouth.  Well, I'm probably still
-uncouth, but there's only so much a good woman can fix.
-

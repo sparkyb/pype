@@ -693,7 +693,6 @@ if 1:
         le = '\n'
         if lang in ('python', 'pyrex'):
             if _cheetah_re.search(source):
-                print "doing cheetah parser...", len(_cheetah_re.findall(source))
                 return parsers.cheetah_parser(source, le, which, x)
             
             elif slowparse:
@@ -1637,7 +1636,6 @@ class MainWindow(wx.Frame):
         ## stc.kw = ' '.join(stc.kw)
         stc.docstate.Update(h1, todo, tags)
         if self.gf:
-            print "doing new hierarchy"
             self.gf.new_hierarchy(stc, h1)
 
         delta += time.time()-t

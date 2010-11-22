@@ -157,8 +157,8 @@ class SuiteInfoBase:
             try:
                 found, vars = match(DOCSTRING_STMT_PATTERN, tree[3])
             except:
-                import pprint
-                pprint.pprint(tree)
+                ## import pprint
+                ## pprint.pprint(tree)
                 raise
         if found:
             self._docstring = eval(vars['docstring'])
