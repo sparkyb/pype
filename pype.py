@@ -59,7 +59,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.7.2"
+    VERSION = "1.7.3"
     VREQ = '2.4.2.4'
 
     import string
@@ -557,8 +557,11 @@ class MainWindow(wxFrame):
         if not os.path.exists(self.configPath):
             os.mkdir(self.configPath)
         path = os.path.join(self.configPath, 'history.txt')
+##        self.config = self.readAndEvalFile(path)
         try:    self.config = self.readAndEvalFile(path)
-        except: self.config = {}
+        except exceptions.Exception, e:
+            print "failed to load configuration", e
+            self.config = {}
         if 'history' in self.config:
             history = self.config['history']
             history.reverse()
@@ -618,7 +621,8 @@ class MainWindow(wxFrame):
             self.exceptDialog("Could not save preferences to %s"%path)
 
     def readAndEvalFile(self, filename):
-        f = open(filename)
+        #filename = os.path.normpath(filename)
+        f = open(filename, 'r')
         txt = f.read().replace('\r\n','\n')
         f.close()
         return eval(txt)
@@ -942,6 +946,7 @@ class MainWindow(wxFrame):
             self.config["lastopenbm"] = bm
         self.config["lastopenex"] = ex
         self.config["lastopen"] = sav
+        print sav
         self.saveHistory()
         if sel > -1:
             self.control.SetSelection(sel)
@@ -1282,7 +1287,7 @@ class MainWindow(wxFrame):
             split.SetSashPosition(max(width-200, int(width/2)))
         else:
             split.SetSashPosition(width-split.GetMinimumPaneSize())
-        win.SAVEDPOSITION = split.GetSashPosition()-self.control.GetClientSize()[0]
+        self.SetPos(None)
 
     def OnTreeHide(self, e):
         width = self.control.GetClientSize()[0]-10
@@ -1307,7 +1312,8 @@ class MainWindow(wxFrame):
             w.SAVEDPOSITION = abs(sp)
         else:
             w.SAVEDPOSITION = width-sp
-        e.Skip()
+        if e:
+            e.Skip()
 
     def startnext(self):
         look = INF

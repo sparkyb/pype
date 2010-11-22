@@ -1,3 +1,6 @@
+(PyPE 1.7.3)
+(fixed) a stupid bug that was caused by fixing a stupid bug.
+
 (PyPE 1.7.2)
 (fixed) I forgot to remove a debug line that keeps copies of every document
 that gets parsed in a user's profile.
@@ -5,6 +8,8 @@ that gets parsed in a user's profile.
 of the line.
 (fixed) a bug that wasn't causing any harm, but was slowing down the loading
 of PyPE.
+(fixed) a problem with the sash not saving its location when using the
+show/hide tree menu option.
 
 
 (PyPE 1.7.1)

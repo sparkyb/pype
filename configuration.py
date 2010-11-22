@@ -138,8 +138,9 @@ a = os.listdir(homedir)
 rem = []
 for fil in a:
     index = fil.find('.tmp.')
-    try: os.remove(os.path.join(homedir, fil))
-    except: pass
+    if index>=0:
+        try: os.remove(os.path.join(homedir, fil))
+        except: pass
 
 def get_paragraphs(text, l_sep):
     in_lines = text.split(l_sep)
