@@ -214,7 +214,7 @@ class HotkeyList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
                 item5 = item[5]
             else:
                 item5 = item[4]
-            dlg = GetKeyDialog(self, item[2], item[3], item5, pos=(0,0))
+            dlg = GetKeyDialog(self, item[2], item[3], item5)
             dlg.ShowModal()
             #dlg.Destroy() #this dialog destroys itself.
             item = item[:3] + (self.accelerator, 1, self.acceleratork)
