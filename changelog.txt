@@ -1,3 +1,79 @@
+(PyPE 1.6.4)
+(NOTES REGARDING UNICODE SUPPORT) I have little (or really no) experience when
+it comes to unicode support in Python.  I had mistakenly assumed that creating
+a binary using the unicode-supporting wxPython would have been sufficient to
+support unicode out of the box.  Unfortunately, this is not the case.  There
+is encoding and decoding that must be done on either end, and one must know
+which encoding to use in order to properly support unicode.  As that adds
+additional complication to PyPE, and to the handling of ALL files, regardless
+of what extended text is supported, I'll not be producing a binary with
+partial unicode support.  Those that have tried saving unicode files in 1.6.3
+will notice the problem during saving, and the fact that it doesn't work.
+While I am not ruling out the possibility of PyPE fully supporting unicode in
+the future, I don't believe I will be implementing it.  My apologies.
+
+(NOTES REGARDING DOCUMENTATION) I know that the documentation is out of date.
+I will update it when I get around to it.  I prefer to make PyPE better than
+to spend my time updating the documentation.
+
+(NOTES REGARDING VERSION REQUIREMENTS) I have changed the wxPython version
+required.  This is because the wxSTC has a known bug in version 2.4.1.2 that
+causes PyPE to exit without warning, possibly causing data loss.  This is bad.
+The wxSTC that is included with wxPython version 2.4.2.4 doesn't have this
+fatal bug.
+
+#The below bugs/suggestions were reported by francescoa in the PyPE forums at
+#Sourceforge or in email.  I have added the features or fixed the bugs.
+(fixed) a bug involving pasting to code snippets.
+(fixed) a bug involving changing code snippet focus and tab focus (they would
+do so simultaneously when changing code snippet focus).
+(fixed) running the currently open script in windows when the path to the file
+contains spaces.
+(removed) an import that was not used.
+(added) when using the find/replace dialog, the word that is currently under
+the cursor will be inserted into the find/replace dialog find text.
+(fixed) the find dialog will now find up or down, depending on the radio item
+in the dialog.  Previously it would ignore the 'up' or 'down' choice.
+(added) bookmarks within a file, for quickly and easily bookmarking certain
+locations for later perusal.
+
+#end of bugs/suggestions reported by francescoa
+
+(replaced) Added file over-write confirmation dialog.
+(removed) checkbox for 'readonly' files.  There seems to be no way to get the
+status of that 'open file in read-only mode'.  Which is completely retarded.
+(cleaned) replaced the indent/dedent code with a call to the STC command for
+indent/dedent.
+(replaced) the aforementioned calls to the STC indent/dedent with my previous
+code.  I prefer the behavior of my code to that of the STC indent/dedent code.
+(made better) the dirty flag on the each open document is now consistent with
+the last time the user saved thanks to EVT_KEY_UP, STC.SetSavePoint(), and
+STC.GetModify().  It is now more accurate and does not rely on the numerous
+hacks I did before to make it work.
+(fixed) a bug that occurred on windows machines when PyPE would try to delete
+the temporary parsing output when it was still opened by the parser.
+(added) a statusbar field that displays the current line and column.  It is
+only updated when a key is released (EVT_STC_POSCHANGED doesn't seem to work).
+To update the display if it is not being updated, tap the CTRL key.
+(added) events in the statusbar now have a timestamp when they occur.
+(moved) code for wrapping lines into configuration.py
+(added) ability to open all the documents previously open in your last PyPE
+session if you quit PyPE with those documents saved and have their tabs open.
+You can force this behavior on PyPE startup with the FIRST argument on the
+command line being '--last'.
+(changed) removed the various 'shortcuts' for generating the menus that ended
+up taking more lines and being more difficult to edit.  While not reducing the
+number of lines (significantly), it does increase readability of the menu
+code.
+(changed) realized that the ID definitions are only required when you need to
+compare event id numbers.  When you don't care, and just want an event to be
+posted, then event declarations are functionally useless.  Cleaned up a lot of
+global definitions.  Will likely have to re-insert such definitions for the
+likely future feature addition of user-definable key-bindings.
+(fixed, changed, added) more than a handful of other things that I didn't
+remember writing down in this changelog.
+
+
 (PyPE 1.6.3)
 (fixed) a visual bug that existed from the beginning.  When saving, it used to
 say 'open' on the button...now it says 'save'.  No big deal.  But still neat.
@@ -406,7 +482,7 @@ support.
 (PyPE 1.0.1)
 (fixed) Thanks to a message from Lunar Linux guru Jeff Hodges, I was turned on
 to Pychecker.sourceforge.net and have discovered two previously unknown
-unpassed arguments to functions.  While pychecker is useful, it returns alot
+unpassed arguments to functions.  While pychecker is useful, it returns a lot
 of variable not used errors.  I'll use it before every .n version release
 after I do a couple more feature additions.
 (fixed) Also thanks to Jeff Hodges, I discovered a bug in 1.0 that will tend

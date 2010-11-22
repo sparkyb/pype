@@ -115,7 +115,7 @@ try:
         c = []
         for i in b:
             if '%' in i:
-                c.append(expandfull(i), rem-1)
+                c.append(expandfull(i, rem-1))
             else:
                 c.append(i)
         return '\\'.join(c)
@@ -127,3 +127,48 @@ except:
     #print "unable to create config directory", homedir
     homedir = default_homedir
 # End cmt-001 08/06/2003
+
+def get_paragraphs(text, l_sep):
+    in_lines = text.split(l_sep)
+    lines = []
+    cur = []
+    for line in in_lines:
+        cur.append(line)
+        if line:
+            if line[-1] != ' ':
+                cur.append(' ')
+        else:
+            if cur:
+                lines.append(cur)
+                cur = []
+            lines.append([])
+    if cur:
+        lines.append(cur)
+    return [''.join(i) for i in lines]
+
+def wrap_paragraph(text, width):
+    words = text.split(' ')
+    lines = []
+    cur = []
+    l = 0
+    for word in words:
+        lw = len(word)
+        if not lw:
+            cur.append(word)
+        elif (l + len(cur) + len(word)) <= width:
+            cur.append(word)
+            l += lw
+        else:
+            if cur[-1]:
+                cur.append('')
+            lines.append(cur)
+            cur = [word]
+            l = lw
+    if cur:
+        lines.append(cur)
+    return '\n'.join([' '.join(i) for i in lines])
+
+def wrap_lines(text, width, lend):
+    paragraphs = get_paragraphs(text, lend)
+    retr = lend.join([wrap_paragraph(i, width) for i in paragraphs])
+    return retr
