@@ -85,6 +85,8 @@ extns = {'py' : 'python',
         'txt' : 'text'}
 
 default_homedir = os.path.dirname(os.path.abspath(__file__))
+if hasattr(sys, 'frozen'):
+    default_homedir = os.path.split(default_homedir)[0]
 
 try:
     #all user-based OSes

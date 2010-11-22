@@ -1,4 +1,11 @@
-#---------------------------- PyPE 2.0 and Betas -----------------------------
+#-------------------------------- PyPE 2.1.1 ---------------------------------
+(fixed) a bug where PyPE would fail to load if the user had run certain PyPE
+beta releases.
+(fixed) a bug where win and win-unicode versions would fail to load if PyPE
+couldn't find your home directory.
+
+
+#-------------------------- PyPE 2.1 and 2.0 Betas ---------------------------
 Changes since Beta 3:
 (fixed) a bug when saving a file at the root of a drive on Windows wouldn't
 quite work.

@@ -68,8 +68,8 @@ for i in [logger, findbar, lru, filehistory, browser, workspace, todo,
     i.isdirty = isdirty
 
 #
-VERSION = "2.1"
-VERSION_ = "2.1"
+VERSION = "2.1.1"
+VERSION_ = "2.1.1"
 
 if 1:
     #under an if so that I can collapse the declarations
@@ -1144,12 +1144,14 @@ class MainWindow(wxFrame):
                             ('SHOWWIDE', 1),
                             ('SHOWTALL', 1),
                             ]:
-                            ## ('XSLOP', ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
                     for k,v in dflt.iteritems():
                         if k not in self.config[nam]:
-                            self.config[nam][k] = dict(v)
+                            if isinstance(v, dict):
+                                self.config[nam][k] = dict(v)
+                            else:
+                                self.config[nam][k] = v
                         elif isinstance(v, dict):
                             V = self.config[nam][k]
                             for k2,v2 in v.iteritems():
