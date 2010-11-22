@@ -42,7 +42,7 @@ from configuration import *
 
 if 1:
     #if so I can collapse the declarations
-    VERSION = "1.4"
+    VERSION = "1.4.2"
     VREQ = '2.4.1.2'
 
     import string
@@ -480,35 +480,30 @@ class MainWindow(wxFrame):
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
 #-------------------------- File History Commands ----------------------------
     def loadHistory(self):
-        try:
-            if not os.path.exists(self.configPath):
-                os.mkdir(self.configPath)
-            path = os.path.join(self.configPath, 'history.txt')
-            self.config = self.readAndEvalFile(path)
-            if self.config != {}:
-                if 'history' in self.config:
-                    history = self.config['history']
-                    history.reverse()
-                    for h in history:
-                        self.fileHistory.AddFileToHistory(h)
-                if 'lastpath' in self.config:
-                    self.lastpath = self.config['lastpath']
-                for (nam, dflt) in [('showautocomp', 0),
-                                  ('paths', {}),
-                                  ('display2code', {}),
-                                  ('displayorder', []),
-                                  ('shellcommands', [])]:
-                    if not (nam in self.config):
-                        self.config[nam] = dflt
-                    globals()[nam] = self.config[nam]
-                pathmarks.update(paths)
-                self.snippet.display2code = self.config['display2code']
-                self.snippet.displayorder = self.config['displayorder']
-                self.snippet.lb_refresh()
-
-        except:
-            self.exceptDialog('error loading history')
-            self.config = {}
+        if not os.path.exists(self.configPath):
+            os.mkdir(self.configPath)
+        path = os.path.join(self.configPath, 'history.txt')
+        try:    self.config = self.readAndEvalFile(path)
+        except: self.config = {}
+        if 'history' in self.config:
+            history = self.config['history']
+            history.reverse()
+            for h in history:
+                self.fileHistory.AddFileToHistory(h)
+        if 'lastpath' in self.config:
+            self.lastpath = self.config['lastpath']
+        for (nam, dflt) in [('showautocomp', 0),
+                          ('paths', {}),
+                          ('display2code', {}),
+                          ('displayorder', []),
+                          ('shellcommands', [])]:
+            if not (nam in self.config):
+                self.config[nam] = dflt
+            globals()[nam] = self.config[nam]
+        pathmarks.update(paths)
+        self.snippet.display2code = self.config['display2code']
+        self.snippet.displayorder = self.config['displayorder']
+        self.snippet.lb_refresh()
         
     def saveHistory(self):
         history = []
@@ -522,8 +517,7 @@ class MainWindow(wxFrame):
         self.config['paths'] = pathmarks
         self.config['display2code'] = self.snippet.display2code
         self.config['displayorder'] = self.snippet.displayorder
-        self.config['lastpath'] = self.config['lp']
-        del self.config['lp']
+        self.config['lastpath'] = self.config.get('lp', os.getcwd())
         try:
             path = os.sep.join([self.configPath, 'history.txt'])
             f = open(path, "w")
@@ -533,7 +527,6 @@ class MainWindow(wxFrame):
             pass    # argh
 
     def readAndEvalFile(self, filename):
-
         f = open(filename)
         txt = f.read().replace('\r\n','\n')
         f.close()

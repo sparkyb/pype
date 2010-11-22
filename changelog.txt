@@ -1,3 +1,9 @@
+(PyPE 1.4.2)
+(fixed) some stupid bugs with loading and saving of history/pathmarks/shell
+commands into history.txt.  Sorry about that.  The 1.4 series of PyPE has
+proven itself to be the buggiest series ever.  *grumble*
+
+
 (PyPE 1.4.1)
 (fixed) a problem with pathmarks introduced by the 'remember the last path you
 were in when PyPE last closed' addition.  Yes, this fix gets it's own version.
