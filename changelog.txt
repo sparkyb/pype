@@ -1,3 +1,12 @@
+(PyPE 1.7.2)
+(fixed) I forgot to remove a debug line that keeps copies of every document
+that gets parsed in a user's profile.
+(fixed) a bug when dedenting a single line with the cursor near the beginning
+of the line.
+(fixed) a bug that wasn't causing any harm, but was slowing down the loading
+of PyPE.
+
+
 (PyPE 1.7.1)
 (fixed) a bug with the 'fold all' menu command that stopped all of the
 document from being folded.

@@ -59,7 +59,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.7.1"
+    VERSION = "1.7.2"
     VREQ = '2.4.2.4'
 
     import string
@@ -576,21 +576,23 @@ class MainWindow(wxFrame):
             if not (nam in self.config):
                 self.config[nam] = dflt
             globals()[nam] = self.config[nam]
-            #insert global defaults here
-            dct =   {'use_tabs':0,
-               'spaces_per_tab':8,
-                       'indent':4,
-                     'collapse':1,
-                'marker_margin':1,
-                  'line_margin':1,
-                     'col_line':78,
-                     'col_mode':wxSTC_EDGE_LINE,
-                 'indent_guide':0,
-                 'showautocomp':0,
-                     'wrapmode':wxSTC_WRAP_NONE,
-                     'sortmode':1}
-            globals().update(dct)
-            globals().update(self.config.setdefault('DOCUMENT_DEFAULTS', {}))
+
+        #insert global defaults here
+        dct =   {'use_tabs':0,
+           'spaces_per_tab':8,
+                   'indent':4,
+                 'collapse':1,
+            'marker_margin':1,
+              'line_margin':1,
+                 'col_line':78,
+                 'col_mode':wxSTC_EDGE_LINE,
+             'indent_guide':0,
+             'showautocomp':0,
+                 'wrapmode':wxSTC_WRAP_NONE,
+                 'sortmode':1}
+        globals().update(dct)
+        globals().update(self.config.setdefault('DOCUMENT_DEFAULTS', {}))
+        
         pathmarks.update(paths)
         
     def saveHistory(self):
@@ -1025,7 +1027,7 @@ class MainWindow(wxFrame):
             m = max(m, 0)
             win.SetLineIndentation(ln, m)
         if x==y:
-            pos = pos + (m-count)
+            pos = pos + (m-count) - min(0, col + (m-count))
             win.SetSelection(pos, pos)
         win.EndUndoAction()
     def OnIndent(self, e):
@@ -1320,9 +1322,6 @@ class MainWindow(wxFrame):
                 cur.ConvertEOLs(fmt_mode[cur.format])
                 out = repr(wxStyledTextCtrl.GetText(cur).replace('\t', cur.GetTabWidth()*' '))
                 a = open(fil, 'wb')
-                a.write(out)
-                a.close()
-                a = open(fil+'.%i'%long(time.time()*100), 'wb')
                 a.write(out)
                 a.close()
                 done = 1

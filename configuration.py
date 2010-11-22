@@ -134,6 +134,13 @@ except:
     homedir = default_homedir
 # End cmt-001 08/06/2003
 
+a = os.listdir(homedir)
+rem = []
+for fil in a:
+    index = fil.find('.tmp.')
+    try: os.remove(os.path.join(homedir, fil))
+    except: pass
+
 def get_paragraphs(text, l_sep):
     in_lines = text.split(l_sep)
     lines = []
