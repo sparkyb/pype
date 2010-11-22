@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #-------------- User changable settings are in configuration.py --------------
 
@@ -48,14 +48,14 @@ from wxPython.lib.mixins.listctrl import wxListCtrlAutoWidthMixin
 #--------------------------- configuration import ----------------------------
 from configuration import *
 #--------- The two most useful links for constructing this editor... ---------
-# http://www.pyframe.com/wxdocs/stc/index.html
+# http://www.pyframe.com/stc/index.html
 # http://personalpages.tds.net/~edream/out2.htm
 
 #---------------------------- Event Declarations -----------------------------
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.9"
+    VERSION = "1.9.1"
     VREQ = '2.4.2.4'
 
     try:
@@ -125,6 +125,7 @@ if 1:
 
     MENULIST = []
     MENUPREF = {}
+    OLD_MENUPREF= {}
     HOTKEY_TO_ID = {}
 
     def _spl(n):
@@ -165,8 +166,15 @@ if 1:
 
         ns, oacc = _spl(name)
         heir = recmenu(menuBar, id)[:-13] + ns
-        name, acc = MENUPREF.setdefault(heir, (ns, oacc))
-        MENULIST.append((heir, name, oacc, acc, kind in [wxITEM_NORMAL, wxITEM_CHECK]))
+        if heir in MENUPREF:
+            name, acc = MENUPREF[heir]
+        else:
+            if heir in OLD_MENUPREF:
+                name, acc = MENUPREF[heir] = OLD_MENUPREF[heir]
+            else:
+                name, acc = MENUPREF[heir] = (ns, oacc)
+            MENULIST.append((heir, name, oacc, acc, kind in [wxITEM_NORMAL, wxITEM_CHECK]))
+
         if acc:
             HOTKEY_TO_ID[acc] = id
 
@@ -317,7 +325,7 @@ class MainWindow(wxFrame):
         self.SetIcon(getIcon())
         self.FINDSHOWN = 0
         path = os.path.join(homedir, 'menus.txt')
-        try:    MENUPREF.update(self.readAndEvalFile(path))
+        try:    OLD_MENUPREF.update(self.readAndEvalFile(path))
         except: pass
 
         #recent menu relocated to load configuration early on.
@@ -1060,9 +1068,9 @@ class MainWindow(wxFrame):
         cnt = self.control.GetPageCount()
         try:
             for i in xrange(cnt):
-                self.control.SetSelection(i)
                 win = self.control.GetPage(i).GetWindow1()
                 if win.dirty:
+                    self.control.SetSelection(i)
                     self.sharedsave(win)
         except cancelled:
             self.closing = 0
@@ -3018,8 +3026,8 @@ class hierCodeTreePanel(wxPanel):
             isz = (16,16)
             il = wxImageList(isz[0], isz[1])
             self.images = [wxArtProvider_GetBitmap(wxART_FOLDER, wxART_OTHER, isz),
-                      wxArtProvider_GetBitmap(wxART_FILE_OPEN, wxART_OTHER, isz),
-                      wxArtProvider_GetBitmap(wxART_HELP_PAGE, wxART_OTHER, isz)]
+                           wxArtProvider_GetBitmap(wxART_FILE_OPEN, wxART_OTHER, isz),
+                           wxArtProvider_GetBitmap(wxART_HELP_PAGE, wxART_OTHER, isz)]
             for i in self.images:
                 il.Add(i)
             self.SetImageList(il)

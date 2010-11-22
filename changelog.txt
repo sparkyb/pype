@@ -1,3 +1,13 @@
+(PyPE 1.9.1)
+(improved) the speed of PyPE closing down with many documents open.
+(fixed) old hotkeys and menu items that are no longer being used are now
+removed upon restarting PyPE.
+(fixed) The #!/ shortcut at the beginning of pype.py now points to:
+'#!/usr/bin/env python', which should find Python on most every *nix system.
+(fixed) a bug reported by Denis Dube when using the binary in which running
+'pype.exe <filename>' would result in syntax highlighting not being available.
+
+
 (PyPE 1.9)
 (fixed) a bug that resulted in PyPE closing down without warning if the Find
 or Find/Replace dialog was attempted to be open while another was already

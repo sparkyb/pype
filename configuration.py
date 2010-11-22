@@ -28,8 +28,6 @@ for i,j in fmt_mode.items():
 eol = os.linesep
 eolmode = fmt_mode[eol]
 
-runpath = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-
 def fp(path):
     if sys.platform=='win32':
         if ' ' in path:
@@ -45,10 +43,14 @@ spawnargs = [se]
 
 if sys.executable[-8:].lower() == 'pype.exe':
     runme = se
+    runpath = se
 else:
+    runpath = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
     b = fixpath(os.path.join(runpath, sys.argv[0]))
     runme = "%s %s"%(se,b)
     spawnargs.append(b)
+    runpath = __file__
+runpath = os.path.dirname(os.path.normpath(os.path.abspath(runpath)))
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
