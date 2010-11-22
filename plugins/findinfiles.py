@@ -530,7 +530,7 @@ class FindInFiles(wx.Panel):
         row+=1
         gbs.Add(
             static("Separate multiple directories and criteria with ; (semicolons)"),
-            (row,1), (1,lastColumn), flag=wx.ALIGN_LEFT)
+            (row,0), allSpan, flag=wx.ALIGN_CENTER)
 
         row+=1
         gbs.Add(static("Directories:"), (row,0),
@@ -577,7 +577,7 @@ class FindInFiles(wx.Panel):
             wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 10)
 
         row+=1
-        gbs.Add(static("View Results As:"), (row,0),
+        gbs.Add(static("View As:"), (row,0),
             flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT,
             border=outsideBorder)
         #views=['table', 'text', 'tree']
@@ -590,7 +590,7 @@ class FindInFiles(wx.Panel):
                 flag=wx.EXPAND|wx.TOP,
                 border=outsideBorder)
         
-        self.enable_controls = [self.sdirs, self.add_path, self.ss]
+        self.enable_controls = [self.sdirs, self.add_path, self.ss, self.dd]
         self.checkscope()
         #------------------------------
 

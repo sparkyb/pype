@@ -32,6 +32,11 @@ for i in sys.argv:
         else:
             break
 
+for i in sys.argv:
+    if i.startswith('--font='):
+        FONT = i[7:].replace('_', ' ').replace('-', ' ')
+        break
+
 def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
     os.chdir(orig_path)
     args = [sys.executable] + orig_sysargv
@@ -43,7 +48,7 @@ def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
 def keep(i):
     if i in ('--ansi', '--unicode', '--debug', '--nothread', '--macros'):
         return 0
-    if i.startswith('--fontsize='):
+    if i.startswith('--fontsize=') or i.startswith('--font='):
         return 0
     return 1
 
@@ -80,6 +85,9 @@ UNICODE = wx.USE_UNICODE
 #--------------------------- configuration import ----------------------------
 from configuration import *
 
+MAX_SAVE_STATE_DOC_SIZE = 0x400000 #2**22 bytes, a little over a 4 megs
+MAX_SAVE_STATE_LINE_COUNT = 20000  #anything more than 4 megs or 20k lines
+
 #---------------------------- Event Declarations -----------------------------
 
 class cancelled(Exception):
@@ -111,8 +119,9 @@ def isdirty(win):
 
 #change the standard font size
 import StyleSetter
-if 'FONTSIZE' in globals():
-    StyleSetter.fs = FONTSIZE
+if 'FONTSIZE' in globals() or 'FONT' in globals():
+    StyleSetter.fs = globals().get('FONTSIZE', StyleSetter.fs)
+    StyleSetter.cn = globals().get('FONT', StyleSetter.cn)
     StyleSetter.update_faces()
 #plugin-type thing imports
 from plugins import documents
@@ -1203,9 +1212,17 @@ class MainWindow(wx.Frame):
         if USE_THREAD:
             self.Bind(EVT_DONE_PARSING, self.doneParsing)
             wx.CallAfter(start_parse_thread, self)
-        wx.CallAfter(self.control.updateChecks, None)
-
+        
     #...
+    def _updateChecks(self):
+        win = None
+        try:
+            num, win = self.getNumWin()
+        except cancelled:
+            print "no window!"
+            pass
+        
+        self.control.updateChecks(win)
 
     def getglobal(self, nam):
         return globals()[nam]
@@ -1439,7 +1456,7 @@ class MainWindow(wx.Frame):
         traceback.print_exc(file=k)
         k = k.getvalue()
         print k
-        dlg = wx.ScrolledMessageDialog(self, k, title)
+        dlg = ScrolledMessageDialog(self, k, title)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -2045,6 +2062,7 @@ class MainWindow(wx.Frame):
             nwin.SetFocus()
         ## self.OnDocumentChange(nwin)
         self.docpanel._refresh()
+        wx.CallAfter(self._updateChecks)
         return nwin.enc
 
     def OnReload(self, e, win=None):
@@ -2131,6 +2149,7 @@ class MainWindow(wx.Frame):
         self.control.DeletePage(wnum)
         self.updateWindowTitle()
         self.docpanel._refresh()
+        wx.CallAfter(self._updateChecks)
 
     def OnRestart(self, e):
         self.OnExit(e)
@@ -3554,18 +3573,23 @@ class PythonSTC(stc.StyledTextCtrl):
                 'whitespace':self.GetViewWhiteSpace(),
                 'sloppy':self.sloppy,
                 'smartpaste':self.smartpaste,
-                'checksum':md5.new(self.GetText(0)).hexdigest(),
                 'showline':self.GetCaretLineVisible(),
                 'fetch_methods':self.fetch_methods,
                }
-        for line in xrange(self.GetLineCount()):
-            if self.MarkerGet(line) & BOOKMARKMASK:
-                BM.append(line)
-
-            if (self.GetFoldLevel(line) & stc.STC_FOLDLEVELHEADERFLAG) and\
-            (not self.GetFoldExpanded(line)):
-                FOLD.append(line)
-        FOLD.reverse()
+        if self.GetTextLength() < MAX_SAVE_STATE_DOC_SIZE:
+            ret['checksum'] = md5.new(self.GetText(0)).hexdigest()
+        
+        if (self.GetLineCount() < MAX_SAVE_STATE_LINE_COUNT and 
+            self.GetTextLength() < MAX_SAVE_STATE_DOC_SIZE):
+            for line in xrange(self.GetLineCount()):
+                if self.MarkerGet(line) & BOOKMARKMASK:
+                    BM.append(line)
+    
+                if (self.GetFoldLevel(line) & stc.STC_FOLDLEVELHEADERFLAG) and\
+                (not self.GetFoldExpanded(line)):
+                    FOLD.append(line)
+            FOLD.reverse()
+        
         return ret
 
     def SetSaveState(self, saved):

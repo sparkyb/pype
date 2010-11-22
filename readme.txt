@@ -178,6 +178,12 @@ text to be bigger, use a number larger than 10.  If you want text to be
 smaller, use a number smaller than 10.  The line number margin will be scaled
 proportional to the font size specified.
 
+--font
+======
+If you provide ``--font=Lucida-Console``, PyPE will change the font for all
+open documents to "Lucida Console".  The default font that PyPE uses is
+Courier New.
+
 --nothread
 ==========
 This command line option will disable the threaded parser, which may cause

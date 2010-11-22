@@ -17,17 +17,16 @@ class defdict(dict):
         try:
             return dict.__getitem__(self, key)
         except KeyError:
-            return key
+            return key.lower()
 
 goodch = dict.fromkeys('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 transtable = ''.join([(' ', i.lower())[i in goodch] for i in [chr(j) for j in xrange(256)]])
 
 
 non_word = defdict([(chr(i), ' ') for i in xrange(256) if chr(i) not in goodch])
+non_word.update(dict([(unichr(i), ' ') for i in xrange(256) if chr(i) not in goodch]))
 
-fil = os.path.join(os.path.normpath(os.path.join(os.getcwd(),
-                                                 os.path.split(__file__)[0])),
-                   'dictionary.txt')
+fil = os.path.join(_pype.runpath, 'dictionary.txt')
 
 dictionary = {}
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
@@ -309,13 +308,17 @@ class SpellCheck(scrolled.ScrolledPanel):
         else:
             doc = wx.stc.StyledTextCtrl.GetSelectedText(win)
             self.start = min(win.GetSelection())
+        
         tt = transtable
         try:
             doc = doc.encode('ascii')
         except:
             tt = non_word
+        try:
+            wrds = doc.translate(tt).split()
+        except:
+            wrds = ''.join([tt[i] for i in doc]).split()
         
-        wrds = doc.translate(tt).split()
         wc = len(wrds)
         for i in wrds:
             if i not in _dict and i not in fd and i not in win.ignore and i not in dcts:

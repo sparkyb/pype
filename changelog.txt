@@ -1,5 +1,26 @@
+#-------------------------------- PyPE 2.7.2 ---------------------------------
+(changed) files with at least 20,000 lines or at least 4 megs will no longer
+have their bookmark or fold states saved on close.  This significantly reduces
+the time to close (and sometimes open) large files.
+(fixed) code that uses MainWindow.exceptDialog() will now properly create a
+dialog.
+(fixed) wxPython 2.7 incompatability in the Browsable directory tree in
+wxPython 2.7 - 2.7.1.2 .
+(removed) some unnecessary debug printouts.
+(changed) the 'Search' tab to better handle narrower layouts.
+(fixed) the 'Ignore .subdirs' option in the 'Search' tab now gets disabled
+along with 'Search Subdirectories' when applicable.
+(fixed) error when opening changelog.txt on unicode-enabled installations.
+(fixed) spell checker for unicode-enabled platforms.
+(fixed) case where various checkmarks in the Documents menu wouldn't update
+when a document was opened, closed, or created on some platforms.
+(added) --font= command line option for choosing the font that the editor will
+use.
+
+
 #-------------------------------- PyPE 2.7.1 ---------------------------------
 (fixed) bug related to wxPython 2.7 conversion.
+
 
 #--------------------------------- PyPE 2.7 ----------------------------------
 (fixed) possible race condition in the 'kill macro thread' code.
@@ -83,7 +104,7 @@ lines.  Thank you to Jonathan Henry for the report and patch.
 version of wxPython.
 (fixed) PyPE and Command Shells not producing prompts and/or not working on
 Mac and Linux.  Thank you to Ernesto Costa for the bug report.
-(fixed) PyPE will no longer indiscriminantly add additional lines to your
+(fixed) PyPE will no longer indiscriminately add additional lines to your
 files when manupulating the last line (now will only add an additional line if
 your last line ends with a line ending character.
 (fixed) 'Run selected text in Python Shell' macro.
@@ -107,7 +128,7 @@ named "Timeout Non-Failure #3 in Python 2.3").
 (added) support for html/xml <?xml encoding=['"]...['"]?> discovery in the
 first two lines of the source file.  Does not assume utf-8 as per spec:
 http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl due to backwards
-compatability concerns.  Users desiring utf-8 decoding support should make
+compatibility concerns.  Users desiring utf-8 decoding support should make
 sure that their xml/html files include a utf-8 encoding directive or BOM at
 the beginning of their file.
 (changed) slightly the behavior of encoding discovery during load/save of a
@@ -248,7 +269,7 @@ will change the definition selection to the direction of the arrow pressed.
 (added) 'lines' property to editor controls for line-based macros.
 (added) option to allow for different context displays for the filter tool.
 (added) approximate line count information for each item in the filter tool.
-(fixed) sorting in the filter tool to be accurrate depending on what context
+(fixed) sorting in the filter tool to be accurate depending on what context
 you have selected.
 (changed) extracted trigger interpretation code so that macros can get the
 same cursor and auto-indent code for text insertion as triggers.  Usable via
@@ -322,7 +343,7 @@ respectively (their sorting had been reversed for some unknown number of
 revisions).
 (added) command-line option for disabling the parsing thread (--nothread)
 (fixed) PyPE will now open files with uppercase characters from Windows on a
-Samba mount, thank you Walter Dörwald for the bug report!
+Samba mount, thank you Walter Dorwald for the bug report!
 (changed) name of the 'Options->Caret Options' menu to 'Options->Caret
 Tracking'
 (added) caret width option in the Options menu.
@@ -339,7 +360,7 @@ after the line-sorted browsable source tree.
 use to wx namespace.
 (added) Options->One Tab that will push the Name and Line sorted source trees,
 the filterable definition list, and the todo list into one 'Tools' tab, with
-navagation between the four via dropdown.
+navigation between the four via dropdown.
 (fixed) at some point I broke bookmark and fold saving, which are now fixed.
 (fixed) at some point I broke todos, which is now fixed.
 (fixed) hidden browsable source trees on GTK/Linux wxPython has been fixed,
@@ -369,10 +390,10 @@ options, Sloppy Cut/Copy, Smart Paste, and others.
 (fixed) Help text for Transforms->Dedent Region.
 (fixed) Radio items in the menus by simulating them with check items.  For
 some reason, trying to check radio items wasn't working...Ah well.
-(fixed) When a Python or Command shell recieves data from the running shell,
-it will now place the recieved data just before the previously being edited
+(fixed) When a Python or Command shell receives data from the running shell,
+it will now place the received data just before the previously being edited
 command (if any).  It was always supposed to work this way, but I messed it up
-during my effort to change the color of all recieved data.
+during my effort to change the color of all received data.
 (fixed) shells for the 2.6.3 release of wxPython.
 (fixed) shell behavior when sending large blocks of data to the client if
 the user is running wxPython 2.6.3 or later through the use of
@@ -389,7 +410,7 @@ represent file types.  This was causing problems whenever PyPE wasn't run from
 the same path as it was installed.
 (fixed) some users of various linux systems were having problems loading
 documents.  This seems to have been caused by either the above icon path
-issue, or merely the existance of these icons in either of the two open
+issue, or merely the existence of these icons in either of the two open
 document lists (along the top, or in the "Documents" tab on the (by default)
 right side of the editor).  I have added Options -> Use Icons to toggle their
 use.  You must use this option before opening any documents for it to work

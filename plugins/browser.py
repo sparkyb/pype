@@ -47,7 +47,7 @@ class FilesystemBrowser(wx.Panel):
         if hasattr(self, 'button'):
             return
         
-        print "called showstuff!"
+        ## print "called showstuff!"
         
         sizer = self.sizer
         
@@ -56,7 +56,12 @@ class FilesystemBrowser(wx.Panel):
         sizer.Add(self.button, 0, wx.EXPAND)
         
         self.browser = wx.GenericDirCtrl(self, -1, style=wx.DIRCTRL_SHOW_FILTERS, filter=_pype.wildcard, defaultFilter=0)
-        self.browser.ShowHidden(1)
+        try:
+            #for all other wxPython versions
+            self.browser.ShowHidden(1)
+        except TypeError:
+            #for wxPython 2.7.0 - 2.7.1.2
+            self.browser.ShowHidden = 1
         tree = self.browser.GetTreeCtrl()
         tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.OnActivate, tree)
         sizer.Add(self.browser, 1, wx.EXPAND)
@@ -79,7 +84,7 @@ class FilesystemBrowser(wx.Panel):
     
     def gethier(self):
         p = self.browser.GetFilePath()
-        print "Path:", p
+        ## print "Path:", p
         return p
 
     def OnActivate(self, evt):
