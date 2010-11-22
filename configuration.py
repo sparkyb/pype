@@ -2,7 +2,9 @@
 #----------------------- Settings for configuring PPE ------------------------
 import os
 import sys
-from wxPython.stc import *
+#from wxPython.wx import *
+from wxPython.stc import wxSTC_EOL_CRLF, wxSTC_EOL_LF, wxSTC_EOL_CR
+from parsers import *
 
 #--------- If I'm wrong on any of the line endings, please tell me. ----------
 crlf = ["nt", "dos", "ce", "os2"]
@@ -58,21 +60,8 @@ extns = {'py' : 'python',
        'html' : 'html',
        'shtm' : 'html',
       'shtml' : 'html',
-        'xml' : 'xml'}
-
-def detectLineEndings(text):
-    crlf_ = text.count('\r\n')
-    lf_ = text.count('\n')
-    cr_ = text.count('\r')
-    mx = max(lf_, cr_)
-    if not mx:
-        return eol
-    elif crlf_ >= mx/2:
-        return '\r\n'
-    elif lf_ is mx:
-        return '\n'
-    else:# cr_ is mx:
-        return '\r'
+        'xml' : 'xml',
+        'txt' : 'text'}
 
 #--------------- load pathmarks, snippets, and shell commands ----------------
 paths = {}

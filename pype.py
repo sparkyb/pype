@@ -30,7 +30,7 @@ import keyword, traceback, cStringIO, imp
 from wxPython.lib.dialogs import wxScrolledMessageDialog
 from wxPython.lib.filebrowsebutton import FileBrowseButton, DirBrowseButton
 
-import exceptions
+import exceptions, time
 #--------------------------- configuration import ----------------------------
 from configuration import *
 #--------- The two most useful links for constructing this editor... ---------
@@ -39,13 +39,11 @@ from configuration import *
 
 #---------------------------- Event Declarations -----------------------------
 if 1:
-    VERSION = "1.2"
+    #if so I can collapse the declarations
+    VERSION = "1.3"
 
     class cancelled(exceptions.Exception):
         pass
-
-    showpress = 0
-    #if so I can collapse the declarations
     ID_NEW=wxNewId()
     ID_OPEN=wxNewId()
     ID_SAVE=wxNewId()
@@ -76,8 +74,13 @@ if 1:
     XM_S = wxNewId()
     TX_S = wxNewId()
     lexers = dict(zip([PY_S, HT_S, CC_S, XM_S, TX_S], ['python', 'html', 'cpp', 'xml', 'text']))
+
+    #view nums
     ZI = wxNewId()
     ZO = wxNewId()
+    REFRESH = wxNewId()
+    BROWSE = wxNewId()
+    AUTO = wxNewId()
     
     #tab_nums
     PT = wxNewId()
@@ -245,26 +248,42 @@ class MainWindow(wxFrame):
         EVT_COMMAND_FIND_REPLACE_ALL(self, -1, self.OnFind)
         EVT_COMMAND_FIND_CLOSE(self, -1, self.OnFindClose)
 
-#-------------------------------- Format Menu --------------------------------
+#-------------------------------- Style Menu ---------------------------------
         stylemenu= wxMenu()
         
         name = ["Python",
                 "HTML",
                 "XML",
                 "C/C++",
-                "Text",
-                "Zoom In\tCTRL-<plus>",
-                "Zoom Out\tCTRL-<minus>"]
+                "Text"]
         help = ["Highlight for Python syntax",
                 "Highlight for HTML syntax",
                 "Highlight for XML syntax",
                 "Highlight for C/C++ syntax",
-                "No Syntax Highlighting",
-                "Make everything bigger",
-                "Make everything smaller"]
-        functs = 5*[self.OnStyleChange]+2*[self.OnZoom]
-        lkp = dict(zip([PY_S,HT_S,XM_S,CC_S,TX_S,ZI,ZO], zip(name, help, functs)))
-        self.updateMenu(stylemenu, [PY_S,HT_S,XM_S,CC_S,TX_S,0,ZI,ZO], lkp)
+                "No Syntax Highlighting"]
+        functs = 5*[self.OnStyleChange]
+        lkp = dict(zip([PY_S,HT_S,XM_S,CC_S,TX_S], zip(name, help, functs)))
+        self.updateMenu(stylemenu, [PY_S,HT_S,XM_S,CC_S,TX_S], lkp)
+
+#--------------------------------- View Menu ---------------------------------
+        viewmenu= wxMenu()
+        
+        name = ["Zoom In\tCTRL-<plus>",
+                "Zoom Out\tCTRL-<minus>",
+                "Show/hide snippet bar\tCTRL-SHIFT-B",
+                "Refresh\tF5",
+                "Show/hide tree\tCTRL-SHIFT-G",
+                "Show Autocomplete Dropdown\tCTRL-<space>"]
+        help = ["Make everything bigger",
+                "Make everything smaller",
+                "Show/hide the global code snippet bar on the left",
+                "Refresh the browsable source tree and autocomplete listing",
+                "Show/hide the heirarchical source tree for the currently open document",
+                "Show the autocomplete dropdown at the current cursor position"]
+        functs = 2*[self.OnZoom]+[self.OnSnippet, self.OnRefresh, self.OnTree, self.OnAutoComplete]
+        lkp = dict(zip([ZI,ZO,SNIP,REFRESH,BROWSE,AUTO], zip(name, help, functs)))
+        self.updateMenu(viewmenu, [ZI,ZO,0,SNIP,REFRESH,BROWSE,AUTO], lkp)
+
 
 #--------------------------------- Tab Menu ----------------------------------
         tabmenu= wxMenu()
@@ -293,7 +312,7 @@ class MainWindow(wxFrame):
         help = ["Select the previous code snippet",
                 "Select the next code snippet",
                 "Insert the currently selected snippet into the document",
-                "Resize the snippet bar to be default width or to be hidden"]
+                "Show/hide the global code snippet bar on the left"]
         functs = [self.snippet.OnSnippetP,
                   self.snippet.OnSnippetN,
                   self.snippet.OnListBoxDClick,
@@ -334,7 +353,8 @@ class MainWindow(wxFrame):
         menuBar = wxMenuBar()
         menuBar.Append(filemenu,"&File") # Adding the "filemenu" to the MenuBar
         menuBar.Append(editmenu, "&Edit")
-        menuBar.Append(stylemenu,"&View")
+        menuBar.Append(stylemenu,"S&tyle")
+        menuBar.Append(viewmenu,"&View")
         menuBar.Append(tabmenu, "&Tabs")
         menuBar.Append(snippetmenu, "Sn&ippets")
         self.pm = pathmarkmenu
@@ -397,22 +417,6 @@ class MainWindow(wxFrame):
             else:
                 menu.AppendSeparator()
 
-    '''def selected(self, e):                   # for a removed dirctrl thing...
-        a = self.dirctrl.GetFilePath()          # leaving here, maybe for later
-        if a:
-            abs = os.path.normcase(os.path.normpath(a))
-            if self.isAbsOpen(abs):
-                self.selectAbsolute(abs)
-            else:
-                self.makeAbsOpen(abs)
-                tdn, tfn = self.splitAbsolute(abs)
-                self.newTab(tdn,tfn,1)
-        else:
-            e.Skip()
-
-    def OnShowSplit(self, e):
-        self.top_split.SetSashPosition(100)'''
-
     def dialog(self, message, title, styl=wxOK):
         d= wxMessageDialog(self,message,title,styl)
         retr = d.ShowModal()
@@ -439,7 +443,7 @@ class MainWindow(wxFrame):
                     self.newTab(d,f, len(fnames)==1)
                     self.SetStatusText("Opened %s"%i)
                 except:
-                    self.parent.parent.exceptDialog("File open failed")
+                    self.exceptDialog("File open failed")
 
 
 #---------------------------- File Menu Commands -----------------------------
@@ -447,7 +451,7 @@ class MainWindow(wxFrame):
         if self.isAbsOpen(path):
             dn, fn = self.splitAbsolute(path)
             for i in xrange(self.control.GetPageCount()):
-                win = self.control.GetPage(i)
+                win = self.control.GetPage(i).GetWindow1()
                 if (win.filename == fn) and (win.dirname == dn):
                     self.control.SetSelection(i)
                     return
@@ -475,7 +479,7 @@ class MainWindow(wxFrame):
 
     def OnNew(self,e):
         self.newTab('', ' ', 1)
-        self.control.GetPage(self.control.GetSelection()).opened = 1
+        self.control.GetPage(self.control.GetSelection()).GetWindow1().opened = 1
         self.SetStatusText("Created a new file")
 
     def OnSave(self,e):
@@ -521,7 +525,7 @@ class MainWindow(wxFrame):
     def OnSaveAll(self, e):
         sel = self.control.GetSelection()
         cnt = self.control.GetPageCount()
-        for i in range(cnt):
+        for i in xrange(cnt):
             self.control.SetSelection(i)
             try:
                 self.OnSave(e)
@@ -573,10 +577,16 @@ class MainWindow(wxFrame):
                 return self.dialog("module %s not found"%mod, "not found")
 
     def newTab(self, dir, fn, switch=0):
-        nwin = PythonSTC(self.control, -1)
+        split = wxSplitterWindow(self.control, -1)
+        split.parent = self
+        nwin = PythonSTC(self.control, -1, split)
+        nwin.split = split
         nwin.filename = fn
         nwin.dirname = dir
         nwin.changeStyle(stylefile, self.style(fn))
+        nwin.tree = HeirCodeTreePanel(self, split)
+        split.SetMinimumPaneSize(3)
+        split.SplitVertically(nwin, nwin.tree, -10)
         if dir:
             f=open(os.path.join(nwin.dirname,nwin.filename),'rb')
             txt = f.read()
@@ -587,7 +597,7 @@ class MainWindow(wxFrame):
             nwin.format = eol
             nwin.SetText('')
         #print repr(nwin.format)
-        self.control.AddPage(nwin, nwin.filename, switch)
+        self.control.AddPage(split, nwin.filename, switch)
 
     def OnReload(self, e):
         num, win = self.getNumWin(e)
@@ -605,7 +615,7 @@ class MainWindow(wxFrame):
             win.SetText(txt, 0)
             win.MakeClean()
         except:
-            self.dialog("Could not reload from disk")
+            self.dialog("Could not reload from disk", "Reload failed")
 
     def OnClose(self, e):
         wnum, win = self.getNumWin(e)
@@ -707,12 +717,12 @@ class MainWindow(wxFrame):
                 win.InsertText(0, st)
             win.MakeDirty()
         else:
-            event.Skip()
+            e.Skip()
 #--------------------- Find and replace dialogs and code ---------------------
     def getNumWin(self, e):
         num = self.control.GetSelection()
         if num >= 0:
-            return num, self.control.GetPage(num)
+            return num, self.control.GetPage(num).GetWindow1()
         e.Skip()
         raise cancelled
 
@@ -721,7 +731,7 @@ class MainWindow(wxFrame):
         if not wcount:
             return evt.Skip()
         for wnum in xrange(wcount):
-            win = self.control.GetPage(wnum)
+            win = self.control.GetPage(wnum).GetWindow1()
             win.gcp = win.GetCurrentPos()
             win.last = 0
         data = wxFindReplaceData()
@@ -734,7 +744,7 @@ class MainWindow(wxFrame):
         if not wcount:
             return evt.Skip()
         for wnum in xrange(wcount):
-            win = self.control.GetPage(wnum)
+            win = self.control.GetPage(wnum).GetWindow1()
             win.gcp = win.GetCurrentPos()
             win.last = 0
         data = wxFindReplaceData()
@@ -864,12 +874,47 @@ class MainWindow(wxFrame):
         else:
             e.Skip()
 
-    def OnSnippet(self, e):
-        if self.split.GetSashPosition() < 10:
-            self.split.SetSashPosition(100)
+    def OnSnippet(self, e, resize=0):
+        split = self.split
+        num = self.control.GetSelection()
+        if num != -1:
+            resize = 1
+            width = self.control.GetClientSize()[0]
+            orig = self.control.GetPage(num).GetSashPosition()
+        if split.GetSashPosition() < 10:
+            split.SetSashPosition(100)
         else:
-            self.split.SetSashPosition(self.split.GetMinimumPaneSize())
+            split.SetSashPosition(split.GetMinimumPaneSize())
+        if resize:
+            delta = self.control.GetClientSize()[0]-width
+            self.control.GetPage(num).SetSashPosition(orig+delta)
 
+    def OnTree(self, e):
+        num, win = self.getNumWin(e)
+        split = self.control.GetPage(num)
+        width = self.control.GetClientSize()[0]-10
+        if (width-split.GetSashPosition())<10:
+            split.SetSashPosition(width-100)
+        else:
+            split.SetSashPosition(width-split.GetMinimumPaneSize())
+        
+
+    def OnRefresh(self, e):
+        num, win = self.getNumWin(e)
+        win.heirarchy, win.kw = cf_heirarchy(win.GetText(), win.format)
+        win.kw += keyword.kwlist[:]
+        win.kw.sort()
+        win.kw = ' '.join(win.kw)
+        win.tree.new_heirarchy(win.heirarchy)
+
+    def OnAutoComplete(self, event):
+        # Images are specified with a appended "?type"
+        #for i in range(len(kw)):
+        #    if kw[i] in keyword.kwlist:
+        #        kw[i] = kw[i]# + "?1"
+        num, win = self.getNumWin(event)
+        win.AutoCompSetIgnoreCase(False)  # so this needs to match
+        win.AutoCompShow(0, win.kw)
 #------------------------- Bookmarked Path Commands --------------------------
     def OnBookmark(self, e, st=type('')):
         try:
@@ -984,7 +1029,7 @@ class MainWindow(wxFrame):
         wnum = self.control.GetSelection()
         pagecount = self.control.GetPageCount()
         if wnum > -1:
-            win = self.control.GetPage(wnum)
+            win = self.control.GetPage(wnum).GetWindow1()
             if win.CallTipActive():
                 win.CallTipCancel()
         if event.ShiftDown():
@@ -995,10 +1040,22 @@ class MainWindow(wxFrame):
                     self.snippet.OnSnippetN(event)
                 elif key == 66:
                     self.OnSnippet(event)
+                elif key == 71:
+                    self.OnTree(event)
                 else:
                     event.Skip()
             else:
-                event.Skip()
+                if key == 32:
+                    event.Skip()
+                    #tooltips
+                    
+                    #pos = win.GetCurrentPos()
+                    #win.CallTipSetBackground("yellow")
+                    #win.CallTipShow(pos, 'lots of of text: blah, blah, blah\n\n'
+                    #                 'show some suff, maybe parameters..\n\n'
+                    #                 'fubar(param1, param2)')
+                else:
+                    event.Skip()
         elif event.ControlDown() and event.AltDown():
             #commands for both control and alt pressed
 
@@ -1024,40 +1081,7 @@ class MainWindow(wxFrame):
 
                 #get the current keyword list with ctrl-<space>
                 elif key == 32:
-#------------- Left in comments for future completion additions --------------
-                    #pos = win.GetCurrentPos()
-                    # Tips
-                    #if event.ShiftDown():
-                    #    self.CallTipSetBackground("yellow")
-                    #    self.CallTipShow(pos, 'lots of of text: blah, blah, blah\n\n'
-                    #                     'show some suff, maybe parameters..\n\n'
-                    #                     'fubar(param1, param2)')
-                    # Code completion
-                    #else:
-                    #lst = []
-                    #for x in range(50000):
-                    #    lst.append('%05d' % x)
-                    #st = " ".join(lst)
-                    #print len(st)
-                    #self.AutoCompShow(0, st)
-        
-                    kw = keyword.kwlist[:]
-                    #kw.append("zzzzzz?2")
-                    #kw.append("aaaaa?2")
-                    #kw.append("__init__?3")
-                    #kw.append("zzaaaaa?2")
-                    #kw.append("zzbaaaa?2")
-                    #kw.append("this_is_a_longer_value")
-                    #kw.append("this_is_a_much_much_much_much_much_much_much_longer_value")
-    
-                    kw.sort()  # Python sorts are case sensitive
-                    self.AutoCompSetIgnoreCase(False)  # so this needs to match
-        
-                    # Images are specified with a appended "?type"
-                    for i in range(len(kw)):
-                        if kw[i] in keyword.kwlist:
-                            kw[i] = kw[i]# + "?1"
-                        self.AutoCompShow(0, " ".join(kw))
+                    self.OnAutoComplete(event)
                 else:
                     event.Skip()
             else:
@@ -1086,6 +1110,8 @@ class MainWindow(wxFrame):
             #four more.
             if (key==13):
                 if pagecount:
+                    if win.AutoCompActive():
+                        return win.AutoCompComplete()
                     #get information about the current cursor position
                     ln = win.GetCurrentLine()
                     pos = win.GetCurrentPos()
@@ -1112,19 +1138,25 @@ class MainWindow(wxFrame):
                     return event.skip()
             elif key == 342:
                 return self.OnHelp(event)
+            elif key == 346:
+                return self.OnRefresh(event)
             else:
                 return event.Skip()
 
 #------------- Ahh, Styled Text Control, you make this possible. -------------
 class PythonSTC(wxStyledTextCtrl):
-    def __init__(self, parent, ID):
-        wxStyledTextCtrl.__init__(self, parent, ID, style = wxNO_FULL_REPAINT_ON_RESIZE)
+    def __init__(self, parent, ID, prnt):
+        wxStyledTextCtrl.__init__(self, prnt, ID, style = wxNO_FULL_REPAINT_ON_RESIZE)
         
+        self.heirarchy = []
+        self.kw = []
+
+        self.prnt = prnt
         self.parent = parent
         self.dirty = 0
         
         #Text is included in the original, but who drags text?  Below for dnd file support.
-        if dnd_file: self.SetDropTarget(FileDropTarget(self.parent))
+        if dnd_file: self.SetDropTarget(FileDropTarget(self.parent.parent))
 
         #for command comlpetion
         self.SetKeyWords(0, " ".join(keyword.kwlist))
@@ -1207,6 +1239,23 @@ class PythonSTC(wxStyledTextCtrl):
         self.SetEOLMode(fmt_mode[self.format])
         wxStyledTextCtrl.SetText(self, txt)
         self.opened = 1
+        #tim(0)
+        if cf_heirarchy == slow_parser:
+            try:    self.heirarchy, self.kw = slow_parser(txt[:])
+            except exceptions.Exception, e:
+                #self.parent.parent.exceptDialog("error with slow parser")
+                self.parent.parent.SetStatusText("%s, using fast_parser"%str(e))
+                #this is just in case the slow parser dies on a syntax error
+                self.heirarchy, self.kw = fast_parser(txt, self.format)
+        else:
+            self.heirarchy, self.kw = fast_parser(txt, self.format)
+        #tim()
+        self.kw += keyword.kwlist[:]
+        self.kw.sort()
+        self.kw = ' '.join(self.kw)
+        #tim()
+        self.tree.new_heirarchy(self.heirarchy)
+        #tim()
         if emptyundo:
             self.EmptyUndoBuffer()
 
@@ -1216,21 +1265,36 @@ class PythonSTC(wxStyledTextCtrl):
             self.dirty = 1
             self.parent.SetPageText(self.parent.GetSelection(), '* '+self.filename)
             self.parent.Refresh(False)
-            #self.parent.Refresh(True)
-            self.Refresh(False)
-            #self.Refresh(True)
+            self.do(self.nada)
         if e:
             e.Skip()
-            
+
+    def nada(self, e):
+        pass
+
     def MakeClean(self, e=None):
         self.dirty = 0
         self.parent.SetPageText(self.parent.GetSelection(), self.filename)
         self.parent.Refresh(False)
-        #self.parent.Refresh(True)
-        self.Refresh(False)
-        #self.Refresh(True)
+        self.do(self.nada, 0)
         if e:
             e.Skip()
+
+    def do(self, funct, dirty=1):
+        if dirty: self.MakeDirty(None)
+        funct(self)
+        a = self.prnt.GetSashPosition()
+        self.prnt.SetSashPosition(a-1)
+        self.prnt.SetSashPosition(a)
+        #self.parent.Refresh(False)
+        #self.prnt.Refresh(False)
+        #self.prnt.GetWindow2().Refresh(False)
+        #self.Refresh(False)
+
+    def Cut(self):      self.do(wxStyledTextCtrl.Cut)
+    def Paste(self):    self.do(wxStyledTextCtrl.Paste)
+    def Undo(self):     self.do(wxStyledTextCtrl.Undo)
+    def Redo(self):     self.do(wxStyledTextCtrl.Redo)
 
 #--------- Ahh, the style change code...isn't it great?  Not really. ---------
     def changeStyle(self, stylefile, language):
@@ -1427,7 +1491,7 @@ class MyNB(wxNotebook):
         new = event.GetSelection()
         #fix for dealing with current paths.  They are wonderful.
         if new > -1:
-            win = self.GetPage(new)
+            win = self.GetPage(new).GetWindow1()
             if win.dirname:
                 os.chdir(win.dirname)
         event.Skip()
@@ -1442,8 +1506,8 @@ class MyNB(wxNotebook):
         text = self.GetPageText(mn)[:]
         self.RemovePage(mn)
         self.InsertPage(mx, page, text, 1)
-        self.parent.Refresh(False)
-        self.Refresh(False)
+        #self.parent.Refresh(False)
+        #self.Refresh(False)
 
 class FileDropTarget(wxFileDropTarget):
     def __init__(self, parent):
@@ -1492,7 +1556,7 @@ class CodeSnippet(wxPanel):
             self.OnListBoxDelete(e)
         elif key == 86 and e.ControlDown():
             wxTheClipboard.Open()
-            tmp = wxTheClipboard.GetData(do)
+            tmp = wxTheClipboard.GetData()
             wxTheClipboard.Close()
             self.OnDropText(tmp)
         elif key == 13:
@@ -1509,6 +1573,7 @@ class CodeSnippet(wxPanel):
         if code != '':
             win.ReplaceSelection(code)
             win.MakeDirty()
+            win.SetFocus()
 
     def OnListBoxDelete(self, e):
         disp = self.lb.GetSelection()
@@ -1766,10 +1831,91 @@ class RunShell(wxMenu):
         EVT_MENU(self.parent, a, self.OnMenu)
         self.menu[a] = (name, path, command)
 
+class HeirCodeTreePanel(wxPanel):
+    class TreeCtrl(wxTreeCtrl):
+        def __init__(self, parent, prnt, tid):
+            wxTreeCtrl.__init__(self, prnt, tid, style=wxTR_DEFAULT_STYLE|wxTR_HIDE_ROOT|wxTR_HAS_BUTTONS)
+            self.parent = parent
+            
+            #this should work for icons, but doesn't.
+            isz = (16,16)
+            il = wxImageList(isz[0], isz[1])
+            self.images = [wxArtProvider_GetBitmap(wxART_FOLDER, wxART_OTHER, isz),
+                      wxArtProvider_GetBitmap(wxART_FILE_OPEN, wxART_OTHER, isz),
+                      wxArtProvider_GetBitmap(wxART_HELP_PAGE, wxART_OTHER, isz)]
+            for i in self.images:
+                il.Add(i)
+            self.SetImageList(il)
+            self.il = il
+
+        def OnCompareItems(self, item1, item2):
+            return cmp(self.GetItemData(item1).GetData(), self.GetItemData(item2).GetData())
+
+    def __init__(self, parent, prnt):
+        # Use the WANTS_CHARS style so the panel doesn't eat the Return key.
+        wxPanel.__init__(self, prnt, -1, style=wxWANTS_CHARS)
+        EVT_SIZE(self, self.OnSize)
+
+        self.parent = parent
+
+        tID = wxNewId()
+
+        self.tree = self.TreeCtrl(parent, self, tID)
+
+        #self.tree.Expand(self.root)
+        EVT_LEFT_DCLICK(self, self.OnLeftDClick)
+        EVT_TREE_ITEM_ACTIVATED (self, tID, self.OnActivate)
+
+    def new_heirarchy(self, heir):
+        self.tree.DeleteAllItems()
+        root = [self.tree.AddRoot("Unseen Root")]
+        stk = [heir]
+        while stk:
+            cur = stk.pop()
+            while cur:
+                name, line_no, leading, children = cur.pop()
+                item_no = self.tree.AppendItem(root[-1], name)
+                self.tree.SetPyData(item_no, line_no)
+                if children:
+                    self.tree.SetItemImage(item_no, 0, wxTreeItemIcon_Normal)
+                    self.tree.SetItemImage(item_no, 1, wxTreeItemIcon_Expanded)
+                    stk.append(cur)
+                    root.append(item_no)
+                    cur = children
+                else:
+                    self.tree.SetItemImage(item_no, 2, wxTreeItemIcon_Normal)
+                    self.tree.SetItemImage(item_no, 2, wxTreeItemIcon_Selected)
+            self.tree.SortChildren(root[-1])
+            root.pop()
+
+    def OnSize(self, event):
+        w,h = self.GetClientSizeTuple()
+        self.tree.SetDimensions(0, 0, w, h)
+
+    def OnLeftDClick(self, event):
+        #pity this doesn't do what it should.
+        num, win = self.parent.getNumWin(event)
+        win.SetFocus()
+
+    def OnActivate(self, event):
+        num, win = self.parent.getNumWin(event)
+        dat = self.tree.GetItemData(event.GetItem()).GetData() 
+        if dat == None:
+            return event.Skip()
+        ln = dat[1]
+        #print ln
+        #print dir(win)
+        linepos = win.GetLineEndPosition(ln)
+        win.EnsureVisible(ln)
+        win.SetSelection(linepos-len(win.GetLine(ln))+len(win.format), linepos)
+        win.ScrollToColumn(0)
+        win.SetFocus()
+
 #--------------------------- And the main...*sigh* ---------------------------
 def main():
     app = wxPySimpleApp()
     app.frame = MainWindow(None, -1, "PyPE %s"%VERSION, (sys.argv[1:]))
+    app.SetTopWindow(app.frame)
     app.frame.Show(1)
     app.MainLoop()
 

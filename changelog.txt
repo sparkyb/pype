@@ -1,3 +1,65 @@
+(PyPE 1.3)
+(confirmed) As believed, PyPE 1.2 and later work with Python 2.3.  No worries
+about upgrading, but no requirements either.  I'll be developing with 2.2, but
+will test all releases from now on with 2.3 as well.  I don't forsee any
+issues involved with the transition to Python 2.3 in the future.  In the next
+6 months, if I happen to use features added in Python 2.3 (like enumerate), I
+will make sure to include a work-alike for those of us who migrate a few
+months after a Python release.
+(changed) now when you open a .txt file the text styling will be used.
+(changed) the text style now uses a monospaced font (because non-monospaced
+text in an editor like PyPE is just plain ugly).
+(fixed) a little bug in MainWindow.OnDrop, where a failed file open should
+open up a dialog explaining why the open failed, but would instead cause
+another exception.  Ick.
+(added) a very rudimentary heirarchical python parser.  It only pays attention
+to leading spaces in function and class definitions.  That is why I call it
+rudimentary.  All bug reports regarding the heirarchical python parser will be
+ignored.  Patches for making the parser better will be merged, likely used,
+and properly attributed.
+(added) "autocompletion" dropdown for keyword/function/method completion.
+Accessable via CTRL-<space>.
+(added) a browsable source tree per open document.  Check the view menu.  It
+uses an iterative method rather than a recursive method which could go beyond
+the interpreter's recursion limit for very deep source files.
+(left in) the stub for adding tooltips.  I dig tooltips, but I don't really
+want to add the code for sucking tooltips out of the first line of a method or
+module's docstring.  Maybe 1.4, maybe.
+(fixed) a bug with dropping files to open onto an already open document.
+(fixed) a bug where cut/paste/undo/redo by keyboard wouldn't mark the document
+as being 'dirty' with the little asterisk next to the file name.  Now whenever
+one uses cut/paste/undo/redo causes the document to become dirty, even when
+nothing actually changes.  I think this is better.
+(discovered) window.SetFocus(), a nice little thing that gives keyboard focus
+to objects derived from wxWindow (most everything is), thanks to oZt that
+popped into the #python channel who was looking for such a thing, that made me
+curious as well.  Now things like double-clicking on code-snippets and on
+the browsable source tree will now give source editor focus.  Sweet.
+(fixed) some bugs with portions of the window not redrawing.
+(added) two parsers for the browsable source tree.  A fast one, and an
+accurate one.  The fast one can parse PyPE 1.3 in .08 seconds.  The accurate
+one can parse PyPE 1.3 in 4 seconds.  These times are on my PII-400.  By
+default, the fast one will be in use, this is for two reasons; the first being
+speed (no one wants a slow source browser refresh), the second being that the
+slow parser (which uses the parser module) dies during the creation of the
+syntax tree if there are any syntax errors in your source, making it somewhat
+useless during development.  If anyone can offer anything better than either
+for what they are doing, I would be very happy to give you credit for your
+work.  Any bug reports on the fast parser being inaccurate will be ignored.
+Any bug reports on the slow parser being slow or not working on non-working
+code will be ignored.  If you'd like to test the parsers, give this a try:
+'./parsers.py pype.py' to find out how fast either would take to parse PyPE on
+your system.  One thing to note is that the slow parser, because it uses the
+parser module, has a few problems with line numbers (many lines that are in
+triple quoted strings are considered one line, and comment lines are discarded
+completely), so the slow parser uses the fast parser to get line numbers.
+Kinda funny really.  The accurate one (in terms of heirarchy) is completely
+off in terms of line numbers.  HAH!
+(fixed) a little bug regarding comment insertion.  If one would hit cancel, it
+would have caused an exception...that was ignored.
+(confirmed) still works with Python 2.2 and 2.3.
+
+
 (PyPE 1.2)
 (changed) pathmarks are always saved on program exit.
 (added) command line argument support with the use of os.path.abspath for all
