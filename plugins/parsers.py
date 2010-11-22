@@ -73,9 +73,8 @@ def detectLineIndent(lines, use_tabs, spaces_per_tab, spaces_per_indent):
             continue
         x = (0,)
         if tl or prev[0]:
-            # 1, 2, 3, and 7 spaces per tab is strange...but we'll
-            # check them just to be sure
-           x = (0, 1, 2, 3, 4, 6, 8)
+            # Let's just check all of the indents up to 8.
+           x = tuple(range(9))
         for i in x:
             d = abs((ind + i*tl) - (prev[1] + i*prev[0]))
             deltas[i,d] = deltas.get((i,d), 0) + 1

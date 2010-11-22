@@ -12,6 +12,12 @@ import __main__
 
 import filtertable
 
+attr1 = wx.ListItemAttr()
+attr1.SetBackgroundColour(wx.Colour(0xee, 0xff, 0xee))
+
+attr2 = wx.ListItemAttr()
+attr2.SetBackgroundColour(wx.Colour(0xee, 0xee, 0xff))
+
 OB1 = 0
 class FileDropTarget(wx.FileDropTarget):
     def __init__(self, parent, root):
@@ -149,6 +155,14 @@ class MyNB(BaseNotebook):
             r = self.GetPage(cur).GetWindow1()
             yield r
             cur += 1
+
+    @property
+    def items(self):
+        return [os.path.join(i.dirname, i.filename) for i in self if i.dirname]
+
+    def __contains__(self, name):
+        dn, fn = os.path.split(name)
+        return self.root.isOpen(fn, dn)
 
     def GotFocus(self, evt):
         evt.Skip()
@@ -371,7 +385,8 @@ class setupmix:
             else:
                 do = __main__.document_options2
         if do&4:
-            self.InsertColumn(self.GetColumnCount(), "Path", wx.LIST_FORMAT_RIGHT)
+            self.InsertColumn(0, "", width=20)
+            self.InsertColumn(self.GetColumnCount(), "Path", format=wx.LIST_FORMAT_RIGHT)
         if do&1:
             self.InsertColumn(self.GetColumnCount(), "Filename")
         if (do&2) or do == 0:
@@ -531,9 +546,9 @@ class RecentClosed(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
 class FakeRecentClosed(object):
     def __init__(self, parent):
         self.parent = parent
-        self.items = __main__.root.lastused.keys()[::-1]
+        self.items = __main__.root.control.items + __main__.root.lastused.keys()[::-1]
     def refresh(self):
-        self.items = __main__.root.lastused.keys()[::-1]
+        self.items = __main__.root.control.items + __main__.root.lastused.keys()[::-1]
         self.parent.table.refresh(self.parent.table.last_text)
 
 die = None
@@ -653,6 +668,7 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
     def __init__(self, parent, root):
         wx.ListCtrl.__init__(self, parent, style=wx.LC_REPORT|wx.LC_VIRTUAL)
         listmix.ListCtrlAutoWidthMixin.__init__(self)
+        self.AssignImageList(__main__.IMGLIST4, wx.IMAGE_LIST_SMALL)
 
         self.setupcolumns(5)
         self.root = root
@@ -667,17 +683,21 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
         self.SetDropTarget(__main__.FileDropTarget(root))
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
         wx.CallAfter(self.update_data, True)
+
     def add_path(self, path):
         self.paths_to_watch.append(path.rstrip(os.path.sep) + os.path.sep)
         self.update_data(True)
+
     def remove_paths(self, paths):
         paths = set(paths)
         self.paths_to_watch[:] = [p for p in self.paths_to_watch if p not in paths]
         self.update_data(True)
+
     def update_data(self, refresh=False):
         global die
         die = time.time()
         get_filenames(self.paths_to_watch, self.extensions_to_watch, self.got_new_data, refresh, die)
+
     def got_new_data(self, data, refresh=False, complete=False):
         self.items = data
         if refresh:
@@ -686,6 +706,7 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
             __main__.root.SetStatusText("Finished adding %i files to Quick Browse."%len(data))
         else:
             print "Added %i files to Quick Browse"%len(data)
+
     def refresh(self, text):
         lcs = filtertable._lcsseq
         recent = self.parent.recentlyclosed.items
@@ -706,7 +727,11 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
 
         self.SetItemCount(len(self.disp_items))
         self.Refresh()
+
     def OnGetItemText(self, index, col):
+        if col == 0:
+            return ''
+        col -= 1
         di = self.disp_items
         if index >= len(di):
             return ''
@@ -728,6 +753,7 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
                 disp = gen_path_diff(cd, od)
         disp = disp or cd
         return disp
+
     def GetSelectedList(self):
         lst = []
         x = self.GetFirstSelected()
@@ -735,10 +761,29 @@ class WatchProject(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
             lst.append(x)
             x = self.GetNextSelected(x)
         return lst
+
     def OnActivate(self, evt):
         lst = self.GetSelectedList()
         di = self.disp_items
         self.root.OnDrop([di[i] for i in lst])
+
+    def OnGetItemAttr(self, item):
+        it = self.disp_items[item]
+        if it in self.root.control:
+            return attr2
+        elif it in self.root.lastused:
+            return attr1
+        return None
+
+    def OnGetItemImage(self, item):
+        return __main__.GDI(os.path.split(self.disp_items[item])[1])
+
+def Button(*args, **kwargs):
+    help = kwargs.pop('help', None)
+    b = wx.Button(*args, **kwargs)
+    if help:
+        b.SetHelpText(help)
+    return b
 
 class DocumentPanel(wx.Panel):
     def __init__(self, parent, root):
@@ -755,25 +800,25 @@ class DocumentPanel(wx.Panel):
 
         sz3 = wx.BoxSizer(wx.HORIZONTAL)
 
-        b = wx.Button(self, -1, "+", style=wx.BU_EXACTFIT)
+        b = Button(self, -1, "+", help="Add paths to watch", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnPlus, b)
 
-        b = wx.Button(self, -1, "-", style=wx.BU_EXACTFIT)
+        b = Button(self, -1, "-", help="Remove paths to watch", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnMinus, b)
 
-        b = wx.Button(self, -1, "R", style=wx.BU_EXACTFIT)
+        b = Button(self, -1, "R", help="Refresh file list", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnRefresh, b)
 
         sz3.Add(wx.StaticText(self, -1, ""), 1, wx.EXPAND|wx.ALL, 2)
         
-        b = wx.Button(self, -1, "E+", style=wx.BU_EXACTFIT)
+        b = Button(self, -1, "E+", help="Add extensions to watch", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnAddExt, b)
         
-        b = wx.Button(self, -1, "E-", style=wx.BU_EXACTFIT)
+        b = Button(self, -1, "E-", help="Remove extensions to watch", style=wx.BU_EXACTFIT)
         sz3.Add(b, 0, wx.ALL, 2)
         self.Bind(wx.EVT_BUTTON, self.OnRemExt, b)
 
@@ -810,7 +855,7 @@ class DocumentPanel(wx.Panel):
         self.table.refresh(self.filter.GetValue())
 
     def OnPlus(self, evt):
-        dlg = wx.DirDialog(self, "Choose a directory:", style=wx.DD_DEFAULT_STYLE)
+        dlg = wx.DirDialog(self, "Choose a directory to add to the quick browse listing:", style=wx.DD_DEFAULT_STYLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.table.add_path(dlg.GetPath())
         dlg.Destroy()

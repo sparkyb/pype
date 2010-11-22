@@ -76,8 +76,8 @@ it doesn't know about functions or classes that are in try/except/finally or
 even if/whatever clauses.  Uck.
 (changed) tweaked some small color display options for latex (subsections are
 now colored green, they used to be blue).
-(added) parser for cheetah and spitfire templates (.tmpl and .spt), they only
-pull #block and #def for now, but they understand block nesting.
+(added) crappy parser for cheetah and spitfire templates (.tmpl and .spt),
+they only pull #block and #def for now, but they understand block nesting.
 (added) True, False, as, and with as Python keywords
 (cleaned) up some repeated os.listdir() calls that weren't necessary for
 keeping the macro list updated.  It now just updates when the window gets
@@ -96,6 +96,15 @@ in 2.6, and removed in 3.0).  The new parser is a bit faster on large files
 future-proof.
 (changed) switched to using .png files for images, closing bug 1750959.
 (fixed) opening of utf8 files that lack a coding directive or a BOM.
+(fixed) sorting of line count in when using the new parser.
+(added) currently open documents to the quick browse area on the documents
+tab.
+(added) different background color for recently opened documents and currently
+open documents in the quick browse section on the documents tab.
+(fixed) PyPE will now check for tab/indent preferences properly when opening a
+file not in it's history.
+(added) listing of currently open files to the quick browse section on the
+documents tab.
 
 
 #-------------------------------- PyPE 2.8.8 ---------------------------------

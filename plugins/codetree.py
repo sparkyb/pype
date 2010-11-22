@@ -379,7 +379,6 @@ class hierCodeTreePanel(wx.Panel):
         #pity this doesn't do what it should.
         num, win = self.root.getNumWin(event)
         win.SetFocus()
-        print "activated 2"
 
     def OnActivate(self, event):
         num, win = self.root.getNumWin(event)

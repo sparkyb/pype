@@ -1,5 +1,6 @@
 
-class Node:
+class Node(object):
+    __slots__ = 'prev', 'me', 'next'
     def __init__(self, prev, me):
         self.prev = prev
         self.me = me

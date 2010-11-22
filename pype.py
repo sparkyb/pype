@@ -1805,17 +1805,18 @@ class MainWindow(wx.Frame):
         if deleted:
             dlg = wx.MessageDialog(self,
                 "Some files seem to have been deleted by an external program.\n"
-                "Unless the files are saved, data loss may occur.\n" + '\n'.join(deleted),
+                "Unless these files are saved, data loss may occur.\n" + '\n'.join(deleted),
                 "WARNING")
             dlg.Destroy()
         if dirty:
             dlg = wx.MultiChoiceDialog(self, 
                "The following files have been modified on disk since you\n"
                "last saved, and have been marked as 'dirty'.\n"
+               "Select the files that you would like to reload now.\n"
                "You can reload the files individually via File -> Reload,\n"
-               "you can force a re-check of the files via\n"
-               "File -> Check Mods, or by selecting the documents below\n"
-               "you can force a reload now.", "Some documents have changed", dirty)
+               "or you can force a re-check of the files via\n"
+               "File -> Check Mods.", "Some documents have changed", dirty)
+            dlg.SetSelections(range(len(dirty)))
             if dlg.ShowModal() == wx.ID_OK:
                 for name in (dirty[i] for i in dlg.GetSelections()):
                     dirname, filename = os.path.split(name)
@@ -2415,6 +2416,7 @@ class MainWindow(wx.Frame):
             #we don't want to syntax highlight by default for non-python shells.
             nwin.changeStyle(stylefile, self.style('a.txt'))
 
+        used_default = True
         try:
             if d:
                 nwin.mod = os.stat(FN)[8]
@@ -2432,6 +2434,7 @@ class MainWindow(wx.Frame):
                     __ = _.pop('triggers', None)
                     state.update(_)
                     del _, __, self.lastused[FN]
+                    used_default = False
                 else:
                     state['CHECK_VIM'] = None
             else:
@@ -2459,7 +2462,7 @@ class MainWindow(wx.Frame):
         if FN:
             self.curdocstates[FN] = state
 
-        if state == document_defaults.get(ftype, DOCUMENT_DEFAULTS) and nwin.GetTextLength() < 200000:
+        if used_default and nwin.GetTextLength() < 200000:
             # try to detect the "true" defaults
             state['use_tabs'], state['spaces_per_tab'], state['indent'] = \
                 parsers.detectLineIndent(nwin.lines, state['use_tabs'], state['spaces_per_tab'], state['indent'])
@@ -2590,10 +2593,10 @@ class MainWindow(wx.Frame):
         wx.CallAfter(self._updateChecks)
 
     def OnRestart(self, e):
-        self.OnExit(e)
+        self.OnExit(e, 0)
         _restart()
 
-    def OnExit(self,e):
+    def OnExit(self, e, force_exit=1):
         try: e.SetCanVeto(1) #try make this vetoable
         except: pass
         force_user = not getattr(e, 'CanVeto', lambda:1)()
@@ -2625,7 +2628,9 @@ class MainWindow(wx.Frame):
         documents.die = None
         if sel > -1:
             self.control.SetSelection(sel)
-        return self.Close(True)
+        self.Close(True)
+        if force_exit:
+            os._exit(0)
 
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
 #------------- Open the file selected from the file history menu -------------
@@ -5939,20 +5944,21 @@ def main():
     if single_instance.send_documents(docs):
         return
 
-    global IMGLIST1, IMGLIST2, IMGLIST3, root, app
+    global IMGLIST1, IMGLIST2, IMGLIST3, IMGLIST4, root, app
     app = wx.App(0)
     IMGLIST1 = wx.ImageList(16, 16)
     IMGLIST2 = wx.ImageList(16, 16)
     IMGLIST3 = []
-    for il in (IMGLIST1, IMGLIST2):
-        for icf in ('icons/blank.ico', 'icons/py.ico'):
-            icf = os.path.join(runpath, icf)
-            img = wx.ImageFromBitmap(wx.Bitmap(icf))
-            img.Rescale(16,16)
-            bmp = wx.BitmapFromImage(img)
-            IMGLIST3.append(bmp)
+    IMGLIST4 = wx.ImageList(16, 16)
+    for icf in ('icons/blank.ico', 'icons/py.ico'):
+        icf = os.path.join(runpath, icf)
+        img = wx.ImageFromBitmap(wx.Bitmap(icf))
+        img.Rescale(16,16)
+        bmp = wx.BitmapFromImage(img)
+        IMGLIST3.append(bmp)
+        for il in (IMGLIST1, IMGLIST2, IMGLIST4):
             il.AddIcon(wx.IconFromBitmap(bmp))
-    IMGLIST3.pop()
+    IMGLIST3.append(IMGLIST3[0])
 
     opn=0
     if len(sys.argv)>1 and ('--last' in sys.argv):

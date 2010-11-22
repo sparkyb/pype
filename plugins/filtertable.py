@@ -153,7 +153,8 @@ class filtertable(todo.vTodo, mylistmix.ListSelect):
                     col = self.data[0].__slots__.index(context)
                 except:
                     pass
-            print "col", col
+            elif self.data:
+                col = self.data[0].__slots__.index('lines')
         else:
             if col == 0:
                 col = 5
@@ -166,10 +167,9 @@ class filtertable(todo.vTodo, mylistmix.ListSelect):
                     col = 0
         
         _cmp = cmp
-        if col != 0:
+        cmpf = lambda a,b: _cmp(a[col],b[col])
+        if col != 0 and (USE_NEW and col != self.data[0].__slots__.index('lines')):
             cmpf = lambda a,b: _cmp(a[col].lower(),b[col].lower())
-        else:
-            cmpf = lambda a,b: _cmp(a[col],b[col])
         
         if ascending:
             self.data.sort(cmpf)
