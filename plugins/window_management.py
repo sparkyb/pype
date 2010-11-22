@@ -14,7 +14,7 @@ HIER, TODO, TAGS = 0, 1, 2
 
 methods = {HIER:'new_hierarchy', TODO:'NewItemList', TAGS:'newTags'}
 whicharg = {'tree1':HIER, 'tree2':HIER, 'todo':TODO, 'filter':HIER,
-            #'sourcetags':TAGS, 'tagger':TAGS
+            ## 'sourcetags':TAGS, 'tagger':TAGS
             }
 
 class docstate:
@@ -29,7 +29,8 @@ class docstate:
         ## self.sourcetags = sourcetags.SourceTags(root.taglist, stc)
         ## self.tagger = tagger.TagManager(root.tagmanage, stc)
         
-        self.items = (self.tree1, self.tree2, self.todo, self.filter)#, self.sourcetags, self.tagger)
+        self.items = (self.tree1, self.tree2, self.todo, self.filter)
+        ## self.items = (self.tree1, self.tree2, self.todo, self.filter, self.sourcetags, self.tagger)
         
         self.isshown = -1
         self.Add()

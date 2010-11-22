@@ -74,6 +74,8 @@ wildcard = "All python files (*.py *.pyw)|*.py;*.pyw|"\
 #for style mappings from extensions
 extns = {'py' : 'python',
         'pyw' : 'python',
+        'spt' : 'python', # spitfire templates look better as Python than as html :P
+       'tmpl' : 'python', # ditto for cheetah templates
         'pyi' : 'pyrex',
         'pyx' : 'pyrex',
           'c' : 'cpp',
@@ -82,6 +84,8 @@ extns = {'py' : 'python',
         'c++' : 'cpp',
         'cxx' : 'cpp',
           'h' : 'cpp',
+       'java' : 'cpp',
+         'js' : 'cpp',
         'htm' : 'html',
        'html' : 'html',
        'shtm' : 'html',
@@ -89,6 +93,7 @@ extns = {'py' : 'python',
         'xml' : 'xml',
         'tex' : 'tex',
         'bib' : 'tex',
+        'ini' : 'text',
         'txt' : 'text'}
 
 default_homedir = os.path.dirname(os.path.abspath(__file__))
@@ -97,7 +102,7 @@ if hasattr(sys, 'frozen'):
 
 sa = 0
 try:
-    sa = hasattr(_pype, '_standalone')
+    sa = getattr(_pype, '_standalone', 0)
 except:
     pass
 
@@ -239,8 +244,8 @@ class _Builder:
 
 class StringBuilder(_Builder):
     def build_Const(self, o):
-        if type(o) in (str, unicode):
-            return o
+        if type(o.value) in (str, unicode):
+            return o.value
         raise Exception
 
 class Builder(_Builder):
@@ -287,3 +292,8 @@ def str_unrepr(s):
         return StringBuilder().build(getObj(s))
     except:
         return s
+
+class __LINE__(object):
+    def __str__(self):
+        return str(sys._getframe(1).f_lineno)
+__LINE__ = __LINE__()

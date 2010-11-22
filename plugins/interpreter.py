@@ -35,7 +35,8 @@ import stat
 from codeop import compile_command
 import parser
 import atexit
-import heapq
+## import heapq
+import scheduler
 try:
     import _winreg
 except:
@@ -74,7 +75,6 @@ atexit.register(KillProcess)
 print_transfer = 0
 pushlines_t = 20
 poll_t = 50
-update_t = 100
 
 def partition(st, sep):
     if sep in st:
@@ -274,11 +274,10 @@ if 'win' not in sys.platform:
     #non-windows platforms should have a working signal implementation
     killsteps.append('SIGINT')
 
-
 fc = []
 
 def FutureCall(delay, fcn, *args, **kwargs):
-    heapq.heappush(fc, (time.time()+delay/1000.0, fcn, args, kwargs))
+	scheduler.FutureCall(delay, fcn, *args, **kwargs)
 
 instances = []
 
@@ -297,13 +296,15 @@ def poll_all(arg=None):
             except:
                 traceback.print_exc()
     
-    tt = time.time()
-    while fc and fc[0][0] < tt:
-        _, fcn, args, kwargs = heapq.heappop(fc)
-        try:
-            fcn(*args, **kwargs)
-        except:
-            traceback.print_exc()
+    ## tt = time.time()
+    ## while fc and fc[0][0] < tt:
+        ## _, fcn, args, kwargs = heapq.heappop(fc)
+        ## try:
+            ## fcn(*args, **kwargs)
+        ## except:
+            ## traceback.print_exc()
+
+_Poller = scheduler.Timer(poll_all)
 
 class MyShell(stc.StyledTextCtrl):
     if 1:
@@ -374,9 +375,9 @@ class MyShell(stc.StyledTextCtrl):
         
         self.Restart(None)
         instances.append(self)
-                
-        ## wx.FutureCall(pushlines_t, self.pushlines)
-        ## wx.FutureCall(poll_t, self.OnPoll)
+		
+        if not _Poller.IsRunning():
+            _Poller.Start(10)
     
     def _gotcharacter2(self, e=None):
         pass

@@ -1,13 +1,16 @@
 #!/usr/bin/python
-import time
-import os
-import re
-import parser
+import bisect
 import compiler
+import compiler.ast
+import os
+import parser
+import pprint
+import re
+import time
+import token
 import traceback
 import symbol
-import token
-import pprint
+
 from plugins import exparse
 
 todoexp = re.compile('(>?[a-zA-Z0-9 ]+):(.*)', re.DOTALL)
@@ -42,8 +45,64 @@ def detectLineEndings(text):
     else:# cr_ is mx:
         return '\r'
 
+def detectLineIndent(lines, use_tabs, spaces_per_tab, spaces_per_indent):
+    tablines = 0
+    lc = 0
+    prev = 0, 0
+    deltas = {}
+    for line in lines:
+        line = line.rstrip('\r\n')
+        tl = 0
+        ll = len(line)
+        indent = ll-len(line.lstrip())
+        lc += 1
+        leading = line[:indent]
+        if '\t' in leading:
+            # we've definitely got tab indents,
+            # but is it mixed, or straight up
+            # tabs, or are the tabs a mistake?
+            leading = leading.replace('\t', '')
+            tl = indent - len(leading)
+            tablines += 1
+        ind = len(leading)
+        this = tl, ind
+        if prev == this:
+            # multiple lines of the same indent
+            # level isn't very interesting, we
+            # only care about transitions
+            continue
+        x = (0,)
+        if tl or prev[0]:
+            # 1, 2, 3, and 7 spaces per tab is strange...but we'll
+            # check them just to be sure
+           x = (0, 1, 2, 3, 4, 6, 8)
+        for i in x:
+            d = abs((ind + i*tl) - (prev[1] + i*prev[0]))
+            deltas[i,d] = deltas.get((i,d), 0) + 1
+        prev = this
+    # We have counts of transitions between different indent levels.
+    # The correct one will generally dominate, and will also divide
+    # the other major indent levels evenly.
+    if deltas:
+        # if more than 1/8 of your lines have tabs...you probably used tabs
+        need_tabs = tablines > lc / 8
+        for count, (sppt, delta) in sorted(((j,i) for i,j in deltas.iteritems()), reverse=True):
+            # Unless something funky is going on, the maximum is the likely
+            # correct answer, so we'll use it unless we are supposed to use tabs...
+            if not sppt and need_tabs:
+                continue
+            spaces_per_indent = delta
+            use_tabs = bool(sppt)
+            if use_tabs:
+                spaces_per_tab = sppt
+            break
+    return use_tabs, spaces_per_tab, spaces_per_indent
+
 def leading(line):
     return len(line)-len(line.lstrip())
+
+def line_info(lineno):
+    return exparse.Info(lineno, '\xff', '\xff', 999, 999, (), (), "", 999999999)
 
 #------------------------------- C/C++ parser --------------------------------
 
@@ -205,17 +264,22 @@ def c_parser(source, line_ending, flat, wxYield):
     todo = []
     _sp = _shared_parse
     labels = []
-    for line_no, line in enumerate(source.replace('\r\n', '\n').replace('\r', '\n').split('\n')):
+    lines = source.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    for line_no, line in enumerate(lines):
         ls = line.strip()
         if ls[:2] == '//':
             _sp(ls, todo, line_no+1, start=2)
         elif ls[:2] == '/*' and ls[-2:] == '*/':
             _label(ls.strip('/* '), labels, line_no+1)
     
+    out, docs = exparse.translate_old_to_new(out, docs, len(lines))
+    
     if labels:
         add_labels(out, labels)
     
     return out, docs.keys(), docs, todo
+
+#-------------------------------- misc stuff ---------------------------------
 
 def _flatten(out, seq=None):
     #used for:
@@ -249,29 +313,58 @@ def _flatten2(out, seq=None):
     return seq
 
 def add_labels(out, labels):
-    labels.reverse()
-    seq = _flatten(out)
-    seq.reverse()
-    _ = seq[-1]
-    while labels:
-        #'seq and' portion semantically unnecessary
-        line, label = labels.pop()
-        while seq and line > seq[-1][0]:
-            _ = seq.pop()
-        __, posn, entry, indent = seq[-1]
-        #normalize the label
-        entry.insert(posn, ('-- %s --'%label, (label.lower(), line, label), indent, []))
+    if USE_NEW:
+        for label in labels:
+            posn = bisect.bisect_right(out, label)
+            line_no, indent, text = label
+            dl = '-- ' + text + ' --'
+            if len(out) > posn and out[posn-1].depth <= out[posn].depth:
+                # no children on the previous guy
+                # or there are children on the previous guy
+                # either way, take the depth of the next guy...
+                out.insert(posn, exparse.Info(line_no, text, dl, out[posn].depth, indent, (), None, None, 1, dl, dl))
+                continue
+            # We should iterate up the set of contexts to try to find the
+            # proper indent level...but screw that; we'll just toss it in as a
+            # sibling to make navigation easier.
+            out.insert(posn, exparse.Info(line_no, text, dl, out[posn-1].depth, indent, (), None, None, 1, dl, dl))
+    else:
+        labels.reverse()
+        seq = _flatten(out)
+        seq.reverse()
+        _ = seq[-1]
+        while labels:
+            #'seq and' portion semantically unnecessary
+            line, label = labels.pop()
+            while seq and line > seq[-1][0]:
+                _ = seq.pop()
+            __, posn, entry, indent = seq[-1]
+            #normalize the label
+            entry.insert(posn, ('-- %s --'%label, (label.lower(), line, label), indent, []))
 
-def _label(lss, labels, line_no):
+def _label(lss, labels, line_no, indent=None):
     #we may have a label of the form...
     # ----- label -----
     if len(lss) > 4 and lss[:1] == lss[-1:] == '-':
         labels.append((line_no, lss.strip('\t\n\x0b\x0c\r -')))
 
+def _new_label(lss, labels, line_no, indent):
+    #we may have a label of the form...
+    # ----- label -----
+    if len(lss) > 4 and lss[:1] == lss[-1:] == '-':
+        labels.append((line_no, indent, lss.strip('\t\n\x0b\x0c\r -')))
+
+#------------------------------ Python parsers -------------------------------
+
 def slower_parser(source, _1, flat, _2):
     try:
-        out, docstring = exparse.parse(source)
+        if USE_NEW:
+            out, docstring = exparse._parse(source)
+        else:
+            out, docstring = exparse.parse(source)
     except:
+        import traceback
+        traceback.print_exc()
         #parse error, defer to faster parser
         return faster_parser(source, '\n', flat, _2)
 
@@ -280,13 +373,16 @@ def slower_parser(source, _1, flat, _2):
     todo = []
     _sp = _shared_parse
     labels = []
+    _l = _label
+    if USE_NEW:
+        _l = _new_label
     for line_no, line in enumerate(source.split('\n')):
         if '#' not in line:
             continue
         p = line.find('#')
         if not _sp(line[p:], todo, line_no+1, bad_todo, 1+(line[p+1:p+2]=='#')):
-            _label(line[p+1:].lstrip('#>'), labels, line_no+1)
-                
+            _l(line[p+1:].lstrip('#>'), labels, line_no+1, len(line)-len(line.lstrip()))
+    
     if labels:
         add_labels(out, labels)
     
@@ -301,14 +397,18 @@ def faster_parser(source, line_ending, flat, wxYield):
     
     out = []
     stk = []
+    if USE_NEW:
+        stk.append(exparse.Info(-1, '', '', 0, -1, (), None, None, len(lines)))
     line_no = 0
-##    SEQ = ('def ','class ')
+    _len = len
     
     FIL = lambda A:A[1][2]
+    if USE_NEW:
+        FIL = lambda A:A[1]
     
     def fun(i, line, ls, line_no, stk):
-        try: wxYield()
-        except: pass
+        ## try: wxYield()
+        ## except: pass
         na = ls.find('(')
         ds = ls.find(':')
         if na == -1:
@@ -316,24 +416,37 @@ def faster_parser(source, line_ending, flat, wxYield):
         if na != -1:
             if ds == -1:
                 ds = na
-            fn = ls[len(i):ds].strip()
+            fn = ls[_len(i):ds].strip()
             if fn:
-                lead = len(line)-len(ls)
-                while stk and (stk[-1][2] >= lead):
-                    prev = stk.pop()
-                    if stk: stk[-1][-1].append(prev)
-                    else:   out.append(prev)
+                lead = _len(line)-_len(ls)
+                if USE_NEW:
+                    while stk and (stk[-1][4] >= lead):
+                        stk[-1].lines = line_no - stk[-1].lineno
+                        out.append(stk.pop())
+                else:
+                    while stk and (stk[-1][2] >= lead):
+                        prev = stk.pop()
+                        if stk: stk[-1][-1].append(prev)
+                        else:   out.append(prev)
                 nam = i+fn
                 nl = nam.lower()
-                f = ls[len(i):na].strip()
+                f = ls[_len(i):na].strip()
                 
-                if f in ('__init__', '__new__') and len(stk):
-                    docstring.setdefault(stk[-1][1][-1], []).append("%s %s.%s"%(fn, '.'.join(map(FIL, stk)), f))
-                stk.append((nam, (f.lower(), line_no, f), lead, []))
+                if f in ('__init__', '__new__') and _len(stk):
+                    key = stk[-1][1]
+                    if not USE_NEW:
+                        key = key[2]
+                    docstring.setdefault(key, []).append("%s %s.%s"%(fn, '.'.join(map(FIL, stk)), f))
+                if USE_NEW:
+                    stk.append(exparse.Info(line_no, f, nam, len(stk), lead, (), None, None, -1))
+                else:
+                    stk.append((nam, (f.lower(), line_no, f), lead, []))
                 docstring.setdefault(f, []).append("%s %s"%(fn, '.'.join(map(FIL, stk))))
-                
     
     _sp = _shared_parse
+    _l = _label
+    if USE_NEW:
+        _l = _new_label
     labels = []
     for line in lines:
         line_no += 1
@@ -348,12 +461,19 @@ def faster_parser(source, line_ending, flat, wxYield):
         elif '#' in line:
             p = line.find('#')
             if not _sp(line[p:], todo, line_no+1, bad_todo, 1+(line[p+1:p+2]=='#')):
-                _label(line[p+1:].lstrip('#>'), labels, line_no+1)
+                _l(line[p+1:].lstrip('#>'), labels, line_no+1, _len(line)-_len(ls))
 
-    while len(stk)>1:
-        a = stk.pop()
-        stk[-1][-1].append(a)
-    out.extend(stk)
+    if not USE_NEW:
+        while _len(stk) > 1:
+            a = stk.pop()
+            stk[-1][-1].append(a)
+        out.extend(stk)
+    else:
+        for i in stk:
+            i.lines = line_no - i.lineno + (i.lineno >= 0)
+        out.extend(stk)
+        out.sort()
+        exparse._fixup_extra(out)
     
     if labels:
         add_labels(out, labels)
@@ -370,7 +490,83 @@ def faster_parser(source, line_ending, flat, wxYield):
 def fast_parser(*args, **kwargs):
     return slower_parser(*args, **kwargs)
 
-## (full, (lower, lineno, upper), indent, contents)
+#-------------------------- spitfire/cheetah parser --------------------------
+
+def cheetah_parser(source, line_ending, flat, _):
+    bad_todo = _bad_todo
+    _sp = _shared_parse
+    _l = _label
+    if USE_NEW:
+        _l = _new_label
+    _len = len
+    # because of start/end stuff, for the new parser, we can generate good
+    # line count information...we'll do that later
+    new_blocks = set('#' + i for i in ('block', 'def')) # to bypass the cheetah parser detection
+    todo = []
+    labels = []
+    docs = {}
+    out = []
+    stk = []
+    lines = source.split('\n')
+    for i, line in enumerate(lines):
+        ls = line.lstrip()
+        if not ls:
+            continue
+        lead = line.split(None, 1)
+        if lead[0] in new_blocks:
+            defn = ls.rstrip()
+            if len(lead) < 2:
+                name = ''
+            elif lead[0][0] == '#' and lead[0][1:] == 'block': # to bypass the cheetah parser detection
+                name = lead[1].split()[0]
+            else:
+                name = lead[1].split('#', 1)[0]
+            docname = '.'.join(i[1][2] for i in stk)
+            if docname:
+                docname += '.'
+            docname += name
+            docs.setdefault(docname, []).append(defn)
+            stk.append((defn, (name.lower(), i+1, name), _len(line)-_len(ls), []))
+        elif lead[0] == '#end' and len(lead) > 1 and (lead[1][:3] == 'def' or lead[1][:5] == 'block'):
+            o = stk.pop()
+            if stk:
+                stk[-1][-1].append(o)
+            else:
+                out.append(o)
+        elif '#' in line:
+            # try to find a todo as best we can...
+            pp = 0
+            while line.find('#', pp) >= 0:
+                pp = line.find('#', pp)
+                if _sp(line[pp:], todo, i+1, bad_todo, 1+(line[pp+1:pp+2]=='#')):
+                    break
+                pp += 1+(line[pp+1:pp+2]=='#')
+            else:
+                # otherwise try to find a label of the form # --- label ---
+                if '---' in line:
+                    p = line.find('#')
+                    _l(line[p+1:].lstrip('#>'), labels, i+1, _len(line)-_len(ls))
+    while len(stk) > 1:
+        o = stk.pop()
+        stk[-1][-1].append(o)
+    out.extend(stk)
+    
+    if USE_NEW:
+        out, docs = exparse.translate_old_to_new(out, docs, len(lines))
+    
+    if labels:
+        add_labels(out, labels)
+    
+    if flat == 0:
+        return out, docs.keys()
+    elif flat==1:
+        return docs
+    elif flat==2:
+        return out, docs.keys(), docs
+    else:
+        return out, docs.keys(), docs, todo
+
+#------------------------------- latex parser --------------------------------
 
 def latex_parser(source, line_ending, flat, _):
     texp = todoexp
@@ -425,6 +621,9 @@ def latex_parser(source, line_ending, flat, _):
         stk[-1][-1].append(a)
     out.extend(stk)
     
+    if USE_NEW:
+        out, _ = exparse.translate_old_to_new(out, {}, len(lines))
+    
     if labels:
         add_labels(out, labels)
     
@@ -436,6 +635,8 @@ def latex_parser(source, line_ending, flat, _):
         return out, [], {}
     else:
         return out, [], {}, todo
+
+#---------------------------- [ht|x|sg]ml parser -----------------------------
 
 #Are there any other non-opening tags?
 no_ends = []
@@ -484,6 +685,8 @@ def ml_parser(source, line_ending, flat, _):
         return out, [], {}
     else:
         return out, [], {}, todo
+
+#--------------------------- other misc functions ----------------------------
 
 def preorder(h):
     #uses call stack; do we care?

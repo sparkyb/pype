@@ -202,6 +202,15 @@ class LineAbstraction(object):
             self.stc.SetTargetStart(start)
             self.stc.SetTargetEnd(end)
     
+    def get_indent(self, lineno):
+        '''
+        Allows read-only access to indent level for particular lines.
+        '''
+        line = self[lineno]
+        ci = len(line) - len(line.lstrip())
+        # do we care about the fact that this line is blank?
+        return len(line[:ci].replace('\t', 8))
+    
     def __len__(self):
         return self.stc.GetLineCount()
     

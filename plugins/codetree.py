@@ -11,20 +11,25 @@ newroot = sys.platform != 'win32'
 blue = wx.Colour(0, 0, 200)
 red = wx.Colour(200, 0, 0)
 green = wx.Colour(0, 200, 0)
+orange = wx.Colour(200, 100, 0)
 
 D = {'cl':blue,
      'de':red,
      'cd':green,
      '\\l':red,
      '\\s':blue,
-     '#d':green}
+     '#b':orange,
+     '#d':green,
+     '\\se':blue,
+     '\\su':green}
 
 #------------------------------------ ... ------------------------------------
 # Node and getTree thanks to the foldExplorer from Stani.
 # Some modifications have been made, among them are language-specific
 # mechanisms for only pulling out function and class definitions.
 
-class Node:
+class Node(object):
+    __slots__ = 'parent level start end text styles children'.split()
     def __init__(self,level,start,end,text,parent=None,styles=[]):
         """Folding node as data for tree item."""
         self.parent     = parent
@@ -81,7 +86,7 @@ def getTree(self):
 class TreeCtrl(wx.TreeCtrl):
     def __init__(self, parent, st):
         wx.TreeCtrl.__init__(self, parent, -1, style=wx.TR_DEFAULT_STYLE|wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
-        
+        self.parent = parent
         if icons:
             isz = (16,16)
             il = wx.ImageList(isz[0], isz[1])
@@ -98,16 +103,14 @@ class TreeCtrl(wx.TreeCtrl):
             self.SetImageList(il)
             self.il = il
         self.SORTTREE = st
-        if st:
-            self.cmpf = lambda d1, d2: cmp(d1,d2)
-        else:
-            self.cmpf = lambda d1, d2: cmp(d1[1],d2[1])
-        
+
         self.root = self.AddRoot("Unseen Root")
 
     def OnCompareItems(self, item1, item2):
-        return self.cmpf(self.GetItemData(item1).GetData(),
-                         self.GetItemData(item2).GetData())
+        d1 = self.GetItemData(item1).GetData()
+        d2 = self.GetItemData(item2).GetData()
+        ## print "got data", d1.name, d2.name
+        return self.parent.cmpf(d1, d2)
     
     def SortAll(self):
         stk = [self.root]
@@ -193,8 +196,9 @@ class TreeCtrl(wx.TreeCtrl):
                     stk.append((ch, x))
         if y:
             wx.CallAfter(self.ScrollTo, y)
-        
+
 def new_tree(hier, cmpf):
+    
     h = hier[:]
     h.sort(cmpf)
     h.reverse()
@@ -223,7 +227,10 @@ def new_tree(hier, cmpf):
 
 def set_color_and_icon(tree, item, name, short, children):
     if colors:
-        tree.SetItemTextColour(item, D.get(name[:2], blue))
+        if name[:3] in D:
+            tree.SetItemTextColour(item, D[name[:3]])
+        else:
+            tree.SetItemTextColour(item, D.get(name[:2], blue))
     if children:
         if icons:
             tree.SetItemImage(item, 0, wx.TreeItemIcon_Normal)
@@ -258,10 +265,19 @@ class hierCodeTreePanel(wx.Panel):
 
         self.tree = TreeCtrl(self, st)
         if st:
-            self.cmpf = lambda d1, d2: cmp(d1[1], d2[1])
+            #name
+            if USE_NEW:
+                self.cmpf = lambda d1, d2: cmp(d1.name.lower(), d2.name.lower())
+            else:
+                self.cmpf = lambda d1, d2: cmp(d1,d2)
+            
         else:
-            self.cmpf = lambda d1, d2: cmp(d1[1][1], d2[1][1])
-        
+            #line
+            if USE_NEW:
+                self.cmpf = lambda d1, d2: cmp(d1.lineno, d2.lineno)
+            else:
+                self.cmpf = lambda d1, d2: cmp(d1[1],d2[1])
+        self.data = {}
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.tree, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -283,29 +299,69 @@ class hierCodeTreePanel(wx.Panel):
             else:
                 old[name] = [(ite, stk[-1])]
             stk.append(ite)
-        
-        done = {():self.tree.root}
-        
-        for name, nam, data, ch in new_tree(hier, self.cmpf):
-            if name in old:
-                ent = old[name]
-                item_no, par = ent.pop(0)
-                if not ent:
-                    del old[name]
-                done[name[:-1]] = par
-                done[name] = item_no
+
+        if not USE_NEW:
+            done = {():self.tree.root}
+            for name, nam, data, ch in new_tree(hier, self.cmpf):
+                if name in old:
+                    ent = old[name]
+                    item_no, par = ent.pop(0)
+                    if not ent:
+                        del old[name]
+                    done[name[:-1]] = par
+                    done[name] = item_no
+                    self.tree.SetPyData(item_no, data)
+                else:
+                    #if we get to this item, its parent *must* be in the tree
+                    par = done[name[:-1]]
+                    item_no = self.tree.AppendItem(par, nam)
+                    done[name] = item_no
+                    ## print "added:", name
+                    self.tree.SetPyData(item_no, data)
+                set_color_and_icon(self.tree, item_no, name[-1], data[2], ch)
+            
+        else:
+            self.data.clear()
+            done = {():self.tree.root}
+            hasch = set()
+            stk = []
+            for data in hier:
+                # generate the name
+                try:
+                    if data.depth <= 0:
+                        continue
+                except:
+                    print data
+                    raise
+                while stk and data.depth <= stk[-1].depth:
+                    _ = stk.pop()
+                stk.append(data)
+                name = tuple(i.defn for i in stk)
+                nt = name[:-1]
+                # toss into the tree
+                if name in old:
+                    ent = old[name]
+                    item_no, par = ent.pop(0)
+                    if not ent:
+                        del old[name]
+                    done[nt] = par
+                    done[name] = item_no
+                    hasch.add(par)
+                else:
+                    #if we get to this item, its parent *must* be in the tree
+                    par = done[nt]
+                    hasch.add(par)
+                    item_no = self.tree.AppendItem(par, data.defn)
+                    done[name] = item_no
                 self.tree.SetPyData(item_no, data)
-            else:
-                #if we get to this item, its parent *must* be in the tree
-                par = done[name[:-1]]
-                item_no = self.tree.AppendItem(par, nam)
-                done[name] = item_no
-                ## print "added:", name
-                self.tree.SetPyData(item_no, data)
-            set_color_and_icon(self.tree, item_no, name[-1], data[2], ch)
+            for item_no in done.itervalues():
+                data = self.tree.GetItemData(item_no).GetData()
+                if not data:
+                    continue
+                set_color_and_icon(self.tree, item_no, data.defn, data.name, item_no in hasch)
         
         old = old.items()
-        old.sort(lambda a,b: -cmp(len(a[0]), len(b[0])))
+        old.sort(reverse=True)
         
         for x in old:
             name = x[0]
@@ -323,18 +379,20 @@ class hierCodeTreePanel(wx.Panel):
         #pity this doesn't do what it should.
         num, win = self.root.getNumWin(event)
         win.SetFocus()
+        print "activated 2"
 
     def OnActivate(self, event):
         num, win = self.root.getNumWin(event)
         dat = self.tree.GetItemData(event.GetItem()).GetData()
         if dat == None:
             return event.Skip()
-        ln = dat[1]-1
+        if USE_NEW:
+            ln = dat[0]-1
+        else:
+            ln = dat[1]-1
         #print ln
         #print dir(win)
-        linepos = win.GetLineEndPosition(ln)
+        win.lines.selectedlinesi = ln, ln+1
         win.EnsureVisible(ln)
-        win.SetSelection(linepos-len(win.GetLine(ln))+len(win.format), linepos)
         win.ScrollToColumn(0)
         win.SetFocus()
-    

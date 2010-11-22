@@ -200,11 +200,10 @@ class SpellCheck(scrolled.ScrolledPanel):
         self.SetSizer(ws)
         self.SetAutoLayout(1)
         self.SetupScrolling()
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.unload_d)
+        self.timer = Timer(self.unload_d)
         ## wx.CallAfter(self.load_d)
     
-    def unload_d(self, e):
+    def unload_d(self, e=None):
         global dictionary
         if dictionary:
             dictionary = {}

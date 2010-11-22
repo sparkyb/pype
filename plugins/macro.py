@@ -25,10 +25,10 @@ class macroList(todo.vTodo, mylistmix.ListSelect):
         self.parent = parent
     def Refresh(self):
         self.SetItemCount(0)
-        try:
-            wx.Yield()
-        except:
-            pass
+        ## try:
+            ## wx.Yield()
+        ## except:
+            ## pass
         self.SetItemCount(len(self.data))
         todo.vTodo.Refresh(self)
     def OnGetItemText(self, item, col):
@@ -175,8 +175,6 @@ class macroPanel(wx.Panel):
         self.d = {}
         self.hotkeys = {}
         self.macros.setData(self.m, copy=0)
-
-        self.t = wx.Timer(self)
         
         self.accelerator = ''
         self.acceleratork = ''
@@ -190,10 +188,14 @@ class macroPanel(wx.Panel):
         self.play.Bind(wx.EVT_BUTTON, self.OnPlay)
         self.de1.Bind(wx.EVT_BUTTON, self.OnDel)
         
-        ## self.t.Bind(wx.EVT_TIMER, self.CheckMacros)
-        self.Bind(wx.EVT_TIMER, self.CheckMacros)
-        self.t.Start(1000, wx.TIMER_CONTINUOUS)
+        ## self.t = wx.Timer(self)
+        ## self.Bind(wx.EVT_TIMER, self.CheckMacros)
+        ## self.t.Start(1000, wx.TIMER_CONTINUOUS)
+
+        ## self.t = Timer(self.CheckMacros)
+        ## self.t.Start(1000, oneShot=False)
         
+        __main__.CheckMacros = self.CheckMacros
         wx.CallAfter(self.CheckMacros, None)
     
     def RunMacro(self, hotkey):
@@ -229,7 +231,7 @@ class macroPanel(wx.Panel):
         elif dc == 2:
             self.OnPlay(e)
     
-    def CheckMacros(self, e):
+    def CheckMacros(self, e=None):
         try:
             a = os.listdir(macropath)
         except:
@@ -301,7 +303,7 @@ class macroPanel(wx.Panel):
                 else:
                     i += 1
             else:
-                print "what?", f
+                ## print "what?", f
                 #not in either list?
                 pass
         

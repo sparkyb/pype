@@ -1,9 +1,14 @@
 
+import itertools
+import math
 import wx
+
+import codetree
+import exparse
 from findinfiles import FoundTable
 import mylistmix
 import todo
-import codetree
+
 import __main__
 
 columns = (
@@ -73,6 +78,17 @@ def lcsseq(x, y):
         z1[:-1] = z2[:] #for == case and j==0
     return z1[-2]
 
+def _lcsseq(x,y):
+    if len(y) > len(x):
+        return 0
+    ## xf = x.find
+    posn = 0
+    for c in y:
+        posn = x.find(c, posn) + 1
+        if posn == 0:
+            return 0
+    return len(y)
+
 def lcsseq(x,y):
     #we really only want to know if _all_ of the characters of the shorter 
     #string are in the longer string in order
@@ -80,16 +96,40 @@ def lcsseq(x,y):
     #O(n*m)
     if len(y) > len(x):
         x,y = y,x
-    posn = 0
+    return _lcsseq(x,y)
+
+def _sseq_score(x,y):
+    # Only call this when you know that y is a subsequence of x.
+    # Will return a "score" for the quality of the subsequence match.
+    # Contiguous substring matches induce 0 score.
+    ml = math.log10
+    posn = x.find(y[0])
+    score = 0
     for c in y:
-        posn = x.find(c, posn)
-        if posn == -1:
-            return 0
-    return len(y)
+        oposn = posn
+        posn = x.find(c, posn) + 1
+        try:
+            score += ml(posn-oposn)
+        except:
+            print score, posn, oposn, c, x
+            raise
+    return score
 
 class filtertable(todo.vTodo, mylistmix.ListSelect):
     def OnGetItemText(self, item, col):
-        if col == 1:
+        context = self.context
+        if USE_NEW:
+            it = self.data[item]
+            if col == 1:
+                if context == 'short':
+                    return str(it.short)
+                elif context == 'long':
+                    return str(it.long)
+                else:
+                    return str(it.defn)
+            else:
+                return str(it.lines)
+        elif col == 1:
             if context == 'short':
                 return '%s'%(self.data[item][3],)
             elif context == 'long':
@@ -99,24 +139,37 @@ class filtertable(todo.vTodo, mylistmix.ListSelect):
         else:
             return '%s'%(self.data[item][5],)
     def OnGetItemAttr(self, item):
+        if USE_NEW:
+            return D.get(self.data[item].defn[:2], default)
         return D.get(self.data[item][0][:2], default)
     def SortItems(self, *args, **kwargs):
         # Override listctrl mixin
         col=self._col
         ascending = self._colSortFlag[col]
         
-        if col == 0:
-            col = 5
+        if USE_NEW:
+            if self.data and col:
+                try:
+                    col = self.data[0].__slots__.index(context)
+                except:
+                    pass
+            print "col", col
         else:
-            if context == 'short':
-                col = 3
-            elif context == 'long':
-                col = 4
+            if col == 0:
+                col = 5
             else:
-                col = 0
+                if context == 'short':
+                    col = 3
+                elif context == 'long':
+                    col = 4
+                else:
+                    col = 0
         
         _cmp = cmp
-        cmpf = lambda a,b: _cmp(a[col],b[col])
+        if col != 0:
+            cmpf = lambda a,b: _cmp(a[col].lower(),b[col].lower())
+        else:
+            cmpf = lambda a,b: _cmp(a[col],b[col])
         
         if ascending:
             self.data.sort(cmpf)
@@ -185,9 +238,8 @@ def get_line_counts(h, lang):
                 __main__.root.control.GetCurrentPage().GetWindow1().GetLineCount()+1-lastl)
         except:
             pass
-    
+
     return counts
-    
 
 class DefinitionList(wx.Panel):
     def __init__(self, parent, root, stc):
@@ -204,10 +256,14 @@ class DefinitionList(wx.Panel):
         
         self.cs = wx.CheckBox(self, -1, "Case Sensitive")
         self.lcs = wx.CheckBox(self, -1, "Subsequence")
+        self.sco = wx.CheckBox(self, -1, "Scored")
         
         s2 = wx.BoxSizer(wx.HORIZONTAL)
-        s2.Add(self.cs, 1, wx.EXPAND|wx.ALL, 3)
-        s2.Add(self.lcs, 1, wx.EXPAND|wx.ALL, 3)
+        s2.Add(self.cs, 0, wx.EXPAND|wx.ALL, 3)
+        s2.Add(wx.StaticText(self, -1, ""), 1, wx.EXPAND|wx.ALL, 0)
+        s2.Add(self.lcs, 0, wx.EXPAND|wx.ALL, 3)
+        s2.Add(wx.StaticText(self, -1, ""), 1, wx.EXPAND|wx.ALL, 0)
+        s2.Add(self.sco, 0, wx.EXPAND|wx.ALL, 3)
         
         sizer.Add(s2, 0, wx.EXPAND)
         
@@ -243,6 +299,8 @@ class DefinitionList(wx.Panel):
                 self.lcs.SetValue(options[1])
                 self.context.SetValue(options[2])
                 self.how.SetValue(options[3])
+                if len(options) >= 5:
+                    self.sco.SetValue(options[4])
                 wx.CallAfter(self.update)
             finally:
                 self.getting = 0
@@ -251,19 +309,25 @@ class DefinitionList(wx.Panel):
         if self.getting:
             return
         global options
-        options = self.cs.GetValue(), self.lcs.GetValue(), self.context.GetValue(), self.how.GetValue()
+        options = self.cs.GetValue(), self.lcs.GetValue(), self.context.GetValue(), self.how.GetValue(), self.sco.GetValue()
     
     def new_hierarchy(self, hier):
         #parse the hierarchy, set the data
         lang = self.stc.style()
         if lang not in ('python', 'tex', 'cpp') and not lang.endswith('ml'):
             return
+
+        if USE_NEW:
+            self.names = hier
+            self.update()
+            return
+
+        counts = get_line_counts(hier, lang)
         names = []
         stk = [hier[::-1]]
         nstk = []
         nstk2 = []
         
-        counts = get_line_counts(hier, lang)
         while stk:
             cur = stk.pop()
             if cur is None:
@@ -328,16 +392,23 @@ class DefinitionList(wx.Panel):
         if not self.getting:
             self.setoptions()
             self.update()
-        e.Skip()
+        if e:
+            e.Skip()
     
     def update(self):
-        global context
-        context = self.context.GetValue()
-        index = 0
-        if context == 'short':
-            index = 3
-        elif context == 'long':
-            index = 4
+        context = self.cmdlist.context = self.context.GetValue()
+        if USE_NEW:
+            index = 2
+            if context == 'short':
+                index = 9
+            elif context == 'long':
+                index = 10
+        else:
+            index = 0
+            if context == 'short':
+                index = 3
+            elif context == 'long':
+                index = 4
         
         sseq = self.lcs.GetValue()
         _lcs = lcsseq
@@ -348,7 +419,7 @@ class DefinitionList(wx.Panel):
             txt = txt.lower()
         
         if not txt.strip():
-            names = self.names
+            names = [i for i in self.names if i[index]]
         else:
             names = []
             how = self.how.GetValue()
@@ -359,7 +430,6 @@ class DefinitionList(wx.Panel):
             
             any = how in ('any', 'exact')
             all = not any
-
             for i in self.names:
                 it = i[index]
                 if lower:
@@ -381,12 +451,24 @@ class DefinitionList(wx.Panel):
                 else:
                     if all:
                         names.append(i)
+            
+            if sseq and self.sco.GetValue():
+                def key(i, xx=txt, score=_sseq_score, prematch=(how=='any'), index=index):
+                    # Average score/match works pretty well here, especially
+                    # when we induce a len(input) score for mismatches.
+                    matches = 0
+                    sc = 0
+                    iil = i[index].lower()
+                    for x in xx:
+                        if (not prematch) or (prematch and _lcs(x, iil) == len(x)):
+                            matches += 1
+                            sc += score(iil, x)
+                        else:
+                            sc += len(iil)
+                    return sc / matches
+                names.sort(key=key)
         
         self.cmdlist.setData(names, copy=0)
-        #colors don't seem to work
-        ## colors = D
-        ## for i,j in enumerate(names):
-            ## self.cmdlist.GetItem(i).SetTextColour(colors.get(j[0][:2], blue))
     
     def OnItemActivated(self, event):
         win = self.stc
@@ -395,16 +477,68 @@ class DefinitionList(wx.Panel):
         if cs == -1:
             cl.Select(0)
             cs = 0
-        sel = self.cmdlist.data[cs][1][1]
+        if USE_NEW:
+            sel = self.cmdlist.data[cs].lineno
+        else:
+            sel = self.cmdlist.data[cs][1][1]
         if sel < win.GetLineCount():
             sel -= 1
-            linepos = win.GetLineEndPosition(sel)
+            win.lines.selectedlinesi = sel, sel+1
             win.EnsureVisible(sel)
-            win.SetSelection(linepos-len(win.GetLine(sel))+len(win.format), linepos)
             win.ScrollToColumn(0)
             win.SetFocus()
     
     def Show(self):
         self.getoptions()
         wx.Panel.Show(self)
-        
+
+class MultiFilter(object):
+    def __init__(self, root):
+        self.root = root
+        self.datamap = {}
+    def __iter__(self):
+        order = [(i.dirname, i.filename, getattr(i, 'NEWDOCUMENT', None)) for i in self.root.control]
+        for finfo in order:
+            for i, d in enumerate(self.datamap.get(finfo, [])):
+                if not i:
+                    continue
+                d.fileinfo = finfo
+                yield d
+    def __setitem__(self, stc, value):
+        self.datamap[stc.dirname, stc.filename, getattr(stc, 'NEWDOCUMENT', None)] = value
+    def __delitem__(self, stc):
+        del self.datamap[stc.dirname, stc.filename, getattr(stc, 'NEWDOCUMENT', None)]
+
+class GlobalFilter(DefinitionList):
+    def __init__(self, parent, root):
+        self.root = root
+        DefinitionList.__init__(self, parent, root, None)
+        self.names = MultiFilter(root)
+        wx.CallAfter(self.getoptions)
+    def new_hierarchy(self, stc, value):
+        self.names[stc] = value
+        self.getoptions()
+    def close_hierarchy(self, stc):
+        del self.names[stc]
+        self.getoptions()
+    def OnItemActivated(self, event):
+        ## win = self.stc
+        cl = self.cmdlist
+        cs = cl.GetFirstSelected()
+        if cs == -1:
+            cl.Select(0)
+            cs = 0
+        finfo = self.cmdlist.data[cs].fileinfo
+        sel = self.cmdlist.data[cs].lineno
+        for i, win in enumerate(self.root.control):
+            if (win.dirname, win.filename, getattr(win, 'NEWDOCUMENT', None)) == finfo:
+                 break
+        else:
+            return
+        self.root.control.SetSelection(i)
+        if sel < win.GetLineCount():
+            sel -= 1
+            win.lines.selectedlinesi = sel, sel+1
+            win.EnsureVisible(sel)
+            win.ScrollToColumn(0)
+            win.SetFocus()

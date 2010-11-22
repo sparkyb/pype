@@ -9,10 +9,10 @@ also recognises parameter names and values, and baseclasses. Names are now
 returned in order also.
 
 July 25, 2006
-Adapted from Synopsis package, assumed GPL-compatible or at least PSF
-licensed, given the content of the Synopsis README.quick.
+Adapted from Synopsis package, which is LGPL licensed.
 """
 
+import compiler
 import parser
 import symbol
 import token
@@ -141,6 +141,7 @@ class SuiteInfoBase:
     def __init__(self, tree = None, env={}):
         self._env = {} ; self._env.update(env)
         self._names = []
+        self._imports = []
         ## self._class_info = {}
         ## self._class_names = []
         ## self._function_info = {}
@@ -153,7 +154,12 @@ class SuiteInfoBase:
         if len(tree) == 2:
             found, vars = match(DOCSTRING_STMT_PATTERN[1], tree[1])
         else:
-            found, vars = match(DOCSTRING_STMT_PATTERN, tree[3])
+            try:
+                found, vars = match(DOCSTRING_STMT_PATTERN, tree[3])
+            except:
+                import pprint
+                pprint.pprint(tree)
+                raise
         if found:
             self._docstring = eval(vars['docstring'])
         # discover inner definitions
@@ -167,8 +173,6 @@ class SuiteInfoBase:
                 elif cstmt[0] == symbol.classdef:
                     name = cstmt[2][1]
                     self._names.append((name, ClassInfo(cstmt, env=self._env)))
-            #found, vars = match(IMPORT_STMT_PATTERN, node)
-            #we are going to ignore imports
     def get_docstring(self):
         return self._docstring
 
@@ -180,13 +184,17 @@ class SuiteInfoBase:
 
 class FunctionInfo(SuiteInfoBase):
     def __init__(self, tree = None, env={}):
-        self._name = tree[2][1]
+        index = 3
+        self._name = tree[index-1][1]
+        if self._name == 'def':
+            self._name = tree[index][1]
+            index += 1
         SuiteInfoBase.__init__(self, tree and tree[-1] or None, env)
         self._params = []
         self._param_defaults = []
-        if tree[3][0] == symbol.parameters:
-            if tree[3][2][0] == symbol.varargslist:
-                args = list(tree[3][2][1:])
+        if tree[index][0] == symbol.parameters:
+            if tree[index][2][0] == symbol.varargslist:
+                args = list(tree[index][2][1:])
                 while args:
                     if args[0][0] == token.COMMA:
                         pass
@@ -312,7 +320,6 @@ def dmatch(pattern, data, vars=None):
     print "dmatch: returning",same,vars
     return same, vars
 
-
 #  This pattern identifies compound statements, allowing them to be readily
 #  differentiated from simple statements.
 #
@@ -377,11 +384,361 @@ TEST_NAME_PATTERN = (
 IMPORT_STMT_PATTERN = (
       symbol.stmt, (
         symbol.simple_stmt, (
-          symbol.small_stmt, ['import_spec']
+          symbol.small_stmt,
+            (symbol.import_stmt, ['import_spec'])
         ), (
           token.NEWLINE, ''
         )
       )
+)
+
+#------------------------------- new parser :) -------------------------------
+def translate_old_to_new(ucky_old_stuff, docs, last_line, depth=1, parent=''):
+    out = []
+    if depth == 1:
+        # we probably want to fix this at the end...
+        out.append(Info(-1, '', '', 0, -1, (), None, None, last_line))
+    maxline = 0
+    luos = len(ucky_old_stuff)-1
+    for posn, node in enumerate(ucky_old_stuff):
+        defn, (name_lower, lineno, name), indent, children = node
+        # we do short and long after the fact :)
+        dl = parent
+        if parent:
+            dl += '.'
+        dl += name
+        nn = ' '+name
+        if nn not in defn:
+            doc_lookup = dl + defn.split(name, 1)[1]
+        else:
+            doc_lookup = dl + defn.split(' '+name, 1)[1]
+        doc = None
+        if doc_lookup in docs:
+            if docs[doc_lookup]:
+                doc = docs[doc_lookup].pop(0)
+                if '\n' in doc:
+                    doc = doc.split('\n', 1)[1]
+                else:
+                    doc = None
+        lastl = last_line
+        if posn < luos:
+            lastl = ucky_old_stuff[posn+1][1][1]
+        out.append(Info(lineno, name, defn, depth, indent, (), None, doc, lastl-lineno))
+        if children:
+            out.extend(translate_old_to_new(children, docs, lastl, depth+1, dl))
+    out.sort()
+    if depth == 1:
+        names = set()
+        for entry in out:
+            if entry.lineno < 0:
+                continue
+            names.add(entry.name)
+            entry.search_list = out[0]
+        out[0].search_list = ()
+        out[0].locals = names and sorted(names) or ()
+        return out, _fixup_extra(out)
+    return out
+
+_new_scope = (compiler.ast.Function, compiler.ast.Class)
+
+class InfoObj(object):
+    def __init__(self, *args):
+        if len(args) < self.required:
+            raise ValueError("needed %i arguments, got %i"%(len(self.__slots__), len(args)))
+        for n, v in zip(self.__slots__, args):
+            setattr(self, n, v)
+        for i in xrange(len(args), len(self.__slots__)):
+            setattr(self, self.__slots__[i], '')
+        if len(self.__slots__) > 4:
+            if not self.olines:
+                self.olines = 0
+    def __getitem__(self, index):
+        ## if index != 0:
+            ## print "index", index, "key", self.__slots__[index]
+        return getattr(self, self.__slots__[index])
+    def __setitem__(self, index, value):
+        setattr(self, self.__slots__[index], value)
+    def __repr__(self):
+        return str([(k,getattr(self, k)) for k in self.__slots__ if k not in ('locals', 'search_list')])
+    def __cmp__(self, other):
+        if other is None:
+            return 1
+        if other is self:
+            return 0
+        return cmp(self[0], other[0])
+
+class Info(InfoObj):
+    __slots__ = 'lineno name defn depth indent locals search_list doc lines short long olines lex_parent fileinfo'.split()
+    required = 9
+
+class Import(InfoObj):
+    __slots__ = 'lineno module_import local_name'.split()
+    required = 3
+
+def postorder(node, depth):
+    new_scope = _new_scope
+    rev = reversed
+    get = getattr
+    isi = isinstance
+    nod = compiler.ast.Node
+    
+    stk = [(node, depth)]
+    while stk:
+        node, depth = stk.pop()
+        if get(node, 'visited', 0):
+            yield node, depth
+            continue
+        node.visited = 1
+        depth += isi(node, new_scope)
+        ch = node.getChildNodes()
+        if ch:
+            stk.append((node, depth))
+            stk.extend((chi, depth) for chi in rev(ch) if isi(chi, nod))
+        else:
+            yield node, depth
+
+def iter_tree(entries, include_labels=True):
+    stk = []
+    for data in entries:
+        if data.depth <= 0:
+            continue
+        while stk and data.depth <= stk[-1].depth:
+            _ = stk.pop()
+        stk.append(data)
+        if data[2][:2] == '--' and include_labels:
+            stk.pop()
+            continue
+        yield stk
+
+def _fixup_extra(entries):
+    docs = {}
+    tcounts = {}
+    stk_seq = [list(stk) for stk in iter_tree(entries)]
+    for stk in reversed(stk_seq):
+        ## print stk
+        last = stk[-1]
+        last.olines = last.lines
+        if len(stk) > 1:
+            last.lex_parent = stk[-2]
+        else:
+            last.lex_parent = entries[0]
+        
+        # Let's get some good names...
+        short = '.'.join(i.name for i in stk)
+        last.short = last.defn.replace(last.name, short, 1)
+        last.long = ': '.join(i.defn for i in stk)
+        
+        # We want to fix line count information
+        last.lines -= tcounts.get(id(last), 0)
+        for i in stk[:-1]:
+            tcounts[id(i)] = tcounts.get(id(i), 0) + last.lines
+        
+        # We are going to add a reference to a parent scope, if available.
+        # We've already got the imports for each function.
+        if last.search_list is None:
+            for si in reversed(stk):
+                if si is last:
+                    continue
+                if not si.defn.startswith('class '):
+                    last.search_list = si
+                    break
+            else:
+                last.search_list = entries[0]
+        
+        # Generate documentation
+        if last.name:
+            doc = last.doc and '\n'+last.doc or ''
+            docs.setdefault(last.name, []).append('%s%s'%(last.short, doc))
+            if last.name in ('__init__', '__new__') and short.count('.') > 0:
+                docs.setdefault(short.rsplit('.', 2)[-2], []).append(docs[last.name][-1])
+
+    return docs
+
+def _parse(source):
+    lines_to_positions = {0:0}
+    for line, match in enumerate(re.finditer('\n', source)):
+        lines_to_positions[line+1] = match.end()
+    lines_to_positions[len(lines_to_positions)] = len(source)
+
+    # cache these references
+    new_scope = _new_scope
+    fcn = compiler.ast.Function
+    ass = compiler.ast.AssName
+    assa = compiler.ast.AssAttr
+    name = compiler.ast.Name
+    fro = compiler.ast.From
+    imp = compiler.ast.Import
+    self_names = set(('self', 'cls', 'klass', 'class_', '_class'))
+
+    # list of Info() objects
+    out = []
+    # imports are a list of (line_no, module_import, local_name)
+    # indent is the indentation of the function/class, tabs = 8 spaces
+    
+    tree = compiler.parse(source)
+    known = {}
+    attrs = {}
+    last = {}
+
+    for node, depth in postorder(tree, 0):
+        # this last dictionary is to allow us to pull the body of an entire
+        # function if necessary for discovering it's arg list
+        last[depth] = max(node.lineno, last.get(depth, 0))
+        if depth not in known:
+            known[depth] = set()
+        if depth not in attrs:
+            attrs[depth] = set()
+        
+        if isinstance(node, new_scope):
+            # pull the locals from the current depth, and toss it in the out
+            # bucket; also add the function name to the depth-1 listing
+            names = known.pop(depth)
+            node.lastlineno = last.pop(depth)
+            last[depth-1] = max(node.lastlineno, last.get(depth-1, 0))
+            if isinstance(node, fcn):
+                names.update(node.argnames)
+                an = node.argnames[:]
+                if node.kwargs:
+                    an[-1] = '**' + an[-1]
+                    if node.varargs:
+                        an[-2] = '*' + an[-2]
+                elif node.varargs:
+                    an[-1] = '*' + an[-1]
+                elif node.defaults:
+                    an = [get_defaults(node, source, lines_to_positions)]
+                for i,j in enumerate(an):
+                    if type(j) is tuple:
+                        # tuple unpacking in argument lists
+                        an[i] = fix_tuples(j)
+                signature = 'def %s(%s)'%(node.name, ', '.join(an))
+            else:
+                for i in xrange(depth, max(attrs)+1):
+                    names.update(attrs.pop(i, ()))
+                if not node.bases:
+                    signature = 'class %s'%(node.name,)
+                else:
+                    signature = 'class %s(%s)'%(node.name, get_defaults(node, source, lines_to_positions, 0))
+            startline = source[lines_to_positions[node.lineno-1]:lines_to_positions[node.lineno]].replace('\t', '        ')
+            indent = len(startline) - len(startline.lstrip())
+            out.append(Info(node.lineno, node.name, signature, depth, indent, sorted(names), None, node.doc, node.lastlineno-node.lineno+1, None, None))
+            known.setdefault(depth-1, set()).add(node.name)
+        
+        elif isinstance(node, ass):
+            # it's an assignment, toss it into the locals list
+            known[depth].add(node.name)
+
+        elif isinstance(node, assa):
+            # it's an attribute assignment, toss it into the attrs list
+            if isinstance(node.expr, name) and node.expr.name in self_names:
+                attrs[depth].add(node.attrname)
+        
+        elif isinstance(node, fro):
+            lead = node.level*'.' + node.modname
+            for oname, dname in node.names:
+                if oname != '*':
+                    known[depth].add(dname or oname)
+                    known[depth].add(Import(node.lineno, lead + '.' + oname, dname or oname))
+                else:
+                    known[depth].add(Import(node.lineno, lead, oname))
+        
+        elif isinstance(node, imp):
+            for oname, dname in node.names:
+                if dname is None or oname == dname:
+                    known[depth].add(oname.split('.')[0])
+                    known[depth].add(Import(node.lineno, oname, oname))
+                    while '.' in oname:
+                        oname = oname.rsplit('.', 1)[0]
+                        known[depth].add(Import(node.lineno, oname, oname))
+                else:
+                    known[depth].add(dname)
+                    known[depth].add(Import(node.lineno, dname, oname))
+        
+        elif isinstance(node, compiler.ast.Module):
+            # don't really need the documentation here, but eh?
+            names = known.pop(depth)
+            for i in xrange(depth-1, max(attrs)+1):
+                names.update(attrs.pop(i, ()))
+            ## print "have module at depth", depth, "with names", names
+            out.append(Info(-1, '', '', depth, -1, sorted(names), None, node.doc, last[depth] - (node.lineno or 1) + 1))
+    
+    out.sort()
+    docs = _fixup_extra(out)
+    return out, docs
+
+def fix_tuples(x):
+    if type(x) is not tuple:
+        return x
+    return '(' + ', '.join(map(fix_tuples, x)) + ')'
+
+def _flatten(data):
+    rev = reversed
+    tup = tuple
+    isi = isinstance
+
+    stk = list(rev(data))
+    while stk:
+        item = stk.pop()
+        if isi(item, tup):
+            stk.extend(rev(item))
+        else:
+            yield item
+
+def _get_tree(source, pattern):
+    isi = isinstance
+    bas = basestring
+    for i in recmatch(parser.suite(source).totuple(), pattern):
+        return [i for i in _flatten(i) if isi(i, bas)]
+    return []
+
+def get_defaults(fnode, source, lines, fcn=1):
+    pattern = (CLASS_BASE_PATTERN, FCN_ARG_PATTERN)[fcn]
+    start = lines[fnode.lineno-1]
+    fend = lines[fnode.lineno]
+    end = lines[fnode.lastlineno]
+    try:
+        # we'll try the fast version that only visits the function
+        # signature... as long as some doof isn't trying to put extra
+        # stuff on the same line, which would kill the parse :/
+        cur = _get_tree(source[start:fend].lstrip() + ' pass\n', pattern)
+    except:
+        # otherwise 
+        cur = _get_tree(source[start:end].lstrip(), pattern)
+    return ''.join(cur).replace(',', ', ')
+
+def recmatch(data, pattern):
+    stk = [(data, pattern, 1)]
+    while stk:
+        data, pattern, first = stk.pop()
+        if type(data) == type(pattern) == tuple:
+            # look for a match
+            if first:
+                stk.extend((data[i], pattern, 1) for i in xrange(len(data)-1, 0, -1))
+            if data[0] == pattern[0]:
+                if pattern[1] is None:
+                    yield data
+                else:
+                    stk.extend((data[i], pattern[1], 0) for i in xrange(len(data)-1, 0, -1))
+
+FCN_ARG_PATTERN = (
+  symbol.stmt, (
+    symbol.compound_stmt, (
+      symbol.funcdef, (
+        symbol.parameters, (
+          symbol.varargslist, None
+        )
+      )
+    )
+  )
+)
+
+CLASS_BASE_PATTERN = (
+  symbol.stmt, (
+    symbol.compound_stmt, (
+      symbol.classdef, (
+        symbol.testlist, None
+      )
+    )
+  )
 )
 
 

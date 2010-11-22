@@ -124,7 +124,8 @@ def initSTC(stc, stylefile, language, custom=''):
     stc.StyleResetDefault()
     stc.ClearDocumentStyle()
     stc.SetLexer(lexer)
-    stc.SetKeyWords(0, extra.get('keywords', ''))
+    stc.kw = extra.get('keywords', '')
+    stc.SetKeyWords(0, stc.kw)
     stc.StyleSetSpec(wx.stc.STC_STYLE_DEFAULT, _base)
     stc.StyleClearAll()
     

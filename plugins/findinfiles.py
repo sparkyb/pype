@@ -639,9 +639,7 @@ class FindInFiles(wx.Panel):
         #------------------------------
 
         ## self.SetAutoLayout(True)
-        tid = wx.NewId()
-        self.timer = wx.Timer(self, tid)
-        wx.EVT_TIMER(self, tid, self.OnFindButtonClick)
+        self.timer = Timer(self.OnFindButtonClick)
         
         wx.CallAfter(self.splitctrl, _pype.SEARCH_SASH_POSITION)
     
@@ -890,84 +888,42 @@ class FindInFiles(wx.Panel):
         self.startTime=time.time()
         
         state = iter(paths), iter(()), fcn, searchFile, found, 0, 0, exdirs, subd, include, exclude, igndot
-        self._threaded_search('', [], state)
         
+        t = threading.Thread(target=self._threaded_search, args=(state,))
+        t.setDaemon(1)
+        t.start()
         
-        ## for path in paths:
-            ## wx.Yield()
-            ## if not self.running:
-                ## break
-            ## for filename, data in fcn(path, subd, include, exclude, igndot):
-                ## self.root.SetStatusText(ss%(len(found), hitFileCount, fileCount, "so far ", '"'+filename+'"'), log=0)
-                ## fileCount+=1
-                ## wx.Yield()
-                ## if self.stopping:
-                    ## break
-                ## r = searchFile(filename, data)
-                ## if len(r):
-                    ## hitFileCount+=1
-                ## found += r
-                ## self.resultsWindow.ExtendEntries(r)
-        ## if self.stopping:
-            ## self.stopping = 0
-            ## self.root.SetStatusText('Find in files cancelled.')
-            ## # stopped by a button press
-        ## else:
-            ## self.running = 0
-            ## self.root.SetStatusText(ss%(len(found), hitFileCount, fileCount,
-                ## "checked (in %.2f seconds)"%(time.time()-startTime,), ""))
-        ## self.b.SetLabel("Start Search")
-        ## self.stopping = 0
-        ## self.running = 0
-        ## self.starting = 0
-        ## self.found = found
-    
-    def _threaded_search(self, ofn, new_found, state):
+    def _threaded_search(self, state):
         path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, exdirs, subd, include, exclude, igndot = state
-        if new_found:
-            hfc += 1
-            found += new_found
-            self.resultsWindow.ExtendEntries(new_found)
-        
-        if not self.stopping:
-            ss = "Found %i instances in %i files out of %i files %s%s."
-            pfn = ''
-            if ofn:
-                pfn = ' "'+ofn+'"'
-            self.root.SetStatusText(ss%(len(found), hfc, fc, "so far", pfn), log=0)
-            try:
-                fn, data = data_i.next()
+        ss = "Found %i instances in %i files out of %i files %s%s."
+        for path in path_i:
+            for fn, data in nf_fcn(path, exdirs, subd, include, exclude, igndot):
                 fc += 1
-                state = path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, exdirs, subd, include, exclude, igndot
-                t = threading.Thread(target = s_fcn, args=(fn, data, state))
-                t.setDaemon(1)
-                t.start()
-                return
-            except StopIteration:
-                pass
-            
-            try:
-                path = path_i.next()
-            except StopIteration:
-                pass
-            else:
-                data_i = nf_fcn(path, exdirs, subd, include, exclude, igndot)
-                state = path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, exdirs, subd, include, exclude, igndot
-                wx.CallAfter(self._threaded_search, '', [], state)
-                return
+                new_found = s_fcn(fn, data, state)
+                if new_found:
+                    hfc += 1
+                    found += new_found
+                    wx.CallAfter(self.resultsWindow.ExtendEntries, new_found)
+                if self.stopping:
+                    break
+                pfn = ''
+                if fn:
+                    pfn = ' "'+fn+'"'
+                wx.CallAfter(self.root.SetStatusText, ss%(len(found), hfc, fc, "so far", pfn), log=0)
+            if self.stopping:
+                break
         
-        if self.stopping:
-            self.stopping = 0
-            self.root.SetStatusText('Find in files cancelled.')
-        else:
-            self.running = 0
-            self.root.SetStatusText(ss%(len(found), hfc, fc,
-                "checked (in %.2f seconds)"%(time.time()-self.startTime,), ""))
-        self.b.SetLabel("Start Search")
-        self.stopping = 0
+        msg = 'Find in files cancelled.'
+        if not self.stopping:
+            msg = ss%(len(found), hfc, fc, "checked (in %.2f seconds)"%(time.time()-self.startTime,), "")
+        wx.CallAfter(self._finish_search, msg)
+    
+    def _finish_search(self, msg):
         self.running = 0
         self.starting = 0
-        self.found = found
+        self.stopping = 0
+        self.root.SetStatusText(msg)
+        self.b.SetLabel("Start Search")
     
 #--------------------------- scopes for searching ----------------------------
 
@@ -1045,11 +1001,14 @@ class FindInFiles(wx.Panel):
         except cancelled:
             pass
     
-    def open_files(self, path, subdirs, include, exclude, ignore_dotted=0):
+    def open_files(self, path, exdirs, subdirs, include, exclude, ignore_dotted=0):
         for win in self.root.control:
-            if namematches(win.filename, include, exclude):
-                yield self.getfn(win), fixnewlines(StyledTextCtrl.GetText(win))
-        
+            full = self.getfn(win)
+            if namematches(win.filename, include, exclude) and not [i for i in exdirs if i and full.startswith(i)]:
+                yield full, fixnewlines(StyledTextCtrl.GetText(win))
+            ## else:
+                ## print win.filename, namematches(win.filename, include, exclude), [i for i in exdirs if i and full.startswith(i)]
+
     def directories(self, path, exdirs, subdirs, include, exclude, ignore_dotted=0):
         try:
             lst = os.listdir(path)
@@ -1098,7 +1057,7 @@ class FindInFiles(wx.Panel):
                 break
         if _pype.UNICODE:
             found =  [(i,j,k.decode('latin-1'),l.decode('latin-1')) for i,j,k,l in found]
-        wx.CallAfter(self._threaded_search, fileName, found, state)
+        return found
     
     def searchFileEachLine(self, fileName, data, state):
         lines = data.split('\n')
@@ -1145,7 +1104,8 @@ class FindInFiles(wx.Panel):
                 break
         if _pype.UNICODE:
             found = [(i,j,k.decode('latin-1'),l.decode('latin-1')) for i,j,k,l in found]
-        wx.CallAfter(self._threaded_search, fileName, found, state)
+        return found
+
 
 #---------------------------- preference handling ----------------------------
 

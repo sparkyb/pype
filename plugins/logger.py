@@ -52,6 +52,7 @@ class logger(wx.TextCtrl):
         l.buffer.seek(0)
         self.data.put(l.buffer.read())
         l = self
+        self.lastwrite = 0
         wx.CallAfter(self.handle_writes)
     
     def write(self, data):
@@ -74,7 +75,9 @@ class logger(wx.TextCtrl):
             sys.__stdout__.write(x.encode('utf8'))
         except:
             pass
-        wx.CallAfter(self.handle_writes)
+        ct = time.time()
+        if ct - self.lastwrite > .5:
+            wx.CallAfter(self.handle_writes)
     
     def flush(self):
         try:
@@ -85,7 +88,10 @@ class logger(wx.TextCtrl):
     def handle_writes(self):
         while self.data.qsize():
             self.SetInsertionPointEnd()
-            self.WriteText(self.data.get())
+            data = []
+            for i in xrange(self.data.qsize()):
+                data.append(self.data.get())
+            self.WriteText(''.join(data))
         lc = linecount = self.GetNumberOfLines()
         lp = lastpos = self.GetLastPosition()
         for i in xrange(min(2, linecount)):

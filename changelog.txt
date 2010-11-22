@@ -1,3 +1,95 @@
+
+#--------------------------------- PyPE 2.9 ----------------------------------
+(fixed) another bug related to realtime parsing.
+(fixed) typo in stc-styles.rc.cfg that is shipped with PyPE that can cause
+PyPE to fail to load on some platforms, thank you to Rob McMullen, the writer
+of Peppy, for pointing out the error.
+(fixed) bug with OS X disabling undo/redo cut/copy.
+(changed) main documents tab to use AuiNotebook to deal with the broken native
+notebook control on OS X.  Seems to work as far as I can tell, though
+sometimes when you click the "scroll" button repeatedly, it doesn't work for
+every click.
+(changed) all tabs now use AuiNotebook for internal consistency, and because it
+just works better than the native control on OS X.
+(changed) the behavior of the search tab (find in files) to fully use a
+secondary thread for parsing, only putting results/events into the wxPython
+layer to update things.  This significantly reduces the thread creation churn
+(I have no idea why I used a repeated callback semantic; maybe because it
+would guarantee a few things about starting/stopping, I don't know), which on
+OS X, allows you to search and edit documents at the same time, something that
+other platforms have been enjoying for years ;) .
+(changed) made the ReplaceAll functionality incrementally increase the number
+of replacements before updating the GUI.  It used to be 20 replacements at a
+time. Now it will start at 30, then multiply that number by 1.5 each block, up
+to a maximum of 1000 replacements before updating the GUI.  This should
+significantly increase the speed of large replacements, though there will be a
+longer delay between screen updates.
+(fixed) PyPE will now actually not close down on OS X if when prompted to save
+an unsaved document you say "cancel".  The benefit of not losing data on other
+platforms has now come to OS X!
+(noticed) OS X screen updates are disgustingly slow.  It's not PyPE's fault,
+it's the drawing method that Scinitlla uses on OS X.
+(fixed) module browser (the Name and Line tools) to work when confronted with
+function decorators.  We will have to wait a bit for Python 2.6 before we can
+support class decorators.
+(fixed) moved file modification check to a secondary thread, which keeps the
+GUI from stalling when files are on slow volumes (remote mounts, etc.), and
+reduced check frequency from *every* time the application receives focus to
+at most once every 60 seconds (it is still signaled when PyPE gets application
+focus).
+(changed) switched to using a secondary thread + sched module variant for
+handling delayed calls, etc.
+(changed) switched to using a single wx.Timer instance + sched module variant
+for handling delayed calls, etc., in order to fix shutdown issues and to
+improve latencies for immediate calls.
+(fixed) unrepr for strings so that find/replace of '\t', etc., work again.  I
+never tested my str_unrepr() stuff :/ .
+(cleaned) out some older code that is no longer necessary.
+(tweaked) file modification checker to ignore the results of the modification
+check if it took more than 30 seconds to complete.
+(fixed) bug where if you try to open a file and it fails due to a unicode
+decoding error, you could get an unsightly box in the corner.
+(fixed) the ugly flashing in the upper-left corner when opening documents.
+(fixed) the fast longest common subsequence algorithm (character doublings
+were effectively ignored, so search terms of 'hello' were the same as 'helo').
+(added) tool to the "Documents" tab to allow you to search a set of known
+paths for files to open (this also includes recently open files).  It scores
+the subsequence search to pull "better" matches to the top.
+(fixed) when pasting multiple lines in files with tab indentation, an extra
+blank line will no longer be added before the pasted lines.
+(fixed) description text for spaces to tabs transform.
+(changed) rather than displaying every "file deleted" or "file modified" in
+it's own dialog (which gets bothersome when you lose a network mount), you now
+get one dialog for "file deleted" and one dialog for "file modified".
+(added) the ability to automatically detect the dominant tab/indent settings
+used per file, and use that as the default (which is quite useful if you have
+recently switched indent styles, and/or if you have to use a different indent
+style for work and not work).
+(fixed) autocomplete breakage due to the parsers module movement.
+(added) new parser and parser backend to replace the old Python parser with
+one based on compiler.ast .  It's a little slower than the previous parser,
+and uses a bit more memory to start, but it offers much more opportunities for
+improving PyPE for 2.9 and beyond.  In the process, I discovered a bug with
+the old parser.suite-based parser that I had borrowed from Synopsis (in
+addition to the decorator bug that I'd already fixed for 2.9), which was that
+it doesn't know about functions or classes that are in try/except/finally or
+even if/whatever clauses.  Uck.
+(changed) tweaked some small color display options for latex (subsections are
+now colored green, they used to be blue).
+(added) parser for cheetah and spitfire templates (.tmpl and .spt), they only
+pull #block and #def for now, but they understand block nesting.
+(added) True, False, as, and with as Python keywords
+(cleaned) up some repeated os.listdir() calls that weren't necessary for
+keeping the macro list updated.  It now just updates when the window gets
+focus.
+(added) lexical scope traversal for Python to discover methods and locals.
+(added) the pulling of self/cls/klass attribute assignments for Python
+instance/class variables.
+(added) optional global filter for all parsed documents.
+(added) scoring method for filter tables (better matches float to the top of
+the listing).
+
+
 #-------------------------------- PyPE 2.8.8 ---------------------------------
 (fixed) a bug related to realtime parsing of non-ascii Python source.
 
@@ -30,7 +122,7 @@ Craig Mahaney.
 (added) macro support to Craig Mahaney's added functionality.
 (added) implementation for regular expression replacements, possibly to be
 integrated as part of a 'replace in all open documents' in the future.
-(added) automatic spellcheck for text and tex documents of up to 200,000 byes
+(added) automatic spellcheck for text and tex documents of up to 200,000 bytes
 in size.  Will only spellcheck if the user has enabled "check syntax" in the
 "Realtime Options".
 (fixed) issue when trying to save language settings when cursor position is

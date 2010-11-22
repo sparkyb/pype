@@ -3,6 +3,8 @@ import re
 import wx
 import wx.stc
 
+import scheduler
+
 class OnCloseBar: #embedded callback to destroy the findbar on removal
     def __init__(self, control):
         self.c = control
@@ -16,7 +18,7 @@ word = dict.fromkeys(map(ord, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 non_word = dict.fromkeys([chr(i) for i in xrange(256) if i not in word])
 
 MEM_LEAK_TEST = 0
-COUNTLIMIT = 20
+OCOUNTLIMIT = COUNTLIMIT = 20
 
 class ReplaceBar(wx.Panel):
     def __init__(self, parent, root):
@@ -34,12 +36,10 @@ class ReplaceBar(wx.Panel):
         self.replacing = 0
         self.wholeword = 0
         
-        self.replace_t = wx.Timer(self, wx.NewId())
-        self.Bind(wx.EVT_TIMER, self._replace_again1, self.replace_t)
+        self.replace_t = Timer(self._replace_again1, None)
         self._replace_args = None
         
-        self.replace_t2 = wx.Timer(self, wx.NewId())
-        self.Bind(wx.EVT_TIMER, self._re_replace_again1, self.replace_t2)
+        self.replace_t2 = Timer(self._re_replace_again1, None)
         self._re_replace_args = None
         
         prefs = self.readPreferences()
@@ -203,11 +203,10 @@ class ReplaceBar(wx.Panel):
         self.Refresh()
 
     def getFinds(self, evt, which=0):
-        
-        if not which:
-            findTxt = self.box1.GetValue()
-        else:
-            findTxt = self.box2.GetValue()
+        findTxt = self.box1
+        if which:
+            findTxt = self.box2
+        findTxt = findTxt.GetValue()
         matchcase = self.case.GetValue() and wx.FR_MATCHCASE
         if not findTxt:
             if not which:
@@ -309,7 +308,7 @@ class ReplaceBar(wx.Panel):
         
         #handle finding previous item, handling wrap-arounds as necessary
         st = min(self.getRange(win, min(win.GetSelection()), len(findTxt), 0))
-        print win.GetSelection(), st, 
+        #print win.GetSelection(), st, 
         posn = win.FindText(st, 0, findTxt, flags)
         if posn != -1:
             self.sel(posn, posn+len(findTxt), '', win)
@@ -482,6 +481,8 @@ class ReplaceBar(wx.Panel):
         wx.CallAfter(self.ReentrantReplace, (ostart, oend, ris, win))
 
     def ReentrantReplace(self, state):
+        global COUNTLIMIT
+        COUNTLIMIT = min(1000, int(COUNTLIMIT*1.5))
         ostart, oend, ris, win = state
         
         if not win:
@@ -526,7 +527,9 @@ class ReplaceBar(wx.Panel):
         
         if cont:
             if MEM_LEAK_TEST:
-                wx.FutureCall(1, self.ReentrantReplace, (ostart, oend, ris, win))
+                scheduler.FutureCall(1, self.ReentrantReplace, (ostart, oend, ris, win))
+            elif 1:
+                wx.CallAfter(self.ReentrantReplace, (ostart, oend, ris, win))
             else:
                 self._replace_again2((ostart, oend, ris, win))
         else:
@@ -547,8 +550,10 @@ class ReplaceBar(wx.Panel):
         self.replace_t.Start(1, wx.TIMER_ONE_SHOT)
     
     def OnReplaceAll(self, evt):
+        global COUNTLIMIT
         if self.replacing:
             return
+        COUNTLIMIT = OCOUNTLIMIT
         self.replaceAll(evt, 0)
     
     def OnReplaceSel(self, evt):
@@ -606,7 +611,7 @@ class ReplaceBar(wx.Panel):
     
     def _re_replace_again1(self, evt):
         self._re_replace_args, args = None, self._re_replace_args
-        self.ReentrantRegularExpressionReplace(args)
+        wx.CallAfter(self.ReentrantRegularExpressionReplace, (args,))
     
     def _re_replace_again2(self, args):
         self._re_replace_args = args
@@ -621,6 +626,8 @@ class ReplaceBar(wx.Panel):
         wx.CallAfter(self.ReentrantRegularExpressionReplace, (lastpw, c, template, _1, win))
     
     def ReentrantRegularExpressionReplace(self, state):
+        global COUNTLIMIT
+        COUNTLIMIT = min(1000, int(COUNTLIMIT*1.5))
         lastpw, c, template, _1, win = state
         
         lastp = 0
@@ -656,6 +663,8 @@ class ReplaceBar(wx.Panel):
         if cont:
             if MEM_LEAK_TEST:
                 wx.FutureCall(1, self.ReentrantRegularExpressionReplace, (lastpw, c, template, _1, win))
+            elif 1:
+                wx.CallAfter(self.ReentrantRegularExpressionReplace, (lastpw, c, template, _1, win))
             else:
                 self._re_replace_again2((lastpw, c, template, _1, win))
         else:
