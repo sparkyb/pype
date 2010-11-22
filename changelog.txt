@@ -1,3 +1,77 @@
+#--------------------------------- PyPE 2.2 ----------------------------------
+(removed) a debug statement or two.
+(added) installation section to readme.
+(fixed) a bug where new saved documents wouldn't close, and their states
+wouldn't be saved.
+(changed) when switching to a different document (for any reason), PyPE now
+selects the editor portion of the window.  Previously if one selected the tab
+of a document, or a document in the document tab, it would keep those
+particular items selected, resulting in strange arrow/typing behavior.
+(fixed) when changing menu item names, previously one needed to choose a
+hotkey in order to make name changes stick (then clearing the hotkey if
+necessary).  Now your changes will take effect as long as you keep clicking
+'OK'.
+(changed) tweaked the C/C++ indentation on {} rules to more closely match the
+most common style guides.
+(added) 'public' keyword to pyrex syntax highlighting.
+(changed) When selecting an item from the results in the 'search' tab, the
+exact item that was found will be selected if possible.  Possible incorrect
+selection conditions:
+ * if the file contents have changed, the same line number where the match was
+originally found will be selected, if it exists
+ * if one is searching for a string that is quoted or commented, and something
+that matches is discovered before the quote or comment, that earlier match
+will be shown instead
+(fixed) currently untitled documents will now have their 'file name' displayed
+in the search results.
+(fixed) choosing an untitled document in the 'search' tab will now go to the
+proper file.
+(fixed) the search tab will now not duplicate entries in the 'selected text',
+'current file', 'current file with includes', or 'open files' scopes when
+multiple paths are listed in "Directories", and will actually produce results
+when there is nothing in "Directories".
+(fixed) searching in currently open unicode files (it works now), unicode
+files on disk still have issues.
+(changed) the 'to be searched for' string in the 'search' tab now supports
+string escaping like the find/replace bars.
+(changed) if your search string for the 'search' tab includes at least one
+line ending, then multiline will be automatically enabled during the search,
+but will not be shown in the options.
+(added) for unicode-enabled versions: PyPE will respect the "Encoding
+declaration" during file load, as specified in the "Python Reference Manual"
+aka the "Language Reference", if no Byte Order Mark (BOM) is present.  It will
+also alert the user to any failure in decoding the loaded file.
+(added) for unicode-enabled versions: if Document->Encodings is set to
+'other', PyPE will attempt to encode the file as specified in the "Encoding
+declaration", and will alert the user on failure to encode the file.
+Note: PyPE will not add/alter/change the encoding declaration, but it will
+respect them.
+(added) for unicode-enabled versions: a tab next to Shell which produces the
+repr() of a given block of text.  Not a huge feature, but convenient for
+working with unicode and Python consoles.
+(added) View->Go to position for jumping to a particular position in a file.
+Note that this may be slow on large files because Scintilla uses an internal
+utf-8 representation.  This means that in order to find the current position
+in the file, one must necessarily iterate up to that position to discover all
+multibyte characters.  This is further uglified by Scintilla considering
+Windows line endings '\r\n' as a single character in stc.GetPositionAfter().
+(changed) non-unicode versions of PyPE will use history.txt and menu.txt to
+store preferences.  unicode enabled versions of PyPE will use history.u.txt
+and menu.u.txt to store preferences.
+(added) Options->Findbar below editor option, when unchecked, find/replace
+bars will be above the editor instead of below it.
+(added) shell command support and interaction embedded in PyPE, or embedded
+within a new terminal (on Windows, the terminal only exists if necessary, on
+other platforms, it uses xterm so the terminal may exist even if it is not
+necessary).
+(fixed) creating a new document (via menu or hotkey) will now focus the cursor
+in the new document.
+(fixed) selecting search context (directories, current files, etc.) in the
+search tab will now disable options which are not relevant to the current
+search context.
+(updated) readme.txt
+
+
 #-------------------------------- PyPE 2.1.1 ---------------------------------
 (fixed) a bug where PyPE would fail to load if the user had run certain PyPE
 beta releases.
@@ -5,8 +79,7 @@ beta releases.
 couldn't find your home directory.
 
 
-#-------------------------- PyPE 2.1 and 2.0 Betas ---------------------------
-Changes since Beta 3:
+#--------------------------------- PyPE 2.1 ----------------------------------
 (fixed) a bug when saving a file at the root of a drive on Windows wouldn't
 quite work.
 (fixed) a bug that would cause windows-unicode using versions of PyPE to not
@@ -53,7 +126,7 @@ not nest (which is also why I went with '//' for C/C++ instead of /* */).
 support multiple filters per entry very well).
 
 
-Changes since Beta 2:
+#------------------------------ PyPE 2.0 Beta 3 ------------------------------
 (fixed) if saving the results of find-in-files requires unicode, it will
 automatically encode the output file into utf-8, which only matters on systems
 with unicode filenames and/or file contents.
@@ -80,7 +153,7 @@ directories, and tags in directories.
 (added) viewing results as a table or tree, in addition to plain text.
 (changed) name of "find in files" to "search", in order to be more
 representative of what the tab is currently capable of.
--- end of find in files features written or helped by Dave Schuyler
+-- beginning of find in files features written or helped by Dave Schuyler
 (added) findbar features with help from Dave Schuyler:
 (updated) the behavior of smartcasing to be 'more smart', updated the readme.
 (changed) find/replace bars now remember their status per-document.
@@ -130,7 +203,7 @@ them, and can be reset via Options->Load Settings.
 (fixed) the display of help text in the status bar for some menu options.
 
 
-Changes since Beta 1:
+#------------------------------ PyPE 2.0 Beta 2 ------------------------------
 (fixed) Todo no longer includes http, ftp, mailto, news, gopher, and telnet.
 (fixed) Bug when opening non-existent files.
 (fixed) When one indents/dedents selected text, the selection will change to
@@ -193,7 +266,8 @@ and the cursor is on a word, it will be inserted into the 'to find' text box.
 (fixed) nameerror during the opening of a document when a previous version of
 PyPE had never been run.
 
-Changes since 1.9.3:
+
+#------------------------------ PyPE 2.0 Beta 1 ------------------------------
 (changed) Pulled source tree from being per-document to being shared among all
 documents, tree is rebuilt on document switch.
 (changed) Each document gets its own tree, but it shares the same visible area,

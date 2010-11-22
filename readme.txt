@@ -19,14 +19,40 @@ in order to not cause exceptions during style changes, and was also
 distributed with wxPython version 2.4.1.2 for Python 2.2
 
 If you do not also receive a copy of gpl.txt with your version of this
-software, please inform the me of the violation at the web page at the top of
-this document.
+software, please inform me of the violation at the web page at the top of this
+document.
 
 
 #------------------------------- Requirements --------------------------------
-PyPE 2.x has only been tested on Python 2.3 and wxPython 2.5.3.1.  It should
+Either a machine running Python and wxPython, or a Windows machine that can
+run the binaries should be sufficient.  Initial revisions of PyPE were
+developed on a PII-400 with 384 megs of ram, but it should work on any machine
+that can run the most recent wxPython revisions.  Some portions may be slow
+(Document->Wrap Long Lines especially, which is a known issue with the
+scintilla text editor control), but it should still be usable.
+
+PyPE 2.x has only been tested on Python 2.3 and wxPython 2.6.1.0.  It should
 work on later versions of Python and wxPython.  If you are having issues, file
 a bug report on http://sourceforge.net/projects/pype .
+
+
+#------------------------------- Installation --------------------------------
+If you have Python 2.3 or later as well as wxPython 2.6.1.0 or later, you can
+extract PyPEX.Y.Z-src.zip anywhere and run it by double-clicking on pype.py or
+pype.pyw .  If you want to be all official, you can use
+'python setup.py install', but that is generally unnecessary.
+
+If you don't have Python 2.3 wxPython 2.6.1.0 or later, and are running
+Windows, you should (hopefully) be able to run the Windows binaries.  They are
+provided for your convenience (so you don't have to install Python and
+wxPython).
+
+If it so happens that the Windows binaries don't work for you, and you have an
+installation of Python and wxPython that fits the requirements, why don't you
+run the source version?  The only difference is a pass through py2exe, and a
+minor loading time speed increase.  Just because the Windows binaries exist,
+doesn't mean that you /have/ to run them.
+
 
 #----------------------------------- Help ------------------------------------
 What the heck is a Trigger?
@@ -54,6 +80,28 @@ escapes in Python.
 
 
 
+Find/Replace bars:
+If you have ' or " as the first character in a find or find/replace entry, and
+what you entered is a proper string declaration in Python, PyPE will use the
+compiler module to parse and discover the the string.  For example, to
+discover the LF charactesr, use "\n", including quotes.
+
+
+
+What the heck is going on with string escapes in regular expressions and/or
+multiline searches?
+You can use standard Python strings with escapes and quote marks just like
+when you use the find/replace bars with one minor difference; all searched
+data is normalized to have \n line endings regardless of the input.  This
+means that if you want to find a colon followed by a line ending followed by
+a space, you would use ":\n ", including quotes.
+
+If you include line endings in your search string, then multiline searching
+will be automatically enabled during the search (but the box will remain
+checked or unchecked).
+
+
+
 What happens when "Smart Case" is enabled during a replace?
 If the found string is all upper or lower case, it will be replaced by a
 string that is also all upper or lower case.
@@ -78,8 +126,9 @@ For example...
 ...by enabling "Smart Case", and putting 'foo' and 'goo' in the find/replace
 boxes.
 
-Otherwise if the first letter of the found string is upper or lowercase, then its
-replacement will have the first letter be upper or lowercase respectively.
+Otherwise if the first letter of the found string is upper or lowercase, then
+its replacement will have the first letter be upper or lowercase respectively.
+
 
 
 What is up with the "Enable File Drops" checkbox in the 'Edit' menu?
@@ -194,7 +243,7 @@ you received.  As it is a known-good version, use it.
 
 
 Expandable/collapseable/foldable code:
-Since the beginning, there have been expandable and collapseale scopes thanks
+Since the beginning, there have been expandable and collapseable scopes thanks
 to wxStyledTxtCtrl.  How to use them...
 Given the below...
 - class nada:
@@ -215,30 +264,21 @@ Control-clicking on a '+' or '-' collapses or expands the entirety of the
 scopes contained within.
 
 I don't know about you, but I'm a BIG fan of shift-clicking classes.  Yeah.
-Play around with them, you may like them.
-
-
-
-Find/Replace bars:
-One big thing to note is how the find/replace bars work.  For those of you who
-are annoyed with one's normal inability to enter in things like newlines, this
-will be a great thing for you.
-
-If you have ' or " as the last character in a find or find/replace entry, and
-what you entered is a proper string declaration in Python, PyPE will use the
-compiler module to parse and discover the the string.  For example, to
-discover Unix LF charactesr, use "\n" including quotes.
-
+Play around with them, you may like it.
 
 
 Converting between tabs and spaces:
 So, you got tabs and you want spaces, or you have spaces and want to make them
 tabs.  As it is not a menu option, you're probably wondering "how in the hell
-am I going to do this".  Well, if you read the above stuff about replacing, it
-would be trivial.
+am I going to do this".  Well, if you read the above stuff about string
+escapes in the find/replace bar, it would be trivial.
 Both should INCLUDE the quotation marks.
 To convert from tabs to 8 spaces per tab; replace "\t" with "        "
 To convert from 8 spaces to one tab; replace "        " with "\t"
+
+
+
+----------------ADD SECTION ABOUT SHELL----------
 
 #-------------------------- How did PyPE come about --------------------------
 The beginnings of PyPE was written from 10:30PM on the 2nd of July through
@@ -265,6 +305,13 @@ me as you.
 
 
 #------------------------------------ FAQ ------------------------------------
+Why doesn't the Windows install work?
+Depending on your platform, it may or may not work.  It works for me on
+Windows 2k, XP and 98.  Most problems people have is that they mistakenly
+extract library.zip, which they shouldn't do.
+
+
+
 What's the deal with the version numbering scheme?
 Early in development, PyPE raised version numbers very quickly.  From 1.0 to
 1.5, not much more than 2 months passed.  In that time, most of the major

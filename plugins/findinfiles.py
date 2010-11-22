@@ -8,6 +8,7 @@ This is a test version of an alternate find in files ui.
 # Further work by parameter@sourceforge (Dave Schuyler).
 
 from wx import ImageFromStream, BitmapFromImage, Yield
+from wx.stc import StyledTextCtrl
 import cStringIO
 
 import wx
@@ -20,6 +21,7 @@ import posixpath
 import time
 import tokenize
 import cStringIO
+import compiler
 
 newlines = re.compile(r'((\r\n)|(\r)|(\n))')
 quotedPattern=re.compile(
@@ -52,6 +54,8 @@ NEWL = tokenize.NEWLINE
 include_re = re.compile('^#include\s+"([^"\\n\\r ]+)".*?$', re.MULTILINE)
 PY = 0
 C = 1
+
+enable_options = ['Directories', 'Tags in Directories']
 
 def find_imports(txt):
     if 'import' in txt:
@@ -137,6 +141,7 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
         #self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnItemDeselected)
+        self.pattern = None
 
     def setData(self, arrayOfTuples, copy=1):
         if copy:
@@ -198,7 +203,8 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
         self.currentItem = event.m_itemIndex
         file = self.GetItem(self.currentItem, 1).GetText()
         line = self.GetItem(self.currentItem, 2).GetText()
-        self.parent.OpenFound(file, int(line))
+        data = self.GetItem(self.currentItem, 3).GetText()
+        self.parent.OpenFound(file, int(line), self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
 
     def OnGetItemText(self, item, col):
         if col == 0:
@@ -215,6 +221,7 @@ class FoundText(wx.ListBox):
         self.parent = parent
         wx.EVT_LISTBOX_DCLICK(parent, self.GetId(), self.OnItemActivated)
         self.last = ''
+        self.pattern = None
 
     def setData(self, arrayOfTuples):
         self.Clear()
@@ -251,7 +258,7 @@ class FoundText(wx.ListBox):
         a = self.GetString(selected) 
         if a[0] == ' ':
             line = int(a.split(':', 1)[0])
-        self.parent.OpenFound(file, int(line))
+        self.parent.OpenFound(file, int(line), self.pattern, ('\\n' in a) and len(a.encode('utf-8')))
 
 #---------------------------------------------------------------------------
 
@@ -280,6 +287,7 @@ class FoundTree(wx.TreeCtrl):
         
         self.last = ''
         self.lasti = None
+        self.pattern = None
     
     def setData(self, arrayOfTuples):
         self.Clear()
@@ -311,8 +319,9 @@ class FoundTree(wx.TreeCtrl):
             event.Skip()
             return
         file = self.GetItemText(parent)
-        line = int(self.GetItemText(item).split(':')[0].strip())
-        self.parent.OpenFound(file, line)
+        data = self.GetItemText(item)
+        line = int(data.split(':')[0].strip())
+        self.parent.OpenFound(file, line, self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
 
 #-----------------------------------------------------------------------------
 
@@ -476,8 +485,8 @@ class FindInFiles(wx.Panel):
             border=outsideBorder)
         self.sdirs = combobox(fc['dirs'])
         gbs.Add(self.sdirs, (row,1), editBoxSpan, flag=wx.EXPAND)
-        gbs.Add(button(
-            "Add Path", self.OnDirButtonClick), (row,lastColumn),
+        self.add_path = button("Add Path", self.OnDirButtonClick)
+        gbs.Add(self.add_path, (row,lastColumn),
             flag=wx.ALIGN_LEFT|wx.RIGHT,
             border=outsideBorder)
 
@@ -522,7 +531,9 @@ class FindInFiles(wx.Panel):
         gbs.Add(self.viewChoice, (row,1), editBoxSpan,
                 flag=wx.EXPAND|wx.TOP,
                 border=outsideBorder)
-
+        
+        self.enable_controls = [self.sdirs, self.add_path, self.ss]
+        self.checkscope()
         #------------------------------
 
         #gbs.AddGrowableRow(0)
@@ -551,12 +562,25 @@ class FindInFiles(wx.Panel):
 
     #-------------------------------------------------------------------------
 
+    def getfn(self, win):
+        if win.dirname and win.filename:
+            return os.path.join(win.dirname, win.filename)
+        else:
+            return '<untitled %i>'%win.NEWDOCUMENT
+    
     def OnScopeChoice(self, event):
         scope=event.GetString()
-        print 'scope', scope
+        ## print 'scope', scope
         if self.scope != scope:
             self.scope=scope
             self.savePreferences()
+        
+        self.checkscope()
+    
+    def checkscope(self):
+        enable = self.scopeChoice.GetStringSelection() in enable_options
+        for i in self.enable_controls:
+            i.Enable(enable)
 
     def OnViewChoice(self, event):
         view=event.GetString()
@@ -564,9 +588,11 @@ class FindInFiles(wx.Panel):
             self.viewResultsAs=view
             self.savePreferences()
             #toss old results window
+            x = self.resultsWindow.pattern 
             self.resultsWindow.Destroy()
             #create new results window
             self.resultsWindow = viewoptions.get(view, FoundText)(self)
+            self.resultsWindow.pattern = x
             self.Bind(wx.EVT_SASH_DRAGGED_RANGE, self.OnSashDrag, self.resultsWindow)
             #populate new results window
             self.resultsWindow.setData(self.found)
@@ -598,13 +624,39 @@ class FindInFiles(wx.Panel):
     def OnExit(self, e):
         print "OnExit"
 
-    def OpenFound(self, file, line):
-        self.root.OnDrop([file], 1)
+    def OpenFound(self, file, line, pattern, multiline):
+        if file[:1] == '<':
+            #untitled files
+            a = self.root.getPositionAbsolute(file, 1)
+            if a == -1:
+                return
+            self.root.control.SetSelection(a)
+        else:
+            self.root.OnDrop([file], 1)
         a = self.root.control.GetSelection()
         if a > -1:
+            line -= 1
             stc = self.root.control.GetPage(a).GetWindow1()
-            stc.EnsureVisible(line-1)
-            stc.GotoLine(line-1)
+            start = 0
+            end = stc.GetLineEndPosition(line)
+            if line != 0:
+                start = stc.GetLineEndPosition(line-1)+len(stc.format)
+            
+            #handle overflow
+            eml = min(end+multiline, stc.GetLength())
+            
+            if multiline:
+                t = fixnewlines(stc.GetTextRange(start, eml))
+            else:
+                t = stc.GetLine(line)
+            grp = pattern(t)
+            if grp != None:
+                end =   grp.end()   + start
+                start = grp.start() + start
+                if stc.format == '\r\n':
+                    #handle line ending fixing
+                    end += grp.group().count('\n')
+            stc.SetSelection(start, end)
             stc.SetFocus()
 
     def OnDirButtonClick(self, e):
@@ -676,11 +728,20 @@ class FindInFiles(wx.Panel):
         multiline = self.multiline.IsChecked()
         subd = self.ss.IsChecked()
 
+        #python strings
+        if pattern and pattern[-1] in ['"', "'"]:
+            try:
+                pattern = [i for i in compiler.parse(str(pattern)).getChildren()[:1] if isinstance(i, basestring)][0]
+            except Exception, e:
+                pass
+        
+        multiline = multiline or '\n' in pattern
+        
         if not self.re.IsChecked():
             pattern = re.escape(pattern)
         
         if wholeWord:
-            pattern="\\b%s\\b"%(pattern,)
+            pattern = "\\b%s\\b"%(pattern,)
         
         if caseSensitive:
             pattern = re.compile(pattern)
@@ -689,6 +750,7 @@ class FindInFiles(wx.Panel):
 
         self.pattern = pattern
         self.resultsWindow.Clear()
+        self.resultsWindow.pattern = pattern.search
 
         if multiline:
             searchFile = self.searchFileMultiline
@@ -703,7 +765,9 @@ class FindInFiles(wx.Panel):
         fcn = self.directories
         if hasattr(self, ch):
             fcn = getattr(self, ch)
-
+        
+        if ch not in ('tags_in_directories', 'directories'):
+            paths = ('',)
         startTime=time.time()
         for path in paths:
             wx.Yield()
@@ -739,15 +803,15 @@ class FindInFiles(wx.Panel):
     def current_file(self, *args):
         try:
             _, win = self.root.getNumWin()
-            yield os.path.join(win.dirname, win.filename), fixnewlines(win.GetText())
+            yield self.getfn(win), fixnewlines(StyledTextCtrl.GetText(win))
         except cancelled:
             pass
     
     def current_file_with_includes(self, path, subdirs, include, exclude):
         try:
             _, win = self.root.getNumWin()
-            t = fixnewlines(win.GetText())
-            yield os.path.join(win.dirname, win.filename), t
+            t = fixnewlines(StyledTextCtrl.GetText(win))
+            yield self.getfn(win), t
             
             typ, lst = find_imports(t)
             if typ == C:
@@ -756,7 +820,12 @@ class FindInFiles(wx.Panel):
                     if os.path.isfile(a):
                         if namematches(a.split('/')[-1], include, exclude):
                             try:
-                                t = fixnewlines(open(a, 'rb').read())
+                                x = self.root.GetPositionAbsolute(a)
+                                if x != -1:
+                                    t = StyledTextCtrl.GetText(self.root.GetPage(x).GetWindow1())
+                                else:
+                                    t = open(a, 'rb').read()
+                                t = fixnewlines(t)
                             except:
                                 continue
                     yield a, t
@@ -776,7 +845,12 @@ class FindInFiles(wx.Panel):
                             if os.path.isfile(a):
                                 if namematches(a.split('/')[-1], include, exclude):
                                     try:
-                                        t = fixnewlines(open(a, 'rb').read())
+                                        x = self.root.GetPositionAbsolute(a)
+                                        if x != -1:
+                                            t = StyledTextCtrl.GetText(self.root.GetPage(x).GetWindow1())
+                                        else:
+                                            t = open(a, 'rb').read()
+                                        t = fixnewlines(t)
                                         found = 1
                                         tried[a] = 1
                                         break
@@ -796,14 +870,14 @@ class FindInFiles(wx.Panel):
             #add some prefix lines so that the line offset is correct
             data = (win.LineFromPosition(win.GetSelection()[0])*'\n' + 
                     fixnewlines(win.GetTextRange(*win.GetSelection())))
-            yield os.path.join(win.dirname, win.filename), data
+            yield self.getfn(win), data
         except cancelled:
             pass
     
     def open_files(self, path, subdirs, include, exclude):
         for win in self.root.control:
             if namematches(win.filename, include, exclude):
-                yield os.path.join(win.dirname, win.filename), fixnewlines(win.GetText())
+                yield self.getfn(win), fixnewlines(StyledTextCtrl.GetText(win))
         
     def directories(self, path, subdirs, include, exclude):
         try:

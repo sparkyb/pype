@@ -1,8 +1,8 @@
 
-To do for Python 2.0:
+Key for the todo items:
 - Not going to make it.
 * Done.
-? Maybe, still thinking.
+? Probably didn't make it here, may make it later.
 
 Switch from all-in-one to plugin style (for easier source maintenance).
 Switch to use wx namespace.
@@ -23,11 +23,11 @@ Beta 1:
 * made subwindows remember size and position
 * tooltips now understand __init__ and __new__
 - interpreter
-? shell command support (open new console, capture output)
+* shell command support (embedded within window)
 * filesystem browser with pathmarks
 * workspace management
 - project management
-? per-filetype preferences
+* per-filetype preferences
 
 Beta 2
 * Add a replace workspace mechanism.
@@ -44,8 +44,20 @@ Beta 2
 ? Save/load search criteria (like workspace).
 
 
-Beta 4:
+2.1:
 * per-filetype preferences
 * Fix per-document type saving and such...
-Fix dragging of edited documents in documents tab...
+* Fix dragging of edited documents in documents tab...
 
+2.2:
+* Add support for #encoding in python files (on open/save, but do not change).
+? Add search support for unicode/#encoding defined files that are not open.
+? Add PyShell from PyCrust as a Python console, but use the external process
+support to run the shell in another process.  Caveat:
+  ? PyShell would not get all the really neat introspection capabilities
+  without significant additional work (which I probably won't ever have time
+  for)
+? Use external command support to spawn persistant slow parser for tooltips,
+calltips, and 
+? Use optional listening socket to support later callings of PyPE pushing
+document opening into a single PyPE instance ("only single instance")

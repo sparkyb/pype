@@ -283,7 +283,7 @@ class ReplaceBar(wx.Panel):
             elif len(findTxt) == len(replaceTxt):
                 ## print "smartcasing", findTxt
                 r = []
-                for i,j in zip(win.GetTextRange(*sel), replaceTxt):
+                for i,j in zip(findTxt, replaceTxt):
                     if i.isupper():
                         r.append(j.upper())
                     elif i.islower():
@@ -300,7 +300,7 @@ class ReplaceBar(wx.Panel):
         
         sel = win.GetSelection()
         win.ReplaceSelection(replaceTxt)
-        win.SetSelection(sel[0], sel[1]-len(findTxt)+len(replaceTxt))
+        win.SetSelection(sel[0], sel[0]+len(replaceTxt))
         self.OnFindN(evt)
         
         return sel, len(findTxt)-len(replaceTxt)

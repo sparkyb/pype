@@ -3,7 +3,8 @@
 # 1. download and install the py2exe utility from:
 #      http://starship.python.net/crew/theller/py2exe/
 # 2. run the following command:
-#      python setup.py py2exe -w -f
+#      python setup.py py2exe
+
 from distutils.core import setup
 import py2exe
 import pype

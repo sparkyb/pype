@@ -59,17 +59,19 @@ from plugins import browser
 from plugins import workspace
 from plugins import todo
 from plugins import findinfiles
+from plugins import shell
+from plugins import textrepr
 
 ## from plugins import project
 
 for i in [logger, findbar, lru, filehistory, browser, workspace, todo,
-          findinfiles]:#, project]:
+          findinfiles, shell, textrepr]:#, project]:
     i.cancelled = cancelled
     i.isdirty = isdirty
 
 #
-VERSION = "2.1.1"
-VERSION_ = "2.1.1"
+VERSION = "2.2"
+VERSION_ = "2.2"
 
 if 1:
     #under an if so that I can collapse the declarations
@@ -252,6 +254,7 @@ if 1:
         TALL_ID = wxNewId()
         TD_ID = wxNewId()
         TB_ID = wxNewId()
+        FINDBAR_BELOW_EDITOR = wxNewId()
         NO_FINDBAR_HISTORY = wxNewId()
         CLEAR_FINDBAR_HISTORY = wxNewId()
 
@@ -341,7 +344,8 @@ if 1:
                ('\xfe\xff', 'utf-16-be'),
                ('\xff\xfe\xff\xfe', 'utf-16'),
                ('\xff\xfe', 'utf-16-le'),
-               ('', 'ascii')]
+               ('', 'ascii'),
+               ('', 'other')]
         ADDBOM = {}
         ENCODINGS = {}
         for i,j in BOM:
@@ -425,6 +429,10 @@ class MainWindow(wxFrame):
         self.SetIcon(getIcon())
         self.FINDSHOWN = 0
         path = os.path.join(homedir, 'menus.txt')
+        if UNICODE:
+            p = os.path.join(homedir, 'menus.u.txt')
+            if os.path.exists(p):
+                path = p
         try:    OLD_MENUPREF.update(self.readAndEvalFile(path))
         except: pass
 
@@ -500,6 +508,10 @@ class MainWindow(wxFrame):
         self.BOTTOMNB.AddPage(logger.logger(self.BOTTOMNB), 'Log')
         ## self.BOTTOMNB.AddPage(findinfiles.FindInFiles(self.BOTTOMNB, self), "Find in Files")
         self.BOTTOMNB.AddPage(findinfiles.FindInFiles(self.BOTTOMNB, self), "Search")
+        self.shell = shell.Shell(self.BOTTOMNB, self, self.config.get('shellprefs', {}))
+        self.BOTTOMNB.AddPage(self.shell, "Shell")
+        if UNICODE:
+            self.BOTTOMNB.AddPage(textrepr.TextRepr(self.BOTTOMNB, self), "repr(text)")
 
         self.leftt = wxPanel(self.RIGHTNB)#HiddenPanel(self.RIGHTNB, self, 0)#hierCodeTreePanel(self, self.RIGHTNB)
         self.leftt.sizer = wxBoxSizer(wxVERTICAL)
@@ -593,6 +605,7 @@ class MainWindow(wxFrame):
         menuAdd(self, viewmenu, "Zoom Out\tCtrl+-", "Make the text in the editing component smaller", self.OnZoom, wxNewId())
         viewmenu.AppendSeparator()
         menuAdd(self, viewmenu, "Go to line number\tAlt+G", "Advance to the given line in the currently open document", self.OnGoto, wxNewId())
+        menuAdd(self, viewmenu, "Go to position", "Advance to the given position in the currently open document", self.OnGotoP, wxNewId())
         menuAdd(self, viewmenu, "Jump forward", "Advance the cursor to the next quote/bracket", self.OnJumpF, wxNewId())
         menuAdd(self, viewmenu, "Jump backward", "Advance the cursor to the previous quote/bracket", self.OnJumpB, wxNewId())
         viewmenu.AppendSeparator()
@@ -621,7 +634,8 @@ class MainWindow(wxFrame):
             encmenu= wxMenu()
             menuAddM(setmenu, encmenu, "Encodings", "Change text encoding")
             menuAdd(self, encmenu, 'ascii', "Change encoding for the current file to ascii (will use utf-8 if unicode characters found)", self.OnEncChange, ENCODINGS['ascii'], typ)
-            for bom, enc in BOM[:-1]:
+            menuAdd(self, encmenu, 'other', "Will use the encoding specified in your encoding declaration, reverting to ascii if not found, and utf-8 as necessary", self.OnEncChange, ENCODINGS['other'], typ)
+            for bom, enc in BOM[:-2]:
                 menuAdd(self, encmenu, enc, "Change encoding for the current file to %s"%enc, self.OnEncChange, ENCODINGS[enc], typ)
 
         #----------------------------- Line ending menu ----------------------
@@ -710,8 +724,8 @@ class MainWindow(wxFrame):
         menuAdd(self, optionsmenu, "Set Caret M value", "Set the number of lines of unapproachable margin, the M value referenced in Caret Options", self.OnCaretM, wxNewId())
         menuAdd(self, optionsmenu, "Set Caret N value", "Set the multiplier, the N value referenced in Caret Options", self.OnCaretN, wxNewId())
         optionsmenu.AppendSeparator()
+        menuAdd(self, optionsmenu, "Findbar below editor", "When checked, any new find/replace bars will be below the editor, otherwise above (bars will need to be reopened)", self.OnFindbarToggle, FINDBAR_BELOW_EDITOR, wxITEM_CHECK)
         menuAdd(self, optionsmenu, "Use Findbar history", "When checked, allows for the find and replace bars to keep history of searches (bars will need to be reopened)", self.OnFindbarHistory, NO_FINDBAR_HISTORY, wxITEM_CHECK)
-        #menuAdd(self, findbarmenu, "Save Find Bar settings", "Save the settings (without history) of the current find/replace bar as the default for any document without preferences", self.OnFinbarDefault, wxNewId())
         menuAdd(self, optionsmenu, "Clear Find Bar history", "Clears the find/replace history on the current document", self.OnFindbarClear, CLEAR_FINDBAR_HISTORY)
         optionsmenu.AppendSeparator()
         menuAdd(self, optionsmenu, "Change Menus and Hotkeys", "Change the name of menu items and their hotkeys, any changes will require a restart to take effect", self.OnChangeMenu, wxNewId())
@@ -756,6 +770,7 @@ class MainWindow(wxFrame):
         self.menubar.Check(SAVE_CURSOR, save_cursor)
         self.menubar.Check(CARET_OPTION_TO_ID[caret_option][0], 1)
         self.menubar.Check(TITLE_OPTION_TO_ID[title_option][0], 1)
+        self.menubar.Check(FINDBAR_BELOW_EDITOR, findbar_location)
         self.menubar.Check(NO_FINDBAR_HISTORY, not no_findbar_history)
         self.menubar.FindItemById(CLEAR_FINDBAR_HISTORY).Enable(not no_findbar_history)
 
@@ -1075,6 +1090,10 @@ class MainWindow(wxFrame):
         if not os.path.exists(self.configPath):
             os.mkdir(self.configPath)
         path = os.path.join(self.configPath, 'history.txt')
+        if UNICODE:
+            p = os.path.join(self.configPath, 'history.u.txt')
+            if os.path.exists(p):
+                path = p
         print "Loading history from", path
         try:    self.config = self.readAndEvalFile(path)
         except: self.config = {}
@@ -1143,6 +1162,8 @@ class MainWindow(wxFrame):
                             ('TOOLBAR', 0),
                             ('SHOWWIDE', 1),
                             ('SHOWTALL', 1),
+                            ('shellprefs', {}),
+                            ('findbar_location', 1),
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -1191,17 +1212,25 @@ class MainWindow(wxFrame):
         self.config['TOOLBAR'] = TOOLBAR
         self.config['SHOWWIDE'] = SHOWWIDE
         self.config['SHOWTALL'] = SHOWTALL
+        self.config['shellprefs'] = self.shell.save_prefs()
+        self.config['findbar_location'] = findbar_location
         ## if self.config['usesnippets'] and (not self.restart):
             ## self.config['display2code'] = self.snippet.display2code
             ## self.config['displayorder'] = self.snippet.displayorder
         self.config['lastpath'] = self.config.get('lp', os.getcwd())
         try:
-            path = os.sep.join([self.configPath, 'history.txt'])
+            if UNICODE:
+                path = os.sep.join([self.configPath, 'history.u.txt'])
+            else:
+                path = os.sep.join([self.configPath, 'history.txt'])
             print "Saving history to", path
             f = open(path, "w")
             f.write(pprint.pformat(self.config))
             f.close()
-            path = os.sep.join([self.configPath, 'menus.txt'])
+            if UNICODE:
+                path = os.sep.join([self.configPath, 'menus.u.txt'])
+            else:
+                path = os.sep.join([self.configPath, 'menus.txt'])
             print "Saving menus to", path
             f = open(path, "w")
             f.write(pprint.pformat(MENUPREF))
@@ -1280,9 +1309,9 @@ class MainWindow(wxFrame):
         wnum, win = self.getNumWin(e)
         if win.dirname:
             try:
+                txt = win.GetText()
                 ofn = os.path.join(win.dirname, win.filename)
                 fil = open(ofn, 'wb')
-                txt = win.GetText()
                 fil.write(txt)
                 fil.close()
                 if UNICODE: a = "%s as %s"%(ofn, win.enc)
@@ -1292,6 +1321,8 @@ class MainWindow(wxFrame):
                 self.curdocstates[ofn] = win.GetSaveState()
                 self.curdocstates[ofn]['checksum'] = md5.new(txt).hexdigest()
                 win.MakeClean()
+            except cancelled:
+                raise
             except:
                 self.exceptDialog("Save Failed")
                 raise cancelled
@@ -1318,7 +1349,11 @@ class MainWindow(wxFrame):
                     raise cancelled
                 if self.isOpen(win.filename, win.dirname):
                     self.closeOpen(win.filename, win.dirname)
-
+            
+            #we do a quick GetText to make sure we don't set the file/dir names
+            #unless we really can get the text for the file.
+            x = win.GetText()
+            
             win.filename = fn
             win.dirname = dn
             self.makeOpen(fn, dn)
@@ -1421,7 +1456,7 @@ class MainWindow(wxFrame):
             FN = ''
             txt = ''
         
-        split = wxSplitterWindow(self.control, wxNewId(), style=wxSP_NOBORDER)
+        split = SplitterWindow(self.control, wxNewId(), style=wxSP_NOBORDER)
         split.SetMinimumPaneSize(0)
         EVT_SPLITTER_SASH_POS_CHANGING(self, split.GetId(), veto)
         
@@ -1484,6 +1519,7 @@ class MainWindow(wxFrame):
         self.control.AddPage(split, fn, switch)
         ## self.OnRefresh(None, nwin)
         self.updateWindowTitle()
+        nwin.SetFocus(True)
         return nwin.enc
 
     def OnReload(self, e, win=None):
@@ -1539,7 +1575,8 @@ class MainWindow(wxFrame):
                     break
             saved = self.sharedsave(win)
         elif self.isOpen(win.filename, win.dirname):
-            self.curdocstates[fn].update(win.GetSaveState())
+            self.curdocstates[fn] = win.GetSaveState()
+            self.curdocstates[fn]['checksum'] = md5.new(win.GetText()).hexdigest()
 
         if self.isOpen(win.filename, win.dirname):
             self.lastused[fn] = self.curdocstates.pop(fn, {})
@@ -1796,8 +1833,6 @@ class MainWindow(wxFrame):
             e.Skip()
         raise cancelled
 
-        return data
-
     def OnShowFindbar(self, evt):
         num, win = self.getNumWin(evt)
         if win.parent.IsSplit() and not isinstance(win.parent.GetWindow2(), findbar.FindBar):
@@ -1805,7 +1840,7 @@ class MainWindow(wxFrame):
         
         if not win.parent.IsSplit():
             bar = findbar.FindBar(win.parent, self)
-            win.parent.SplitHorizontally(win, bar, -(bar.GetBestSize())[1]-5)
+            win.parent.SplitHorizontally(win, bar, -(bar.GetBestSize())[1]-5, 1-findbar_location)
 
         bar = win.parent.GetWindow2()
         focused = self.FindFocus()
@@ -1820,9 +1855,10 @@ class MainWindow(wxFrame):
         num, win = self.getNumWin(evt)
         if win.parent.IsSplit() and isinstance(win.parent.GetWindow2(), findbar.FindBar):
             win.parent.GetWindow2().close()
+        
         if not win.parent.IsSplit():
             bar = findbar.ReplaceBar(win.parent, self)
-            win.parent.SplitHorizontally(win, bar, -(bar.GetBestSize())[1]-5)
+            win.parent.SplitHorizontally(win, bar, -(bar.GetBestSize())[1]-5, 1-findbar_location)
 
         self.commonbar(win)
 
@@ -1881,6 +1917,22 @@ class MainWindow(wxFrame):
             win.SetSelection(linepos-len(win.GetLine(valu))+len(win.format), linepos)
             win.ScrollToColumn(0)
     
+    def OnGotoP(self, e):
+        wnum, win = self.getNumWin(e)
+        x = win.GetSelection()[0]
+        valu = 0
+        while x > 0:
+            y, x = x, win.PositionBefore(x)
+            valu += len(win.GetTextRange(y,x))
+        valu = self.getInt('What position would you like to advance to?', '', valu)
+        length = win.GetLength()
+        x = 0
+        while valu > 0 and x < length:
+            y, x = x, win.PositionAfter(x)
+            valu -= len(win.GetTextRange(y,x))
+        if not valu:
+            win.SetSelection(x, x)
+    
     def OnJumpF(self, e):
         num, win = self.getNumWin(e)
         win.jump(1)
@@ -1934,7 +1986,7 @@ class MainWindow(wxFrame):
         self.control.AdvanceSelection(False)
 
     def OnRight(self, e):
-        self.control.AdvanceSelection(True)
+        self.control.AdvanceSelection(True)        
     
 #--------------------------- Document Menu Methods ---------------------------
 
@@ -2224,7 +2276,11 @@ class MainWindow(wxFrame):
         else:
             win.findbarprefs['find'] = []
             win.findbarprefs['replace'] = []
-    
+        
+    def OnFindbarToggle(self, e):
+        global findbar_location
+        findbar_location = (findbar_location + 1)%2
+        
     def OnFindbarHistory(self, e):
         global no_findbar_history
         no_findbar_history = (no_findbar_history + 1) % 2
@@ -2324,17 +2380,24 @@ class MainWindow(wxFrame):
                     
                     elif lang == 'cpp':
                         ## print "indent on return for cpp"
-                        dmap = {'{':1, '}':-1}
+                        dmap = {'{':1, '}':2}
+                        first = None
+                        x = [0,0,0]
                         for ch in line:
-                            xtra += dmap.get(ch, 0)
-                        
+                            y = dmap.get(ch, 0)
+                            x[y] += 1
+                            if not first and y:
+                                first=y
+                        if first==2:
+                            x[2] -= 1
+                        xtra = x[1]-x[2]
                         if line.split()[:1] == ['return']:
                             xtra -= 1
                     
                     #insert other indentation per language here.
                     
                     else: #if language is python
-                        print "indent on return for python"
+                        ## print "indent on return for python"
                         colon = ord(':')
                         
                         if (line.find(':')>-1):
@@ -2807,21 +2870,51 @@ class PythonSTC(wxStyledTextCtrl):
                     txt = txt[len(bom):]
                     #print "chose", enc
                     break
-            if self.enc != 'ascii':
-                try:    txt = txt.decode(self.enc)
-                except:
+            if self.enc == 'ascii':
+                twolines = txt.split(self.format, 2)[:2]
+                for line in twolines:
+                    x = re.search('coding[=:]\s*([-\w.]+)', line)
+                    if not x:
+                        continue
+                    x = x.group(1).lower()
+                    if x in ADDBOM:
+                        self.enc = x
+                        break
+                    else:
+                        self.enc = 'other'
+                        try:
+                            txt = txt.decode(x)
+                        except Exception, why:
+                            self.root.dialog(('''\
+                                You have used %r as your encoding
+                                declaration, but PyPE was unable to decode
+                                your document due to:
+                                %s
+                                PyPE will load your document as ASCII.
+                                Depending on the content of your file, this
+                                may cause data loss if you save the opened
+                                version.  You do so at your own risk, and
+                                have now been warned.'''%(x, why)).replace(32*' ', ''),
+                                "%r decoding error"%why)
+                            self.enc = 'ascii'
+                        break
+            if self.enc not in ('ascii', 'other'):
+                try:
+                    txt = txt.decode(self.enc)
+                except Exception, why:
                     #print "failed text decoding"
-                    self.root.dialog("There has been a unicode decoding error."
-                                     "The cause of this error is unknown to PyPE."
-                                     "To prevent loss or corruption of data, it"
-                                     "is suggested that you close the document,"
-                                     "do not save.  Then try to open the document"
-                                     "with the application you originally created"
-                                     "it with.  If PyPE was the original creator,"
-                                     "and only editor of the document, please"
-                                     "contact the author and submit a bug report.",
-                                     "Unicode decoding error.")
-                    self.enc = ascii
+                    self.root.dialog(('''\
+                        There has been a unicode decoding error:
+                        %s
+                        To prevent loss or corruption of data, it
+                        is suggested that you close the document,
+                        do not save.  Then try to open the document
+                        with the application you originally created
+                        it with.  If PyPE was the original creator,
+                        and only editor of the document, please
+                        contact the author and submit a bug report.'''%(why)).replace(24*' ', ''),
+                        "Unicode decoding error.")
+                    self.enc = 'ascii'
         wxStyledTextCtrl.SetText(self, txt)
         self.ConvertEOLs(fmt_mode[self.format])
         self.opened = 1
@@ -2832,15 +2925,53 @@ class PythonSTC(wxStyledTextCtrl):
     def GetText(self):
         self.ConvertEOLs(fmt_mode[self.format])
         if UNICODE:
+            if self.enc == 'other':
+                txt = wxStyledTextCtrl.GetText(self)
+                twolines = txt.split(self.format, 2)[:2]
+                x = None
+                #pull the encoding
+                for line in twolines:
+                    x = re.search('coding[=:]\s*([-\w.]+)', line)
+                    if not x:
+                        continue
+                    x = str(x.group(1).lower())
+                    break
+                #try the encoding, ascii, then utf-8 in that order
+                why = None
+                for i in [j for j in (x, 'ascii', 'utf-8') if j]:
+                    try:
+                        txt = txt.encode(i)
+                    except UnicodeEncodeError, wh:
+                        if why is None:
+                            why = wh
+                    else:
+                        if x != None and x != i:
+                            y = os.path.join(self.dirname, self.filename)
+                            if self.root.dialog(('''\
+                                    While trying to save the file named:
+                                        %s
+                                    PyPE was not able to encode the file as specified in the encoding declaration as:
+                                        %r
+                                    Due to:
+                                        %s
+                                    Would it be all right for PyPE to instead use %r as an encoding?
+                                    '''%(y, x, why, i)).replace(36*' ', ''),
+                                    "Continue with alternate encoding?", wxYES_NO) != wxID_YES:
+                                raise cancelled
+                            self.root.SetStatusText("Using %r encoding for %s"%(i, y))
+                        return ADDBOM.get(i, '') + txt
             if self.enc == 'ascii':
                 try:
                     return wxStyledTextCtrl.GetText(self).encode(self.enc)
                 except:
                     #Previously non-unicode ascii file has had unicode characters
                     #inserted.  Must encode into some sort of unicode format.
+                    #I choose you, utf-8!
                     self.enc = 'utf-8'
                     self.root.SetStatusText(self.enc, 2)
-            return ADDBOM[self.enc] + wxStyledTextCtrl.GetText(self).encode(self.enc)
+                    if self.root.HAS_RADIO:
+                        self.root.menubar.Check(ENCODINGS[self.enc], 1)
+            return ADDBOM.get(self.enc, '') + wxStyledTextCtrl.GetText(self).encode(self.enc)
         return wxStyledTextCtrl.GetText(self)
 
 #----- Takes care of the little '*' modified next to the open file name ------
@@ -2946,7 +3077,7 @@ class PythonSTC(wxStyledTextCtrl):
 
         if self.filename.lower().split('.')[-1:] in (['pyx'], ['pyi']):
             #it is pyrex!
-            self.SetKeyWords(0, ' '.join(keyword.kwlist) + ' struct union enum extern include ctypedef cdef char short int long float double unsigned')
+            self.SetKeyWords(0, ' '.join(keyword.kwlist) + ' struct union enum extern include ctypedef cdef char short int long float double unsigned public')
 
 #------------ copied and pasted from the wxStyledTextCtrl_2 demo -------------
     def OnUpdateUI(self, evt):
@@ -3111,7 +3242,8 @@ class MyNB(wxNotebook):
             if new > -1:
                 self.root.dragger._SelectItem(new)
                 win = self.GetPage(new).GetWindow1()
-                #fix for dealing with current paths.  They are wonderful.
+                #fix for dealing with current paths.
+                
                 if win.dirname:
                     try:
                         os.chdir(win.dirname)
@@ -3135,7 +3267,7 @@ class MyNB(wxNotebook):
             self.root.timer.Start(10, wxTIMER_ONE_SHOT)
             if event:
                 event.Skip()
-
+            win.SetFocus()
         finally:
             self.calling = 0
     
@@ -3784,12 +3916,14 @@ class MenuItemDialog(wxDialog):
                 if item[0].find('->') == -1 or not item[4]:
                     self.items[inum] = (item[0], name, '', '', 0)
                     return self.RefreshItem(inum)
+                
                 dlg = GetKeyDialog(self, item[2], item[3])
                 dlg.ShowModal()
-                if not self.accelerator:
-                    return
-                self.items[inum] = (item[0], name, item[2], self.accelerator, 1)
-                self.RefreshItem(inum)
+                
+                x = (item[0], name, item[2], self.accelerator, 1)
+                if x[:-1] != self.items[inum][:4]:
+                    self.items[inum] = x
+                    self.RefreshItem(inum)
 
             def getColumnText(self, index, col):
                 return self.items[index][col]
@@ -3897,6 +4031,41 @@ class MenuItemDialog(wxDialog):
     def OnCancel(self, evt):
         self.Destroy()
 
+
+class SplitterWindow(wxSplitterWindow):
+    if 1:
+        swap = 0
+    def SplitVertically(self, win1, win2, sashPosition=0, swap=0):
+        self.swap = swap
+        if swap:
+            win1, win2, sashPosition = win2, win1, -sashPosition
+        wxSplitterWindow.SplitVertically(self, win1, win2, sashPosition)
+    def SplitHorizontally(self, win1, win2, sashPosition=0, swap=0):
+        self.swap = swap
+        if swap:
+            win1, win2, sashPosition = win2, win1, -sashPosition
+        wxSplitterWindow.SplitHorizontally(self, win1, win2, sashPosition)
+    def Unsplit(self, which=None):
+        if which is None:
+            which = self.GetWindow2()
+        wxSplitterWindow.Unsplit(self, which)
+        self.swap = 0
+    def GetWindow1(self):
+        if self.IsSplit() and self.swap:
+            x = wxSplitterWindow.GetWindow2(self)
+        else:
+            x = wxSplitterWindow.GetWindow1(self)
+        return x
+    def GetWindow2(self):
+        if self.IsSplit() and self.swap:
+            x = wxSplitterWindow.GetWindow1(self)
+        else:
+            x = wxSplitterWindow.GetWindow2(self)
+        return x
+    def SetSashPosition(self, position, redraw = 1):
+        if self.swap:
+            position = -position
+        return wxSplitterWindow.SetSashPosition(self, position, redraw)
 
 #--------------------------- And the main...*sigh* ---------------------------
 import wx
