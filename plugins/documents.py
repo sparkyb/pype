@@ -182,6 +182,8 @@ class MyNB(wx.Notebook):
         if not win:
             return
         
+        win.SetCaretLineBack(__main__.COLOUR)
+        
         if __main__.UNICODE:
             self.root.SetStatusText(win.enc, 2)
             
@@ -213,6 +215,7 @@ class MyNB(wx.Notebook):
         self.root.menubar.Check(__main__.S_WHITE, win.GetViewWhiteSpace())
         ## self.root.menubar.Check(SORTBY, win.tree.tree.SORTTREE)
         self.root.menubar.Check(__main__.SAVE_CURSOR, win.save_cursor)
+        self.root.menubar.Check(__main__.HIGHLIGHT_LINE, win.GetCaretLineVisible())
         self.root.menubar.SetHelpString(__main__.IDR, "Indent region %i spaces"%win.GetIndent())
         self.root.menubar.SetHelpString(__main__.DDR, "Dedent region %i spaces"%win.GetIndent())
         self.root.macropage.update_button(win)

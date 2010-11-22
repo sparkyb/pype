@@ -1,3 +1,14 @@
+#-------------------------------- PyPE 2.6.2 ---------------------------------
+(added) automatic conversion for line endings during paste.
+(fixed) continuous exceptions being produced when using shells.
+(fixed) cursor position information for shells.
+(fixed) cursor position information now updates only when necessary.
+(added) 'Document -> Highlight Current Line' to optionally show the current
+line with a different background color.
+(added) 'Options -> Set Line Color' to change the default line background
+color for the "Highlight Current Line" option above.
+
+
 #-------------------------------- PyPE 2.6.1 ---------------------------------
 (added) FAQ topic in the help/readme explaining where ideas for PyPE's
 features come from.

@@ -41,6 +41,7 @@ from wx.py.editwindow import FACES
 from wx.py.shell import NAVKEYS, Shell
 
 import shell
+import lineabstraction
 
 def unimpl_factory(name):
     def _(*args, **kwargs):
@@ -99,7 +100,7 @@ OnHistoryReplace OnHistoryInsert clearCommand Copy CopyWithPrompts
 CopyWithPromptsPrefixed _clip OnHistorySearch'''.split()
 
 pypecopy = '''
-GetSaveState jump GetText SetText Undo Redo changeStyle pos_ch
+GetSaveState jump GetText SetText Undo Redo changeStyle pos_ch OnUpdateUI
 do'''.split()
 pypeprefix = '''SetSaveState'''.split()
 
@@ -122,6 +123,7 @@ class MyShell(stc.StyledTextCtrl):
         cached = [], [], {}, []
     def __init__(self, parent, id, root, trees=None, filter=1):
         stc.StyledTextCtrl.__init__(self, parent, id)
+        self.lines = lineabstraction.LineAbstraction(self)
         
         global pypestc
         if not pypestc:
@@ -159,6 +161,7 @@ class MyShell(stc.StyledTextCtrl):
         wx.EVT_KEY_DOWN(self, self.OnKeyDown)
         wx.EVT_KEY_DOWN(self, self.OnKeyDown2)
         wx.EVT_CHAR(self, self.OnChar)
+        self.Bind(wx.stc.EVT_STC_UPDATEUI, self.OnUpdateUI)
         self.scroll = 1
         self.history = []
         self.historyIndex = -1

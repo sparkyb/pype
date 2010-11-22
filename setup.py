@@ -13,6 +13,17 @@
 # I have explicitly removed support for them unless someone sends in a fix
 # for making them work.
 
+"""A Python-oriented editor with support for multiple platforms
+
+PyPE (Python Programmers Editor) was written in order to offer a lightweight
+but powerful editor for those of you who think emacs is too much and Idle is
+too little. Syntax highlighting is included out of the box, as is multiple
+open documents via tabs.
+
+See http://pype.sf.net/features.html for an almost complete listing of PyPE's
+available features.
+"""
+
 import sys
 
 if [i for i in sys.argv if 'wininst' in i or 'rpm' in i]:
@@ -52,11 +63,32 @@ def glob_(path, extns):
     
 samples = os.path.join('macros', 'samples')
 
+classifiers = '''
+Development Status :: 5 - Production/Stable
+Environment :: Other Environment
+Intended Audience :: Developers
+Intended Audience :: End Users/Desktop
+License :: OSI Approved :: GNU General Public License (GPL)
+Natural Language :: English
+Operating System :: OS Independent
+Programming Language :: Python
+Topic :: Software Development
+Topic :: Text Editors
+'''
+
+doclines = [i.strip() for i in __doc__.split("\n")]
+
 setup(
     name=nam,
     version=__version__.VERSION_,
     author="Josiah Carlson",
     author_email="jcarlson@uci.edu",
+    url="http://pype.sf.net/",
+    license="GNU GPL v. 2",
+    description=doclines[0],
+    long_description='\n'.join(doclines[2:]),
+    platforms=["any"],
+    classifiers=[i.strip() for i in classifiers.split('\n') if i.strip()],
     
     windows=[{"script": "pype.py",
               "icon_resources": [(1, os.path.join("icons", "pype.ico"))]}],

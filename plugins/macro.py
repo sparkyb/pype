@@ -191,7 +191,7 @@ class macroPanel(wx.Panel):
         if not stc:
             stc = self.root.getNumWin(None)[1]
         
-        if not hasattr(stc, 'lines'):
+        if not hasattr(stc, 'recording'):
             return
         
         if stc.recording:
@@ -303,7 +303,7 @@ class macroPanel(wx.Panel):
     
     def OnRec(self, e):
         num, stc = self.root.getNumWin(None)
-        if not hasattr(stc, 'lines'):
+        if not hasattr(stc, 'recording'):
             return
         stc.MacroToggle(None)
         self.update_button()
@@ -350,11 +350,11 @@ class macroPanel(wx.Panel):
         
         stc = self.root.getNumWin(None)[1]
         
-        if stc.recording:
-            self.root.dialog("You must stop recording a macro\nin order to play a macro.", 'Sorry')
+        if not hasattr(stc, 'recording'):
             return
         
-        if not hasattr(stc, 'lines'):
+        if stc.recording:
+            self.root.dialog("You must stop recording a macro\nin order to play a macro.", 'Sorry')
             return
         
         try:

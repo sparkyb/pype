@@ -332,6 +332,7 @@ if 1:
     SLOPPY = wxNewId()
     SMARTPASTE = wxNewId()
     SAVE_CURSOR = wxNewId()
+    HIGHLIGHT_LINE = wxNewId()
     S_WHITE = wxNewId()
     DND_ID = wxNewId()
     DB_ID = wxNewId()
@@ -849,6 +850,7 @@ class MainWindow(wxFrame):
             menuAdd(self, setmenu, "Show Indentation Guide", "Show or hide gray indentation guides in indentation", self.OnIndentGuideToggle, INDENTGUIDE, wxITEM_CHECK)
             menuAdd(self, setmenu, "Show Whitespace", "Show or hide 'whitespace' characters", self.OnWhitespaceToggle, S_WHITE, wxITEM_CHECK)
             menuAdd(self, setmenu, "Save Position", "Remember or forget the last position of the cursor when the current document is closed", self.OnSavePositionToggle, SAVE_CURSOR, wxITEM_CHECK)
+            menuAdd(self, setmenu, "Highlight Current line", "When checked, will change the background color of the current line", self.HightlightLineToggle, HIGHLIGHT_LINE, wxITEM_CHECK)
             setmenu.AppendSeparator()
             menuAdd(self, setmenu, "Refresh\tF5", "Refresh the browsable source tree, autocomplete listing, and the tooltips (always accurate, but sometimes slow)", self.OnRefresh, wxNewId())
             menuAdd(self, setmenu, "Run Macro", "Run the currently selected macro on the current document", self.macropage.OnPlay, wxNewId())
@@ -873,10 +875,6 @@ class MainWindow(wxFrame):
             x.sort()
             for _, idn, name, helpt in x:
                 menuAdd(self, longlinemenu, name, helpt, self.OnSetLongLineMode, idn, typ)
-
-#-------------------------------- Shell Menu ---------------------------------
-
-        ## self.shell = RunShell(self, menuBar, "&Shell")
 
 #------------------------------- Options Menu --------------------------------
         if 1:
@@ -938,8 +936,6 @@ class MainWindow(wxFrame):
                 desc = MACRO_CLICK_OPTIONS[iid][1]
                 menuAdd(self, moptmenu, desc, "When double clicking on a macro: %s"%desc, self.OnChangeMacroOptions, iid, typ)
             
-            
-            
             optionsmenu.AppendSeparator()
             caretmenu = wxMenu()
             menuAddM(optionsmenu, caretmenu, "Caret Tracking", "Set how your caret behaves while it is moving around")
@@ -956,6 +952,8 @@ class MainWindow(wxFrame):
             menuAddM(optionsmenu, caretmenu2, "Caret Width", "Set how wide your caret is to make it more or less visible")
             for i in (1,2,3):
                 menuAdd(self, caretmenu2, "%i pixels"%i, "Set your caret to be %i pixels wide."%i, self.OnCaretWidth, CARET_W_WIDTH_TO_O[i], typ)
+            
+            menuAdd(self, optionsmenu, "Set Line Color", "The color of the current line when 'Highlight Current Line' is enabled", self.OnLineColor, wxNewId())
             
             optionsmenu.AppendSeparator()
             menuAdd(self, optionsmenu, "Findbar below editor", "When checked, any new find/replace bars will be below the editor, otherwise above (bars will need to be reopened)", self.OnFindbarToggle, FINDBAR_BELOW_EDITOR, wxITEM_CHECK)
@@ -1035,7 +1033,7 @@ class MainWindow(wxFrame):
             EVT_TIMER(self, tid, self.ex_size)
             tid = wxNewId()
             self.timer2 = wxTimer(self, tid)
-            EVT_TIMER(self, tid, self.keyposn)
+            EVT_TIMER(self, tid, self.single_instance_poller)
             self.timer2.Start(100, wxTIMER_CONTINUOUS)
 
 #------------------ Open files passed as arguments to PyPE -------------------
@@ -1228,14 +1226,7 @@ class MainWindow(wxFrame):
         except cancelled:
             pass
 
-    def keyposn(self, evt=None):
-        #an attempt to keep the line and column indicators correct
-        try:
-            win = self.getNumWin()[1]
-            win.pos_ch(evt)
-        except cancelled:
-            pass
-        
+    def single_instance_poller(self, evt=None):
         if single_pype_instance:
             single_instance.poll()
 
@@ -1394,7 +1385,8 @@ class MainWindow(wxFrame):
                 ## 'triggers':{},
                'findbarprefs':{},
                      'sloppy':0,
-                 'smartpaste':0}
+                 'smartpaste':0,
+                   'showline':0}
         for _i in ASSOC:
             doc_def[_i[2]] = dict(dct)
             if _i[2] in ('xml', 'html'):
@@ -1444,6 +1436,7 @@ class MainWindow(wxFrame):
                             ('always_write_bom', 1),
                             ('document_options', 1),
                             ('macro_doubleclick', 0),
+                            ('COLOUR', '#d0d0d0'),
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -1524,6 +1517,7 @@ class MainWindow(wxFrame):
         self.config['always_write_bom'] = always_write_bom
         self.config['document_options'] = document_options
         self.config['macro_doubleclick'] = macro_doubleclick
+        self.config['COLOUR'] = COLOUR
         try:
             if UNICODE:
                 path = os.sep.join([self.configPath, 'history.u.txt'])
@@ -2237,6 +2231,10 @@ class MainWindow(wxFrame):
         n, win = self.getNumWin(e)
         win.save_cursor = (1+win.save_cursor)%2
     
+    def HightlightLineToggle(self, e):
+        n, win = self.getNumWin(e)
+        win.SetCaretLineVisible(not win.GetCaretLineVisible())
+    
     def OnExpandAll(self, e):
         n, win = self.getNumWin(e)
         lc = win.GetLineCount()
@@ -2501,6 +2499,21 @@ class MainWindow(wxFrame):
         
         num, win = self.getNumWin(e)
         win.SetCaretWidth(CARET_WIDTH)
+    
+    def OnLineColor(self, e):
+        global COLOUR
+        data = wx.ColourData()
+        data.SetChooseFull(True)
+        data.SetColour(COLOUR)
+        dlg = wx.ColourDialog(self, data)
+        changed = dlg.ShowModal() == wx.ID_OK
+        
+        if changed:
+            c = dlg.GetColourData().GetColour()
+            COLOUR = '#%02x%02x%02x'%(c.Red(), c.Green(), c.Blue())
+        dlg.Destroy()
+        
+        self.getNumWin()[1].SetCaretLineBack(COLOUR)
 
     def SharedCaret(self):
         _, flags = CARET_OPTION_TO_ID[caret_option]
@@ -2759,7 +2772,7 @@ class PythonSTC(wxStyledTextCtrl):
         self.SetEndAtLastLine(False)
         self.cached = None
         self.MarkerDefine(BOOKMARKNUMBER, BOOKMARKSYMBOL, 'blue', 'blue')
-        
+                
         _, flags = CARET_OPTION_TO_ID[caret_option]
         self.SetXCaretPolicy(flags, caret_slop*caret_multiplier)
         self.SetYCaretPolicy(flags, caret_slop)
@@ -2806,6 +2819,7 @@ class PythonSTC(wxStyledTextCtrl):
         self.SetMarginMask(2, wxSTC_MASK_FOLDERS)
         self.SetMarginSensitive(2, True)
         self.SetMarginWidth(2, 12)
+        self.SetPasteConvertEndings(1)
 
         if collapse_style: # simple folder marks, like the old version
             self.MarkerDefine(wxSTC_MARKNUM_FOLDER, wxSTC_MARK_BOXPLUS, "navy", "white")
@@ -2857,7 +2871,7 @@ class PythonSTC(wxStyledTextCtrl):
         EVT_KEY_UP(self, self.key_up)
 
         EVT_STC_CHARADDED(self, ID, self.added)
-        EVT_STC_CHANGE(self, ID, self.cha)
+        EVT_STC_CHANGE(self, ID, self.key_up)
         #unavailable in 2.5.1.2, didn't work in previous versions of wxPython
         # EVT_STC_POSCHANGED(self, ID, self.pos)
         EVT_STC_SAVEPOINTREACHED(self, ID, self.MakeClean)
@@ -3017,15 +3031,6 @@ class PythonSTC(wxStyledTextCtrl):
         print "Performed %s steps of the macro!"%len(self.macro)
         if PRINTMACROS: print '\n'.join(z)
 
-    def pos(self, e):
-        #print "position changed event"
-        #for some reason I never get called
-        self.pos_ch(e)
-
-    def cha(self, e):
-        #print "changed event"
-        self.key_up(e)
-
     def save(self, e):
         #print "save reached"
         self.key_up(e)
@@ -3037,11 +3042,11 @@ class PythonSTC(wxStyledTextCtrl):
     def key_up(self, e):
         if self.GetModify(): self.MakeDirty()
         else:                self.MakeClean()
-        self.pos_ch(e)
-        #e.Skip()
     
     def pos_ch(self, e):
         if self.root.control.GetCurrentPage() == self.GetParent():
+            if not hasattr(self, 'lines'):
+                return
             l = self.lines
             self.root.SetStatusText("L%i C%i"%(l.curlinei+1, l.curlinep), 1)
         if e:
@@ -3173,7 +3178,8 @@ class PythonSTC(wxStyledTextCtrl):
                 'whitespace':self.GetViewWhiteSpace(),
                 'sloppy':self.sloppy,
                 'smartpaste':self.smartpaste,
-                'checksum':md5.new(self.GetText()).hexdigest()
+                'checksum':md5.new(self.GetText()).hexdigest(),
+                'showline':self.GetCaretLineVisible()
                }
         for line in xrange(self.GetLineCount()):
             if self.MarkerGet(line) & BOOKMARKMASK:
@@ -3200,6 +3206,7 @@ class PythonSTC(wxStyledTextCtrl):
         self.triggers = saved['triggers']
         self.sloppy = saved['sloppy']
         self.smartpaste = saved['smartpaste']
+        self.SetCaretLineVisible(saved['showline'])
         if self.GetWrapMode() != saved['wrapmode']:
             self.root.WrapToggle(self)
         ## self.tree.tree.SORTTREE = saved.get('sortmode', sortmode)
@@ -3590,6 +3597,7 @@ class PythonSTC(wxStyledTextCtrl):
             #self.Refresh(True, wxRect(pt.x, pt.y, 5,5))
             #print pt
             #self.Refresh(False)
+        self.pos_ch(None)
 
     def OnMarginClick(self, evt):
         # fold and unfold as needed
