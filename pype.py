@@ -57,7 +57,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.6.5"
+    VERSION = "1.6.5.1"
     VREQ = '2.4.2.4'
 
     import string
@@ -2141,8 +2141,9 @@ class MyNB(wxNotebook):
             if VS[-1] == 'u':
                 self.root.SetStatusText(win.enc, 2)
                 if self.root.HAS_RADIO:
-                    self.root.stylemenu.Check(lexers2[win.GetLexer()], 1)
                     self.root.encmenu.Check(ENCODINGS[win.enc], 1)
+            if self.root.HAS_RADIO:
+                self.root.stylemenu.Check(lexers2[win.GetLexer()], 1)
             #if win.GetWrapMode() == wxSTC_WRAP_NONE:
             #    self.parent.SetStatusText("", 1)
             #else:

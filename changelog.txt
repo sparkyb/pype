@@ -1,3 +1,8 @@
+(PyPE 1.6.5.1)
+(fixed) a small bug with the syntax highlighting submenu not updating what
+highlighting is being used in non-unicode versions.
+
+
 (PyPE 1.6.5)
 (changed) untitled documents are now labeled as such, rather than not having a
 name at all on the tab.
