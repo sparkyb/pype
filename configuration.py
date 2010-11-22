@@ -1,5 +1,17 @@
 #----------------------------- configuration.py ------------------------------
 #----------------------- Settings for configuring PyPE -----------------------
+
+collapse_style = 0
+
+#if the following is set to 1, then drag and drop TEXT support will not work
+#in the editor control, but will enable drag and drop FILE support in the
+#editor control.  Enabled by default.  Why?  Because I drag files, I cut and
+#paste text.
+dnd_file = 1
+
+#CTRL-T swaps two lines.  Setting the below to 1 disables this hotkey.
+REM_SWAP = 1
+
 import os
 import sys
 #from wxPython.wx import *
@@ -9,26 +21,34 @@ from parsers import *
 fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
               "\n":wxSTC_EOL_LF,
               "\r":wxSTC_EOL_CR}
+fmt_Rmode = {}
+for i,j in fmt_mode.items():
+    fmt_Rmode[j] = i
+
 eol = os.linesep
 eolmode = fmt_mode[eol]
 
 runpath = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
-se = sys.executable
-a = se
-b = sys.argv[0]
-if ' ' in a:
-    a = '"%s"'%a
-if ' ' in b:
-    b = '"%s"'%b
-runme = "%s %s"%(a,b)
+def fp(path):
+    if sys.platform=='win32':
+        if ' ' in path:
+            return '"%s"'%path
+        return path
+    return path.replace(' ', '\\ ')
 
-if se[-8:] == 'pype.exe':
-    runme = a
+def fixpath(path):
+    return os.path.normpath(fp(path))
 
-spawnargs = [sys.executable]
-if sys.executable[-8:] != 'pype.exe':
-    spawnargs.append(sys.argv[0])
+se = fixpath(sys.executable)
+spawnargs = [se]
+
+if sys.executable[-8:].lower() == 'pype.exe':
+    runme = se
+else:
+    b = fixpath(os.path.join(runpath, sys.argv[0]))
+    runme = "%s %s"%(se,b)
+    spawnargs.append(b)
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
@@ -48,40 +68,6 @@ def command_parser(command):
     if beg != cur:
         args.append(command[beg:cur])
     return args
-
-
-#light vert line just before this column number
-#that is after this many characters
-col_line = 78
-
-#width of the left margin in pixels (I like mine big)
-margin_width = 40
-
-#for those collapseable source blocks (they rock)
-collapse = 1
-collapse_style = 0
-
-#most python users use this...Stay away from tabs, they reduce file size,
-#but are a bitch when it comes to formatting.
-indent = 4
-use_tabs = 0
-#if use_tabs enabled, the number of spaces per tab
-spaces_per_tab = 8
-
-#if the following is set to 1, then drag and drop TEXT support will not work
-#in the editor control, but will enable drag and drop FILE support in the
-#editor control.  Enabled by default.  Why?  Because I drag files, I cut and
-#paste text.
-dnd_file = 1
-
-#CTRL-T swaps two lines.  Setting the below to 1 disables this hotkey.
-REM_SWAP = 1
-
-#the default STC behavior resulted in hitting 'home' would send you to the
-#beginning of the entire line, rather than the displayed line
-#setting the below to 0 will give the default STC behavior (like emacs).
-#setting the below to 1 will give the behavior that most people are used to.
-SWAP_HE_BEHAVIOR = 1
 
 #for open/save dialogs
 wildcard = "All python files (*.py *.pyw)|*.py;*.pyw;*.PY;*.PYW|"\
@@ -198,3 +184,12 @@ def wrap_lines(text, width, lend):
     paragraphs = get_paragraphs(text, lend)
     retr = lend.join([wrap_paragraph(i, width) for i in paragraphs])
     return retr
+
+def validate(dlg, orig):
+    try:
+        a = int(dlg.GetValue())
+    except:
+        a = 0
+    if a < 1:
+        return orig
+    return a

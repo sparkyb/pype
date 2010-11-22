@@ -1,3 +1,134 @@
+(PyPE 1.7)
+(added) When reloading from disk, a document's browsable source tree, etc.,
+will be updated.
+(fixed) various problems with the window not being redrawn.
+(fixed) some indent/dedent problems.
+(added) SPE-style per-document todo list.
+(updated) the readme.txt that is included with PyPE.
+(changed) the default styling for unknown extensions is now plain text.
+(changed) the exceptDialog to show a scrolled text dialog, for easy copy/paste
+bug reports.
+(fixed) Thanks once again to Villy Dachev, any time the PyPE executable (or
+the source vesion was run with the python binary) was run from a path that
+contained spaces, it used to have some SERIOUS issues.  They have all been
+resolved.
+(fixed) a problem when one's user profile was not stored in a path containing
+spaces, resulting in a file not being parsed.
+(cleaned) up some parser spawning code.
+(added) notification to warn users when they attempt to run a script who'se
+path contains unicode characters.
+(fixed) a difficult to track down bug involving running the source version.
+It was the result of taking the location of the PyPE source as sys.argv[0],
+which only gives the relative path given the original path when running PyPE.
+Too many hours were spent tracking this bug down.  This was likely a long
+standing bug.
+
+
+(PyPE 1.7-test3)
+(fixed) 2 problems pointed out by Villy Dachev, and added one feature:
+(fixed) a problem with external document modification and refreshing.
+(fixed) a problem with running external scripts in the windows binary.  Users
+should check this one some more.
+(added) a 'fold all' function to the 'Document' menu.
+
+
+(PyPE 1.7-test2)
+(fixed) after using 'save as' or attempting to save a document that was
+previously unnamed, PyPE would leave capital letters in the document name
+within the document tab, even when the operating system is case agnostic.
+This is now fixed.  On systems where case does not matter, the file names will
+be consistent in the document tabs.  No change for systems that care about
+case in file names.  This has been a long-standing visual bug that was never
+noticed.
+(fixed) a bug with indentation.  Previously it would always indent using the
+default indent during indent/dedent operations (including when hitting return
+after a function def, while, etc).  This has been fixed so that indent/dedent
+uses the document specified indent.
+(changed) Rather than ALWAYS indenting/dedenting the indent width, the first
+indent/dedent operation will indent/dedent to the closest proper indentation
+position.  That is, if your indent width is k, after indent/dedent operations,
+the indentation of a line will be 0 mod k.
+(fixed) the text entry dialogs for various numbers in the document tab would
+not validate the result, making sure they were > 0, even when such a number
+was asked.  They now check.  If the returned value is <= 0, it will keep the
+previous value.
+(added) when closing down PyPE with open documents, PyPE will remember which
+lines were folded and which weren't.
+(added) a function to unfold all lines in a document to the 'Document' menu.
+(changed) a slight 'Document' menu reorganization.
+(tossed) some unused dialog box code.
+
+
+(PyPE 1.7-test)
+(changed) when source files are larger than 512k, the slow parser will never
+be called.  Why?  Because the slow parser runs around 25 seconds (on my
+machine) on such a large piece of Python source, and it stops being useful if
+you have to wait so long.
+(made faster) Thanks to the input of Jeff Grimmett (no sourceforge id given),
+the fast parser is even faster.  He offered a two-pass method that beat my
+previous single-pass method by a significant margin.  After more than a dozen
+emails back and forth, along with heavy optimization, which one is faster is
+still up for debate (there are some inputs where one is ~5% faster, then on
+others the other is ~5% faster).  All told, the new fast parser is around 30%
+faster than the original fast parser, and includes support for pulling out
+calltips, and better function/class listings in the browsable source tree.
+Most all the modifications to the parsing for this release is due to the
+dialog between Jeff and I.
+(fixed) Sometimes parsing would fail due to ambiguous line endings.  This has
+been fixed.  All line endings upon load, save, and parsing, are automatically
+converted to the most dominant line ending format.
+(fixed) fast parsing would ignore tabs, thinking they were not whitespace.
+Now it is converted before parsing to spaces, as given by spaces_per_tab in
+configuration.py
+(fixed) While I am uncertain whether Python supports unicode in function,
+class, or variable declarations, fast parsing will not behave any differently
+when using unicode or not.
+(changed) both parsers now generate a better browsable tree.  The tree
+now contains more information about function calls.  It also sorts based on
+the names of a function/class, without the leading 'class' or 'def', and
+ignores case.
+(moved) all the user-changeable configuration in configuration.py to the top
+of the file for easy access.
+(fixed) when hitting enter on a line with a return or pass statement, the next
+line will be dedented properly.
+(changed) the way calltips are cancelled.  They are cancelled less often,
+which is definitely better.
+(changed) due to the fact that the fast parser produces basically everything
+about the python source (except for docstrings and multi-line calltip
+definitions), PyPE will now use, by default, the fast parser to deal with
+parsing.  This is preferred, if only because now tree updates can happen in
+under 2 seconds for the majority of source files (on my Celeron 400).
+(increased) the size of the browsable source tree when "Show/hide tree" is
+used (whether by the menu or hotkey).
+(added) a command to hide all the browsable source trees.  Check the 'View'
+menu.
+(fixed) resizing the window doesn't change the size of the browsable source
+trees.  Every open document will have their browsable source tree keep their
+sizes during window resize.  It only updates the document that is currently
+visible (so no worries about 20 documents slowing down window resize).
+(fixed) a bug when using bookmarks.  When going to a bookmark, PyPE will make
+sure that the line containing the bookmark is visible.
+(changed) basically all those configuration options that were to be edited in
+configuration.py have been removed.  They are now available in the 'document'
+menu.
+(added) option to view/not view line numbers.
+(added) option to view/not view bookmark margin.
+(added) option to view/not view fold margin.
+(added) option to view/not view indentation guide.
+(added) option to view/not use tabs.
+(added) option to view/not wrap long lines.
+(added) option to change indent width.
+(added) option to change the tab character's width.
+(added) option to change the long line column number.
+(added) option to change the long line column indicator.
+(added) option to view/change the current line endings.
+(added) option to sort the browsable source tree by name or line number.
+(added) per-document autocomplete.  Rather than autocomplete being a global
+setting, it is now a per-document setting.
+(moved) location of encoding and syntax highlighting submenus to the document
+menu.
+
+
 (PyPE 1.6.5.4)
 (fixed) a bug when opening up multiple documents that are in the root of a
 drive in Windows.  Thank you once again francescoa@sourceforge's for the bug
