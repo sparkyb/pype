@@ -41,6 +41,7 @@ from configuration import *
 if 1:
     #if so I can collapse the declarations
     VERSION = "1.3"
+    VREQ = '2.4.1.2'
 
     class cancelled(exceptions.Exception):
         pass
@@ -1837,7 +1838,6 @@ class HeirCodeTreePanel(wxPanel):
             wxTreeCtrl.__init__(self, prnt, tid, style=wxTR_DEFAULT_STYLE|wxTR_HIDE_ROOT|wxTR_HAS_BUTTONS)
             self.parent = parent
             
-            #this should work for icons, but doesn't.
             isz = (16,16)
             il = wxImageList(isz[0], isz[1])
             self.images = [wxArtProvider_GetBitmap(wxART_FOLDER, wxART_OTHER, isz),
@@ -1912,8 +1912,18 @@ class HeirCodeTreePanel(wxPanel):
         win.SetFocus()
 
 #--------------------------- And the main...*sigh* ---------------------------
+import wx
+VS = wx.VERSION_STRING
+del wx
+
 def main():
     app = wxPySimpleApp()
+    if VS < VREQ:
+        app.frame = wxFrame(None, -1, "Improper version of wxPython")
+        dlg = wxMessageDialog(app.frame, "PyPE is only known to run on wxPython %s or later.\nYou are running version %s of wxPython.\nYou should upgrade your version of wxPython.\nNewer versions of wxPython are available at\nwww.wxpython.org"%(VREQ,VS), "Improper version of wxPython", wxOK|wxICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+        return
     app.frame = MainWindow(None, -1, "PyPE %s"%VERSION, (sys.argv[1:]))
     app.SetTopWindow(app.frame)
     app.frame.Show(1)

@@ -1,3 +1,11 @@
+(PyPE 1.3.1)
+(added) a version checker to PyPE.  If you are running a version of wxPython
+before 2.4.1.2, and PyPE worked before I added this, please email me with the
+version string of wxPython you were using, which can be found by running this
+(without the single quotes) python -c "import wx;print wx.VERSION_STRING"
+To email me, head to http://www.ics.uci.edu/~jcarlson/contact.html
+
+
 (PyPE 1.3)
 (confirmed) As believed, PyPE 1.2 and later work with Python 2.3.  No worries
 about upgrading, but no requirements either.  I'll be developing with 2.2, but
