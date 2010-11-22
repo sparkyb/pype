@@ -9,12 +9,7 @@ import sys
 #handy parsing and external command execution without external scripts
 if __name__ == '__main__':
     if (len(sys.argv) > 1):
-        if (sys.argv[1] == '--parse'):
-            del sys.argv[1]
-            from parsers import main
-            main()
-            sys.exit(0)
-        elif (sys.argv[1] == '--exec'):
+        if (sys.argv[1] == '--exec'):
             del sys.argv[1]
             import os
             cwd = os.getcwd()
@@ -42,12 +37,13 @@ if __name__ == '__main__':
             sys.exit(0)
 
 import os
-import keyword, traceback, cStringIO, imp, zlib, fnmatch
-import exceptions, time, pprint
+import keyword, traceback, cStringIO, imp, fnmatch, re
+import time, pprint
 from wxPython.wx import *
 from wxPython.stc import *
 from wxPython.lib.rcsizer import RowColSizer
 from wxPython.lib.dialogs import wxScrolledMessageDialog
+from wxPython.lib.mixins.listctrl import wxListCtrlAutoWidthMixin
 
 #--------------------------- configuration import ----------------------------
 from configuration import *
@@ -59,8 +55,14 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.8.2"
+    VERSION = "1.9"
     VREQ = '2.4.2.4'
+
+    try:
+        True
+    except:
+        True = bool(1)
+        False = not True
 
     import string
     STRINGPRINTABLE = string.printable[:]
@@ -69,12 +71,122 @@ if 1:
     OUTF = "%s/.%s.tmp"%(homedir, ST)
     INF = OUTF+".out"
 
-    class cancelled(exceptions.Exception):
+    class cancelled(Exception):
         pass
 
+    #keypresses
+    if 1:
+        keys = ["BACK", "TAB", "RETURN", "ESCAPE", "SPACE", "DELETE", "START", 
+        "LBUTTON", "RBUTTON", "CANCEL", "MBUTTON", "CLEAR", "PAUSE", 
+        "CAPITAL", "PRIOR", "NEXT", "END", "HOME", "LEFT", "UP", "RIGHT", 
+        "DOWN", "SELECT", "PRINT", "EXECUTE", "SNAPSHOT", "INSERT", "HELP", 
+        "NUMPAD0", "NUMPAD1", "NUMPAD2", "NUMPAD3", "NUMPAD4", "NUMPAD5", 
+        "NUMPAD6", "NUMPAD7", "NUMPAD8", "NUMPAD9", "MULTIPLY", "ADD", 
+        "SEPARATOR", "SUBTRACT", "DECIMAL", "DIVIDE", "F1", "F2", "F3", "F4", 
+        "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "F13", "F14", 
+        "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24", 
+        "NUMLOCK", "SCROLL", "PAGEUP", "PAGEDOWN", "NUMPAD_SPACE", 
+        "NUMPAD_TAB", "NUMPAD_ENTER", "NUMPAD_F1", "NUMPAD_F2", "NUMPAD_F3", 
+        "NUMPAD_F4", "NUMPAD_HOME", "NUMPAD_LEFT", "NUMPAD_UP", 
+        "NUMPAD_RIGHT", "NUMPAD_DOWN", "NUMPAD_PRIOR", "NUMPAD_PAGEUP", 
+        "NUMPAD_NEXT", "NUMPAD_PAGEDOWN", "NUMPAD_END", "NUMPAD_BEGIN", 
+        "NUMPAD_INSERT", "NUMPAD_DELETE", "NUMPAD_EQUAL", "NUMPAD_MULTIPLY", 
+        "NUMPAD_ADD", "NUMPAD_SEPARATOR", "NUMPAD_SUBTRACT", "NUMPAD_DECIMAL", 
+        "NUMPAD_DIVIDE"] 
+        
+        keyMap = {}
+        #RkeyMap = {}
+        for i in keys:
+            key = eval("WXK_"+i)
+            keyMap[key] = i
+            #RkeyMap[i] = key
+        for i in ["SHIFT", "ALT", "CONTROL", "MENU"]:
+            key = eval("WXK_"+i)
+            keyMap[key] = ''
+        del key
+        
+        def GetKeyPress(evt):
+            keycode = evt.GetKeyCode()
+            keyname = keyMap.get(keycode, None)
+            modifiers = ""
+            for mod, ch in [(evt.ControlDown(), 'Ctrl+'),
+                            (evt.AltDown(),     'Alt+'),
+                            (evt.ShiftDown(),   'Shift+'),
+                            (evt.MetaDown(),    'Meta+')]:
+                if mod:
+                    modifiers += ch
+    
+            if keyname is None:
+                if 27 < keycode < 256:
+                    keyname = chr(keycode)
+                else:
+                    keyname = "(%s)unknown" % keycode
+            return modifiers + keyname
+
+    MENULIST = []
+    MENUPREF = {}
+    HOTKEY_TO_ID = {}
+
+    def _spl(n):
+        return (n.split('\t', 1) + [''])[:2]
+
+    def recmenu(menu, id):
+        #this was a pain in the ass.
+        if isinstance(menu, wxMenuItem) or isinstance(menu, wxMenuItemPtr):
+            sm = menu.GetSubMenu()
+            if sm:
+                a = recmenu(sm, id)
+                if a:
+                    return '%s->%s'%(menu.GetLabel(), a)
+                return ''
+            elif menu.GetId() == id:
+                return menu.GetLabel()
+            else:
+                return ''
+        elif isinstance(menu, wxMenu) or isinstance(menu, wxMenuPtr):
+            ITEMS = menu.GetMenuItems()
+            for i in ITEMS:
+                a = recmenu(i, id)
+                if a:
+                    return a
+            return ''
+        else:
+            for i in xrange(menu.GetMenuCount()):
+                r = menu.GetMenu(i)
+                if r.FindItemById(id):
+                    return "%s->%s"%(menu.GetLabelTop(i), recmenu(r, id))
+        raise Exception("Item not found.")
+
     def menuAdd(root, menu, name, desc, funct, id, kind=wxITEM_NORMAL):
-        menu.Append(id, name, desc, kind)
+        
+        a = wxMenuItem(menu, id, 'TEMPORARYNAME', desc, kind)
+        menu.AppendItem(a)
         EVT_MENU(root, id, funct)
+
+        ns, oacc = _spl(name)
+        heir = recmenu(menuBar, id)[:-13] + ns
+        name, acc = MENUPREF.setdefault(heir, (ns, oacc))
+        MENULIST.append((heir, name, oacc, acc, kind in [wxITEM_NORMAL, wxITEM_CHECK]))
+        if acc:
+            HOTKEY_TO_ID[acc] = id
+
+        menuBar.SetLabel(id, '%s\t%s'%(name, acc))
+
+    def menuAddM(parent, menu, name, help=''):
+        if isinstance(parent, wxMenu) or isinstance(parent, wxMenuPtr):
+            id = wxNewId()
+            parent.AppendMenu(id, "TEMPORARYNAME", menu, help)
+            heir = recmenu(menuBar, id) + name
+            name, toss = MENUPREF.setdefault(heir, (name, ''))
+
+            menuBar.SetLabel(id, name)
+        else:
+            heir = name
+            name, toss = MENUPREF.setdefault(name, (name, ''))
+            
+            parent.Append(menu, name)
+        
+        MENULIST.append((heir, name, '', '', 0))
 
     def getIcon():
         data = getData()
@@ -85,7 +197,7 @@ if 1:
         icon.CopyFromBitmap(bitmap)
         return icon
 
-    ID_TIMER = wxNewId()
+    NEWDOCUMENT = 0L
     
     #required ids
     if 1:
@@ -105,7 +217,6 @@ if 1:
         TX_DS = wxNewId()
         lexers.update(dict(zip([PY_DS, HT_DS, CC_DS, XM_DS, TX_DS], ['python', 'html', 'cpp', 'xml', 'text'])))
         lexers3 = dict(zip(['python', 'html', 'cpp', 'xml', 'text'], [PY_DS, HT_DS, CC_DS, XM_DS, TX_DS]))
-
     
         #checkbox ids
         SNIPT = wxNewId()
@@ -204,6 +315,11 @@ class MainWindow(wxFrame):
                          style=wxDEFAULT_FRAME_STYLE|wxNO_FULL_REPAINT_ON_RESIZE)
 
         self.SetIcon(getIcon())
+        self.FINDSHOWN = 0
+        path = os.path.join(homedir, 'menus.txt')
+        try:    MENUPREF.update(self.readAndEvalFile(path))
+        except: pass
+
         #recent menu relocated to load configuration early on.
         recentmenu = wxMenu()
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
@@ -217,10 +333,8 @@ class MainWindow(wxFrame):
         EVT_MENU_RANGE(self, wxID_FILE1, wxID_FILE9, self.OnFileHistory)
         self.lastused = lastused(64+len(lastopen), LASTUSED)
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
-        self.poller = wxTimer(self, ID_TIMER)
         self.toparse = []
-        self.parsing = None
-        EVT_TIMER(self, ID_TIMER, self.OnRefreshDone)
+        self.parsing = 0
         
         #EVT_IDLE(self, self.SetPos)
         #a = wxNewId()
@@ -254,14 +368,22 @@ class MainWindow(wxFrame):
 
         # Setting up the menu.
 
+#------------------------- Insert menus into Menubar -------------------------
+        global menuBar
+        menuBar = wxMenuBar()
+
+        self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
+        self.menubar = menuBar
+
 #--------------------------------- File Menu ---------------------------------
+
         filemenu= wxMenu()
-        
+        menuAddM(menuBar, filemenu, "&File")
         menuAdd(self, filemenu, "&New\tCtrl+N",         "New file", self.OnNew, wxID_NEW)
         menuAdd(self, filemenu, "&Open\tCtrl+O",        "Open a file", self.OnOpen, wxID_OPEN)
         menuAdd(self, filemenu, "Open &Module\tAlt+M",  "Open a module for editing using the same path search as import would", self.OnOpenModule, wxNewId())
         menuAdd(self, filemenu, "Open &Last\t",         "Open all the documents that were opening before last program exit", self.OnOpenPrevDocs, wxNewId())
-        filemenu.AppendMenu(wxNewId(), "Open Recent", recentmenu)
+        menuAddM(filemenu, recentmenu, "Open Recent")
         filemenu.AppendSeparator()
         menuAdd(self, filemenu, "&Save\tCtrl+S",        "Save a file", self.OnSave, wxID_SAVE)
         menuAdd(self, filemenu, "Save &As",             "Save a file as...", self.OnSaveAs, wxID_SAVEAS)
@@ -275,8 +397,8 @@ class MainWindow(wxFrame):
 
 #--------------------------------- Edit Menu ---------------------------------
 
-        #more lines, but easier to understand.
         editmenu= wxMenu()
+        menuAddM(menuBar, editmenu, "&Edit")
         menuAdd(self, editmenu, "Undo\tCtrl+Z",         "Undo last modifications", self.OnUndo, wxNewId())
         menuAdd(self, editmenu, "Redo\tCtrl+Y",         "Redo last modifications", self.OnRedo, wxNewId())
         editmenu.AppendSeparator()
@@ -288,7 +410,8 @@ class MainWindow(wxFrame):
         menuAdd(self, editmenu, "Indent Region\tCtrl+]", "Indent region %i spaces%indent", self.OnIndent, wxNewId())
         menuAdd(self, editmenu, "Dedent Region\tCtrl+[", "Dedent region %i spaces%indent", self.OnDedent, wxNewId())
         editmenu.AppendSeparator()
-        menuAdd(self, editmenu, "Find\tCtrl+F",         "Find text in a file", self.OnShowFind, wxNewId())
+        menuAdd(self, editmenu, "Find...\tCtrl+F",      "Find text in a file", self.OnShowFind, wxNewId())
+        menuAdd(self, editmenu, "Find again\tF3",       "Find again same text in a file", self.OnShowFindAgain, wxNewId())
         menuAdd(self, editmenu, "Find In Files",        "Find a string or regular expression in a group of files", self.OnFindInFiles, wxNewId())
         menuAdd(self, editmenu, "Replace\tCtrl+R",      "Replace text in a file", self.OnShowFindReplace, wxNewId())
         menuAdd(self, editmenu, "Wrap Selected Text\tAlt+W", "Wrap selected text to a specified width", self.OnWrap, wxNewId())
@@ -298,8 +421,8 @@ class MainWindow(wxFrame):
             menuAdd(self, editmenu, "Insert Snippet\tCtrl+return", "Insert the currently selected snippet into the document", self.snippet.OnListBoxDClick, wxNewId())
         editmenu.AppendSeparator()
         menuAdd(self, editmenu, "Insert Comment\tCtrl+I", "Insert a centered comment", self.OnInsertComment, wxNewId())
-        menuAdd(self, editmenu, "Comment Selection\tAlt+3", "Comment selected lines", self.OnCommentSelection, wxNewId())
-        menuAdd(self, editmenu, "Uncomment Selection\tAlt+4", "Uncomment selected lines", self.OnUncommentSelection, wxNewId())
+        menuAdd(self, editmenu, "Comment Selection\tAlt+8", "Comment selected lines", self.OnCommentSelection, wxNewId())
+        menuAdd(self, editmenu, "Uncomment Selection\tAlt+9", "Uncomment selected lines", self.OnUncommentSelection, wxNewId())
 
         EVT_COMMAND_FIND(self, -1, self.OnFind)
         EVT_COMMAND_FIND_NEXT(self, -1, self.OnFind)
@@ -308,9 +431,11 @@ class MainWindow(wxFrame):
         EVT_COMMAND_FIND_CLOSE(self, -1, self.OnFindClose)
 
 #--------------------------------- View Menu ---------------------------------
+        
         viewmenu= wxMenu()
-        menuAdd(self, viewmenu, "Zoom In\tCtrl+<plus>", "Make the text in the editing component bigger", self.OnZoom, ZI)
-        menuAdd(self, viewmenu, "Zoom Out\tCtrl+<minus>", "Make the text in the editing component smaller", self.OnZoom, wxNewId())
+        menuAddM(menuBar, viewmenu,"&View")
+        menuAdd(self, viewmenu, "Zoom In\tCtrl++", "Make the text in the editing component bigger", self.OnZoom, ZI)
+        menuAdd(self, viewmenu, "Zoom Out\tCtrl+-", "Make the text in the editing component smaller", self.OnZoom, wxNewId())
         viewmenu.AppendSeparator()
         menuAdd(self, viewmenu, "Go to line number\tAlt+G", "Advance to the given line in the currently open document", self.OnGoto, wxNewId())
         viewmenu.AppendSeparator()
@@ -318,8 +443,17 @@ class MainWindow(wxFrame):
         menuAdd(self, viewmenu, "Next Bookmark\tF2", "Hop to the next bookmark in this file", self.OnNextBookmark, wxNewId())
         menuAdd(self, viewmenu, "Previous Bookmark\tShift+F2", "Hop to the previous bookmark in this file", self.OnPreviousBookmark, wxNewId())
 
-#-------------------------------- Style Menu ---------------------------------
+#------------------------------- Document menu -------------------------------
+        
+        setmenu= wxMenu()
+        menuAddM(menuBar, setmenu, "&Document")
+        menuAdd(self, setmenu, "Use Snippets (req restart)", "Enable or disable the use of snippets, requires restart for change to take effect", self.OnSnipToggle, SNIPT, wxITEM_CHECK)
+        menuAdd(self, setmenu, "Use Todo (req restart)", "Enable or disable the use of todo, requires restart for change to take effect", self.OnTodoToggle, TODOT, wxITEM_CHECK)
+        setmenu.AppendSeparator()
+
+        #-------------------------------- Style subenu -----------------------
         stylemenu= wxMenu()
+        menuAddM(setmenu, stylemenu, "Syntax Highlighting", "Change the syntax highlighting for the currently open document")
         try:
             typ = wxITEM_RADIO
             menuAdd(self, stylemenu, "Python",      "Highlight for Python syntax", self.OnStyleChange, PY_S, typ)
@@ -335,46 +469,31 @@ class MainWindow(wxFrame):
         menuAdd(self, stylemenu, "C/C++",       "Highlight for C/C++ syntax", self.OnStyleChange, CC_S, typ)
         menuAdd(self, stylemenu, "Text",        "No Syntax Highlighting", self.OnStyleChange, TX_S, typ)
 
-#---------------------------- Default Style Menu -----------------------------
+        #---------------------------- Default Style submenu ------------------
         stylemenu2= wxMenu()
+        menuAddM(setmenu, stylemenu2, "Default Highlighting", "Set the default syntax highlighting for new or unknown documents")
         menuAdd(self, stylemenu2, 'Python', '', self.OnDefaultStyleChange, PY_DS, typ)
         menuAdd(self, stylemenu2, 'HTML', '', self.OnDefaultStyleChange, HT_DS, typ)
         menuAdd(self, stylemenu2, 'XML', '', self.OnDefaultStyleChange, XM_DS, typ)
         menuAdd(self, stylemenu2, 'C/C++', '', self.OnDefaultStyleChange, CC_DS, typ)
         menuAdd(self, stylemenu2, 'Text', '', self.OnDefaultStyleChange, TX_DS, typ)
 
-#------------------------------ Encodings Menu -------------------------------
-
+        #------------------------------ Encodings submenu --------------------
         if VS[-1] == 'u':
             encmenu= wxMenu()
+            menuAddM(setmenu, encmenu, "Encodings", "Change text encoding")
             menuAdd(self, encmenu, 'ascii', "Change encoding for the current file to ascii (will use utf-8 if unicode characters found)", self.OnEncChange, ENCODINGS['ascii'], typ)
             for bom, enc in BOM[:-1]:
                 menuAdd(self, encmenu, enc, "Change encoding for the current file to %s"%enc, self.OnEncChange, ENCODINGS[enc], typ)
 
-        
-#----------------------------- Line ending menu ------------------------------
+        #----------------------------- Line ending menu ----------------------
         endingmenu = wxMenu()
+        menuAddM(setmenu, endingmenu, "Line Ending", "Change the line endings on the current document")
         menuAdd(self, endingmenu, "CRLF (windows)", "", self.OnLineEndChange, LE_CRLF, typ)
         menuAdd(self, endingmenu, "LF (*nix)", "", self.OnLineEndChange, LE_LF, typ)
         menuAdd(self, endingmenu, "CR (mac)", "", self.OnLineEndChange, LE_CR, typ)
-
-#------------------------------ Long line menu -------------------------------
-        longlinemenu = wxMenu()
-        menuAdd(self, longlinemenu, "Background", "Long lines will have a different background color beyond the column limit", self.OnSetLongLineMode, LL_BACK, typ)
-        menuAdd(self, longlinemenu, "Line", "Long lines will have a vertical line at the column limit", self.OnSetLongLineMode, LL_LINE, typ)
-        menuAdd(self, longlinemenu, "None", "Show no long line indicator", self.OnSetLongLineMode, LL_NONE, typ)
-
-#------------------------------- Document menu -------------------------------
-        setmenu= wxMenu()
-        menuAdd(self, setmenu, "Use Snippets (req restart)", "Enable or disable the use of snippets, requires restart for change to take effect", self.OnSnipToggle, SNIPT, wxITEM_CHECK)
-        menuAdd(self, setmenu, "Use Todo (req restart)", "Enable or disable the use of todo, requires restart for change to take effect", self.OnTodoToggle, TODOT, wxITEM_CHECK)
-        setmenu.AppendSeparator()
-        setmenu.AppendMenu(wxNewId(), "Syntax Highlighting", stylemenu, "Change the syntax highlighting for the currently open document")
-        setmenu.AppendMenu(wxNewId(), "Default Highlighting", stylemenu2, "Set the default syntax highlighting for new or unknown documents")
-
-        if VS[-1] == 'u':
-            setmenu.AppendMenu(wxNewId(), "Encodings", encmenu, "Change text encoding")
-        setmenu.AppendMenu(wxNewId(), "Line Ending", endingmenu, "Change the line endings on the current document")
+        #
+        
         setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Show Autocomplete", "Show the autocomplete dropdown while typing", self.OnAutoCompleteToggle, AUTO, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show line numbers", "Show or hide the line numbers on the current document", self.OnNumberToggle, NUM, wxITEM_CHECK)
@@ -395,14 +514,24 @@ class MainWindow(wxFrame):
         menuAdd(self, setmenu, "Indent Width", "Set the number of spaces per indentation level", self.OnSetIndent, wxNewId())
         menuAdd(self, setmenu, "Set Tab Width", "Set the visual width of tabs in the current open document", self.OnSetTabWidth, wxNewId())
         menuAdd(self, setmenu, "Set Long Line Column", "Set the column number for the long line indicator", self.OnSetLongLinePosition, wxNewId())
-        setmenu.AppendMenu(wxNewId(), "Set Long Line Indicator", longlinemenu, "Change the mode that signifies long lines")
+
+        #------------------------------ Long line submenu --------------------
+        longlinemenu = wxMenu()
+        menuAddM(setmenu, longlinemenu, "Set Long Line Indicator", "Change the mode that signifies long lines")
+        menuAdd(self, longlinemenu, "Background", "Long lines will have a different background color beyond the column limit", self.OnSetLongLineMode, LL_BACK, typ)
+        menuAdd(self, longlinemenu, "Line", "Long lines will have a vertical line at the column limit", self.OnSetLongLineMode, LL_LINE, typ)
+        menuAdd(self, longlinemenu, "None", "Show no long line indicator", self.OnSetLongLineMode, LL_NONE, typ)
+        #
+        
         setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Save settings", "Save the settings for the current document as the default for all documents (excluding syntax and encodings)", self.OnSaveSettings, wxNewId())        
 
 #--------------------------------- Tab Menu ----------------------------------
+        
         tabmenu= wxMenu()
-        menuAdd(self, tabmenu, "Previous Tab\tCtrl+,",          "View the tab to the left of the one you are currently", self.OnLeft, wxNewId())
-        menuAdd(self, tabmenu, "Next Tab\tCtrl+.",              "View the tab to the right of the one you are currently", self.OnRight, wxNewId())
+        menuAddM(menuBar, tabmenu, "&Tabs")
+        menuAdd(self, tabmenu, "Previous Tab\tAlt+,",          "View the tab to the left of the one you are currently", self.OnLeft, wxNewId())
+        menuAdd(self, tabmenu, "Next Tab\tAlt+.",              "View the tab to the right of the one you are currently", self.OnRight, wxNewId())
         tabmenu.AppendSeparator()
         menuAdd(self, tabmenu, "Move tab left\tCtrl+Alt+,",     "Swap the current tab with the one on the left", self.MoveLeft, wxNewId())
         menuAdd(self, tabmenu, "Move tab right\tCtrl+Alt+.",    "Swap the current tab with the one on the right", self.MoveRight, wxNewId())
@@ -410,6 +539,8 @@ class MainWindow(wxFrame):
 #------------------------------- Snippet Menu --------------------------------
         if self.config['usesnippets']:
             snippetmenu= wxMenu()
+            self.OnSnipToggle(None)
+            menuAddM(menuBar, snippetmenu, "Sn&ippets")
             menuAdd(self, snippetmenu, "Previous snippet\tCtrl+Shift+,",        "Select the previous code snippet", self.snippet.OnSnippetP, wxNewId())
             menuAdd(self, snippetmenu, "Next snippet\tCtrl+Shift+.",            "Select the next code snippet", self.snippet.OnSnippetN, wxNewId())
             menuAdd(self, snippetmenu, "Insert Snippet\tCtrl+return",           "Insert the currently selected snippet into the document", self.snippet.OnListBoxDClick, wxNewId())
@@ -417,7 +548,10 @@ class MainWindow(wxFrame):
             menuAdd(self, snippetmenu, "Show/hide snippet bar\tCtrl+Shift+B",   "Show/hide the global code snippet bar on the left", self.OnSnippet, wxNewId())
 
 #------------------------------- Pathmark Menu -------------------------------
+
         pathmarkmenu = wxMenu()
+        self.pm = pathmarkmenu
+        menuAddM(menuBar, pathmarkmenu, "&Pathmarks")
         menuAdd(self, pathmarkmenu, "View pathmarks",           "Edit your Pathmarks", self.ViewPathmarks, wxNewId())
         menuAdd(self, pathmarkmenu, "Edit pathmarks\tCtrl+B",   "Add a path to your bookmarks", self.AddPathmark, wxNewId())
         menuAdd(self, pathmarkmenu, "Remove pathmark",          "Remove a bookmarked path", self.RemovePathmark, wxNewId())
@@ -433,32 +567,20 @@ class MainWindow(wxFrame):
             else:
                 EVT_MENU(self, pmk[i-49], self.OnPathmark)
 
+#-------------------------------- Shell Menu ---------------------------------
+
+        self.shell = RunShell(self, menuBar, "&Shell")
+
 #--------------------------------- Help Menu ---------------------------------
+        
         helpmenu= wxMenu()
+        menuAddM(menuBar, helpmenu, "&Help")
         menuAdd(self, helpmenu, "About...", "About this piece of software", self.OnAbout, wxID_ABOUT)
+        menuAdd(self, helpmenu, "Change Menus (req restart)", "Change the name of menu items and their hotkeys", self.OnChangeMenu, wxNewId())
         helpmenu.AppendSeparator()
         menuAdd(self, helpmenu, "PyPE Help\tF1", "View the help", self.OnHelp, wxID_HELP)
 
-#------------------------- Insert menus into Menubar -------------------------
-        menuBar = wxMenuBar()
-        # Adding the menus to the MenuBar
-        menuBar.Append(filemenu,"&File")
-        menuBar.Append(editmenu, "&Edit")
-        menuBar.Append(viewmenu,"&View")
-        menuBar.Append(setmenu, "&Document")
-        menuBar.Append(tabmenu, "&Tabs")
-        if self.config['usesnippets']:
-            self.OnSnipToggle(None)
-            menuBar.Append(snippetmenu, "Sn&ippets")
-        self.pm = pathmarkmenu
-        menuBar.Append(pathmarkmenu, "&Pathmarks")
-        self.shell = RunShell(self)
-        menuBar.Append(self.shell, "&Shell")
-        menuBar.Append(helpmenu, "&Help")
-        self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
-        self.menubar = menuBar
-
-#------------------------- A couple state variables --------------------------
+#------------------------ A ...few... state variables ------------------------
 
         self.Show(true)
         self.dirname = '.'
@@ -475,31 +597,6 @@ class MainWindow(wxFrame):
         self.menubar.Check(lexers3[DEFAULTLEXER], 1)
         self.menubar.Check(SAVE_CURSOR, save_cursor)
 
-#---------------- A nice lookup table for control keypresses -----------------
-#-------------- it saves the trouble of a many if calls during ---------------
-#---------------- control+keypress combos, which can't hurt ------------------
-
-        #the commented lines mean that the insertion of an item into the menu
-        #created the shortcut key necessary
-        self.ctrlpress=dict([
-            #(13, self.snippet.OnListBoxDClick),#insert selected code snippet
-            #(70, self.OnShowFind),      #find string with Ctrl+f
-            #(82, self.OnShowFindReplace),#find and replace string with Ctrl+r
-            #(73, self.OnInsertComment), #shifts current line down one, inserting a line-long comment
-            #(78, self.OnNew),           #create a new document with Ctrl+n
-            #(79, self.OnOpen),          #open an old document with Ctrl+o
-            #(87, self.OnClose),         #close the currently open document with Ctrl+w
-            #(83, self.OnSave),          #save the currently open document with Ctrl+s
-            (93, self.OnIndent),        #indent the current line or selection of lines (indent) spaces with Ctrl+]
-            (91, self.OnDedent),        #dedent the current line or selection of lines (indent) spaces with Ctrl+[
-            (44, self.OnLeft),          #go to the tab to the left with Ctrl+, (same key as <)
-            (46, self.OnRight)          #go to the tab to the right with Ctrl+. (same key as >)
-            #(66, self.AddPathmark)      #open the 'edit pathmark' dialog
-        ])
-
-#------------------------------ Pathmark stuff -------------------------------
-        self.ctrlpress.update(dict(zip(pathmarks.keys(), 10*[self.OnPathmark])))
-
 #------------------------ Drag and drop file support -------------------------
         self.SetDropTarget(FileDropTarget(self))
 
@@ -507,6 +604,7 @@ class MainWindow(wxFrame):
         self.OnDrop(fnames, 0)
         EVT_SIZE(self, self.OnResize)
         EVT_ACTIVATE(self, self.OnActivation)
+        EVT_KEY_DOWN(self, self.OnKeyPressed)
 
     def dialog(self, message, title, styl=wxOK):
         d= wxMessageDialog(self,message,title,styl)
@@ -639,7 +737,7 @@ class MainWindow(wxFrame):
         globals().update(self.config.setdefault('DOCUMENT_DEFAULTS', dct))
 
         pathmarks.update(paths)
-        
+
     def saveHistory(self):
         history = []
         for i in range(self.fileHistory.GetNoHistoryFiles()):
@@ -657,7 +755,11 @@ class MainWindow(wxFrame):
         try:
             path = os.sep.join([self.configPath, 'history.txt'])
             f = open(path, "w")
-            pprint.pprint(self.config, f)
+            f.write(pprint.pformat(self.config))
+            f.close()
+            path = os.sep.join([self.configPath, 'menus.txt'])
+            f = open(path, "w")
+            f.write(pprint.pformat(MENUPREF))
             f.close()
         except:
             self.exceptDialog("Could not save preferences to %s"%path)
@@ -890,7 +992,10 @@ class MainWindow(wxFrame):
             
         f = nwin.filename
         if f == ' ':
-            f = '<untitled>'
+            globals()['NEWDOCUMENT'] += 1
+            nwin.NEWDOCUMENT = NEWDOCUMENT
+            f = '<untitled %i>'%NEWDOCUMENT
+            
 
         self.control.AddPage(split, f, switch)
         self.OnRefresh(None, nwin)
@@ -924,7 +1029,7 @@ class MainWindow(wxFrame):
     def sharedsave(self, win):
         nam = win.filename
         if not win.dirname:
-            nam = "<untitled>"
+            nam = "<untitled %i>"%win.NEWDOCUMENT
         a = self.dialog("%s was modified after last save.\nSave changes before closing?"%nam,\
                         "Save changes?", wxYES_NO|wxCANCEL)
         if a == wxID_CANCEL:
@@ -1102,8 +1207,11 @@ class MainWindow(wxFrame):
         win.MakeDirty()
         win.BeginUndoAction()
         for lineNumber in range(start, end + 1):
-            firstChar = win.PositionFromLine(lineNumber)
-            win.InsertText(firstChar, '##')
+            firstChar = win.GetLineIndentPosition(lineNumber)
+            lastChar = win.GetLineEndPosition(lineNumber)
+            ranga = win.GetTextRange(firstChar,lastChar)
+            if len(ranga.strip()) != 0:
+                win.InsertText(firstChar, '## ')
         win.SetCurrentPos(win.PositionFromLine(start))
         win.SetAnchor(win.GetLineEndPosition(end))
         win.EndUndoAction()
@@ -1118,15 +1226,17 @@ class MainWindow(wxFrame):
         win.MakeDirty()
         win.BeginUndoAction()
         for lineNumber in range(start, end + 1):
-            firstChar = win.PositionFromLine(lineNumber)
-            if chr(win.GetCharAt(firstChar)) == '#':
-                if chr(win.GetCharAt(firstChar + 1)) == '#':
-                    # line starts with ##
-                    win.SetCurrentPos(firstChar + 2)
-                else:
-                    # line starts with #
-                    win.SetCurrentPos(firstChar + 1)
-                win.DelLineLeft()
+            firstChar = win.GetLineIndentPosition(lineNumber)
+            texta = win.GetTextRange(firstChar,firstChar+3)
+            lengtha = 0
+            if texta[0:3] == '## ':
+                lengtha = 3
+            elif texta[0:2] == '##':
+                lengtha = 2
+            elif texta[0:1] == '#':
+                lengtha = 1
+            win.SetSelection(firstChar,firstChar+lengtha)
+            win.ReplaceSelection("")
 
         win.SetCurrentPos(win.PositionFromLine(start))
         win.SetAnchor(win.GetLineEndPosition(end))
@@ -1155,6 +1265,8 @@ class MainWindow(wxFrame):
         return data
 
     def OnShowFind(self, evt):
+        if self.FINDSHOWN: return
+        else: self.FINDSHOWN = 1
         wcount = self.control.GetPageCount()
         if not wcount:
             return evt.Skip()
@@ -1166,9 +1278,11 @@ class MainWindow(wxFrame):
         data = self.makedata(evt)
         dlg = wxFindReplaceDialog(self, data, "Find")
         dlg.data = data
-        return dlg.Show(True)
+        dlg.Show(True)
 
     def OnShowFindReplace(self, evt):
+        if self.FINDSHOWN: return
+        else: self.FINDSHOWN = 1
         wcount = self.control.GetPageCount()
         if not wcount:
             return evt.Skip()
@@ -1180,6 +1294,14 @@ class MainWindow(wxFrame):
         dlg = wxFindReplaceDialog(self, data, "Find & Replace", wxFR_REPLACEDIALOG)
         dlg.data = data
         return dlg.Show(True)
+
+    def OnShowFindAgain(self, evt):
+        try: self.findTxt
+        except: return
+        a = wxFindDialogEvent(wxEVT_COMMAND_FIND_NEXT)
+        a.SetFlags(self.flags)
+        a.SetFindString(self.findTxt)
+        self.OnFind(a)
 
     def OnFind(self, evt):
         wnum, win = self.getNumWin(evt)
@@ -1199,6 +1321,7 @@ class MainWindow(wxFrame):
         if findTxt and (findTxt[-1] in ['"', "'"]):
             try:    findTxt = eval(findTxt)
             except: pass
+        self.findTxt = findTxt
 
         #the next couple lines deal with python strings in replace
         if et == wxEVT_COMMAND_FIND_REPLACE or et == wxEVT_COMMAND_FIND_REPLACE_ALL:
@@ -1219,8 +1342,11 @@ class MainWindow(wxFrame):
             #searching up causes a crash when searching for unicode strings
             flags = flags|wxFR_DOWN
 
+        self.flags = flags
+
         if et == wxEVT_COMMAND_FIND_REPLACE_ALL:
             totl = 0
+            win.BeginUndoAction()
             while 1:
                 win.last = win.FindText(win.last, win.GetTextLength(), findTxt, flags)
                 if win.last > -1:
@@ -1235,6 +1361,7 @@ class MainWindow(wxFrame):
                     win.SetSelection(win.gcp, win.gcp)
                     win.ScrollToColumn(0)
                     win.EnsureCaretVisible()
+                    win.EndUndoAction()
                     return self.dialog("%i replacements made."%totl, "Finished replacing")
         elif et == wxEVT_COMMAND_FIND_REPLACE:
             win.last = win.FindText(win.last, win.GetTextLength(), findTxt, flags)
@@ -1273,12 +1400,14 @@ class MainWindow(wxFrame):
         win.EnsureCaretVisible()
         if win.last == -1:
             self.dialog("Reached the end of the document.", "")
-            
+
         return None
+
 
     def OnFindClose(self, evt):
         #self.log.write("wxFindReplaceDialog closing...\n")
         evt.GetDialog().Destroy()
+        self.FINDSHOWN = 0
         for win in self.control:
             try:
                 if win.last == -1:
@@ -1289,6 +1418,10 @@ class MainWindow(wxFrame):
                 continue
 
 #---------------------------- View Menu Commands -----------------------------
+
+    def Maximize(self, b):
+        wxFrame.Maximize(b)
+        wxPostEvent(wxSizeEvent((0,0), self.GetId()))
 
     def OnZoom(self, e):
         wnum, win = self.getNumWin(e)
@@ -1332,10 +1465,11 @@ class MainWindow(wxFrame):
 
     def OnResize(self, e):
         num, stc = self.getNumWin(e)
-        width = self.control.GetClientSize()[0]
+        width = e.GetSize()[0]
         split = stc.parent
         split.SetSashPosition(max(width-stc.SAVEDPOSITION, int(width/2)))
-        e.Skip()
+        if e:
+            e.Skip()
 
     def SetPos(self, e):
         try:    n, w = self.getNumWin(e)
@@ -1349,91 +1483,43 @@ class MainWindow(wxFrame):
         e.Skip()
 
     def startnext(self):
-        look = INF
-        if os.path.isfile(look):
-            os.remove(look)
+        self.parsing = 1
         done = 0
-        while not done and self.toparse:
-            cur = self.toparse.pop(0)
-            if cur in self.control:
-                self.parsing = (cur, time.time())
-                fil = OUTF
-                cur.ConvertEOLs(fmt_mode[cur.format])
-                out = repr(wxStyledTextCtrl.GetText(cur).replace('\t', cur.GetTabWidth()*' '))
-                a = open(fil, 'wb')
-                a.write(out)
-                a.close()
-                done = 1
-        if done:
-            fil = fixpath(fil)
-            if sys.platform == 'win32':
-                os.spawnv(os.P_DETACH, sys.executable, spawnargs+['--parse', fil])
-            else:
-                os.spawnvp(os.P_NOWAIT, sys.executable, spawnargs+['--parse', fil])
-            self.poller.Start(100)
+        while self.toparse:
+            win = self.toparse.pop(0)
+            if win in self.control:
+                start = time.time()
+
+                win.ConvertEOLs(fmt_mode[win.format])
+                out = wxStyledTextCtrl.GetText(win).replace('\t', win.GetTabWidth()*' ')
+
+                tpl = fast_parser(out, win.format, 3, wxYield)
+                if not win in self.control:
+                    continue
+                h1, win.kw, win.tooltips, todo = tpl
+
+                win.kw.sort()
+                win.kw = ' '.join(win.kw)
+                win.tree.new_hierarchy(h1)
+                t = ' and tooltips'
+                if win.todo:
+                    win.todo.NewItemList(todo)
+                    t = ', tooltips and todo'
+                self.SetStatusText(("Browsable source tree, autocomplete%s"+
+                                    " updated for %s in %.1f seconds.")%(t,
+                                    win.filename, time.time()-start))
+                win.refresh = 0
+        self.parsing = 0
 
     def OnRefresh(self, e, win=None):
         if win is None:
             num, win = self.getNumWin(e)
-        #start = time.time()
         if win.refresh:
             return
         win.refresh = 1
         self.toparse.append(win)
-        if not self.poller.IsRunning():
+        if not self.parsing:
             self.startnext()
-
-    def OnRefreshDone(self, e):
-        look = INF
-        if os.path.isfile(look):
-            self.poller.Stop()
-        else:
-            return
-        if not self.parsing[0] in self.control:
-            #document was closed before refresh completed
-            #ignore the event
-            return self.startnext()
-        win = self.parsing[0]
-        win.refresh = 0
-        
-        try:
-            #print "getting result"
-            rslt = ""
-            k = 5
-            while k:
-                try:
-                    k -= 1
-                    a = open(look, 'rb')
-                    rslt = a.read()
-                    a.close()
-                    os.remove(look)
-                    break
-                except:
-                    #print "deletion failed", k, len(rslt)
-                    time.sleep(.1)
-                    #return self.poller.Start(100)
-            tpl = eval(rslt)
-            #print "got the result", bool(tpl[0])
-            toss = 1
-            h1, win.kw, win.tooltips, todo = tpl
-            #print "passing on the refresh"
-            win.kw.sort()
-            win.kw = ' '.join(win.kw)
-            win.tree.new_hierarchy(h1)
-            t = ' and tooltips'
-            win.todoL = todo
-            if win.todo:
-                win.todo.NewItemList(todo)
-                t = ', tooltips and todo'
-            self.SetStatusText("Browsable source tree, autocomplete%s updated for %s in %.1f seconds."%(t, win.filename, time.time()-self.parsing[1]))
-
-        except:
-            try:
-                time.sleep(.1)
-                os.remove(look)
-            except:
-                pass
-        self.startnext()
 
     def OnToggleBookmark (self, e):
         wnum, win = self.getNumWin(e)
@@ -1495,6 +1581,9 @@ class MainWindow(wxFrame):
                         "Restart is%s required for change to take effect."%\
                         (["dis", "en"][self.config['usetodo']],
                          [" not", ''][self.restartt]), "Preference change")
+
+    def OnChangeMenu(self, e):
+        MenuItemDialog(self, self).ShowModal()
 
     def OnStyleChange(self,e):
         wnum, win = self.getNumWin(e)
@@ -1565,7 +1654,8 @@ class MainWindow(wxFrame):
         #these next two lines are to allow
         #win.GetFoldLevel() to be accurate
         win.HideLines(0, win.GetLineCount()-1)
-        wxYield()
+        try: wxYield()
+        except: pass
         
         #toss all the old folds
         self.OnExpandAll(e)
@@ -1834,47 +1924,21 @@ class MainWindow(wxFrame):
 #-------------------------- Hot Key support madness --------------------------
     def OnKeyPressed(self, event):
         showpress=0
-        if showpress: print "keypressed", event.KeyCode()
+        
+        keypressed = GetKeyPress(event)
+        
+        if showpress: print "keypressed", keypressed
         key = event.KeyCode()
         wnum = self.control.GetSelection()
         pagecount = self.control.GetPageCount()
         if wnum > -1:
             win = self.control.GetPage(wnum).GetWindow1()
-            #print win.GetStyleAt(win.GetCurrentPos()-1), win.GetStyleAt(win.GetCurrentPos()), win.GetStyleAt(win.GetCurrentPos()+1)
-        if event.ShiftDown() and event.ControlDown():
-            if self.config['usesnippets'] and (not self.restart):
-                if key == ord(','):
-                    return self.snippet.OnSnippetP(event)
-                elif key == ord('.'):
-                    return self.snippet.OnSnippetN(event)
-        if event.ControlDown() and event.AltDown():
-            #commands for both control and alt pressed
+        
+        if keypressed in HOTKEY_TO_ID:
+            menuid = HOTKEY_TO_ID[keypressed]
+            wxPostEvent(self, wxMenuEvent(wxEVT_COMMAND_MENU_SELECTED, menuid))
 
-            #shift current tab left with Ctrl+Alt+, (same key as <)
-            if key == ord(','):
-                return self.MoveLeft(event)
-            #shift current tab right with Ctrl+Alt+. (same key as >)
-            elif key == ord('.'):
-                return self.MoveRight(event)
-            else:
-                return event.Skip()
-##        elif event.AltDown():
-##            #commands for just alt pressed
-##            if key == WXK_LEFT:
-##                return self.OnLeft(event)
-##            elif key == WXK_RIGHT:
-##                return self.OnRight(event)
-##            else:
-##                return event.Skip()
-        elif event.ControlDown():
-            #commands for just control pressed
-            if key in self.ctrlpress:
-                #only works for self.function(event) commands
-                self.ctrlpress[key](event)
-            else:
-                return event.Skip()
         else:
-            #events for any key down
             if pagecount:
                 if (key==13):
                     #when 'enter' is pressed, indentation needs to happen.
@@ -2162,6 +2226,7 @@ class PythonSTC(wxStyledTextCtrl):
         EVT_STC_UPDATEUI(self,    ID, self.OnUpdateUI)
         EVT_STC_MARGINCLICK(self, ID, self.OnMarginClick)
         EVT_KEY_DOWN(self, self.root.OnKeyPressed)
+        #EVT_CHAR(self, self.root.OnKeyPressed)
         EVT_KEY_UP(self, self.key_up)
         
         EVT_STC_CHARADDED(self, ID, self.key_up)
@@ -2175,6 +2240,14 @@ class PythonSTC(wxStyledTextCtrl):
             self.CmdKeyClear(ord('T'), wxSTC_SCMOD_CTRL)
         if wrapmode != wxSTC_WRAP_NONE:
             self.root.WrapToggle(self)
+        
+        self.CmdKeyClear(ord('Z'), wxSTC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('Y'), wxSTC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('X'), wxSTC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('C'), wxSTC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('V'), wxSTC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('A'), wxSTC_SCMOD_CTRL)
+        
         
     def pos(self, e):
         #print "position changed event"
@@ -2261,7 +2334,8 @@ class PythonSTC(wxStyledTextCtrl):
             self.HideLines(exl+1,a)
             self.SetFoldExpanded(exl, 0)
         
-        wxYield()
+        try: wxYield()
+        except: pass
         
         if self.save_cursor:
             a = saved.get('cursor_posn', 0)
@@ -2322,7 +2396,7 @@ class PythonSTC(wxStyledTextCtrl):
             self.dirty = 1
             f = self.filename
             if f == ' ':
-                f = '<untitled>'
+                f = '<untitled %i>'%self.NEWDOCUMENT
             c = 0
             for i in self.notebook:
                 if i == self:
@@ -2338,7 +2412,7 @@ class PythonSTC(wxStyledTextCtrl):
             self.dirty = 0
             f = self.filename
             if f == ' ':
-                f = '<untitled>'
+                f = '<untitled %i>'%self.NEWDOCUMENT
             c = 0
             for i in self.notebook:
                 if i == self:
@@ -2737,8 +2811,9 @@ class CodeSnippet(wxPanel):
         self.seladj(1)
 
 class RunShell(wxMenu):
-    def __init__(self, root):
+    def __init__(self, root, parent, label):
         wxMenu.__init__(self)
+        menuAddM(parent, self, label)
         self.root = root
         
         menuAdd(self.root, self, "Run current file",    "Run the current open file", self.runScript, wxNewId())
@@ -3117,6 +3192,246 @@ class VirtualTodo(wxPanel):
         self.vtd.SetDimensions(0, 0, w, h)
 
 
+
+
+class KeySink(wxWindow):
+    def __init__(self, parent, defa, curr):
+        wxWindow.__init__(self, parent, -1, style=wxWANTS_CHARS)
+        self.SetBackgroundColour(wxBLUE)
+        self.haveFocus = False
+        self.defa = defa
+        self.curr = curr
+        
+
+        EVT_PAINT(self, self.OnPaint)
+        EVT_SET_FOCUS(self, self.OnSetFocus)
+        EVT_KILL_FOCUS(self, self.OnKillFocus)
+        EVT_MOUSE_EVENTS(self, self.OnMouse)
+        EVT_KEY_DOWN(self, self.OnKey)
+
+    def OnPaint(self, evt):
+        dc = wxPaintDC(self)
+        rect = self.GetClientRect()
+        dc.SetTextForeground(wxWHITE)
+        dc.DrawLabel("Click here and enter your key combination.\n"
+                     "Default: %s  Current: %s"%(self.defa, self.curr),
+                     rect, wxALIGN_CENTER | wxALIGN_TOP)
+        if self.haveFocus:
+            dc.SetTextForeground(wxGREEN)
+            dc.DrawLabel("Have Focus", rect, wxALIGN_RIGHT | wxALIGN_BOTTOM)
+        else:
+            dc.SetTextForeground(wxRED)
+            dc.DrawLabel("Need Focus!", rect, wxALIGN_RIGHT | wxALIGN_BOTTOM)
+
+    def OnSetFocus(self, evt):
+        self.haveFocus = True
+        self.Refresh()
+
+    def OnKillFocus(self, evt):
+        self.haveFocus = False
+        self.Refresh()
+
+    def OnMouse(self, evt):
+        if evt.ButtonDown():
+            self.SetFocus()
+
+    def OnKey(self, evt):
+        self.GetParent().text.SetValue(GetKeyPress(evt))
+
+class GetKeyDialog(wxDialog):
+    def __init__(self, parent, defa, curr):
+        wxDialog.__init__(self, parent, -1, "Enter key combination",
+                          style=wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER,
+                          size=(320, 240))
+        self.parent = parent
+        
+        self.keysink = KeySink(self, defa, curr)
+        
+        self.text = wxTextCtrl(self, -1, curr, style=wxTE_READONLY|wxTE_LEFT)
+        
+        buttons = wxBoxSizer(wxHORIZONTAL)
+        ok = wxButton(self, wxOK, "OK")
+        cancel = wxButton(self, wxCANCEL, "Cancel")
+        buttons.Add(ok, 0)
+        buttons.Add(cancel, 0)
+        
+        sizer = wxBoxSizer(wxVERTICAL)
+        sizer.Add(self.keysink, 1, wxGROW)
+        sizer.Add(self.text, 0, wxGROW)
+        sizer.Add(buttons, 0, wxALIGN_RIGHT)
+
+        self.SetSizer(sizer)
+        EVT_BUTTON(self, wxOK, self.OnOK)
+        EVT_BUTTON(self, wxCANCEL, self.OnCancel)
+        EVT_CLOSE(self, self.OnClose)
+
+    def OnClose(self, evt):
+        self.OnCancel(evt)
+
+    def OnOK(self, evt):
+        self.parent.accelerator = self.text.GetValue()
+        self.Destroy()
+    
+    def OnCancel(self, evt):
+        self.parent.accelerator = ""
+        self.Destroy()
+
+class MenuItemDialog(wxDialog):
+    class VirtualMenu(wxPanel):
+        class virtualMenu(wxListCtrl, wxListCtrlAutoWidthMixin):
+            def __init__(self, parent):
+                wxListCtrl.__init__(self, parent, -1,
+                                    style=wxLC_REPORT|wxLC_VIRTUAL|wxLC_HRULES|wxLC_VRULES|wxLC_SINGLE_SEL)
+                wxListCtrlAutoWidthMixin.__init__(self)
+                
+                self.parent = parent
+                self.sel = None
+    
+                self.InsertColumn(0, "Default Menu Heirarchy")
+                self.InsertColumn(1, "Current Name")
+                self.InsertColumn(2, "Default Hotkey")
+                self.InsertColumn(3, "Current Hotkey")
+                self.SetColumnWidth(0, 250)
+                self.SetColumnWidth(1, 150)
+                self.SetColumnWidth(2, 100)
+        
+                self.items = []
+                self.SetItemCount(0)
+                
+                EVT_LIST_ITEM_SELECTED(self, self.GetId(), self.OnItemSelected)
+                EVT_LIST_ITEM_ACTIVATED(self, self.GetId(), self.OnItemActivated)
+        
+            def OnItemActivated(self, event):
+                inum = event.GetIndex()
+                item = self.items[inum]
+                dlg = wxTextEntryDialog(self,
+                                        "Enter the new name of the menu item\n"\
+                                        "Default: %s  Current: %s"%(item[0].split('->')[-1], item[1]),\
+                                        "What should the item be called?")
+                dlg.SetValue(item[1])
+                rslt = dlg.ShowModal()
+                if rslt == wxID_OK:
+                    name = dlg.GetValue()
+                else:
+                    name = None
+                dlg.Destroy()
+                if not name:
+                    return
+                if item[0].find('->') == -1 or not item[4]:
+                    self.items[inum] = (item[0], name, '', '', 0)
+                    return self.RefreshItem(inum)
+                dlg = GetKeyDialog(self, item[2], item[3])
+                dlg.ShowModal()
+                if not self.accelerator:
+                    return
+                self.items[inum] = (item[0], name, item[2], self.accelerator, 1)
+                self.RefreshItem(inum)
+        
+            def getColumnText(self, index, col):
+                return self.items[index][col]
+        
+            def OnGetItemText(self, item, col):
+                return self.items[item][col]
+        
+            def OnGetItemImage(self, item):
+                return -1
+        
+            def OnGetItemAttr(self, item):
+                return None
+            def OnItemSelected(self, evt):
+                self.sel = evt.GetIndex()
+        
+        def __init__(self, parent):
+            wxPanel.__init__(self, parent, -1, style=wxWANTS_CHARS)
+            self.vm = self.virtualMenu(self)
+            self.refresh(MENULIST)
+            
+            self.parent = parent
+            
+            EVT_SIZE(self, self.OnSize)
+
+        def refresh(self, items):
+            self.vm.items = []
+            self.vm.SetItemCount(0)
+            self.vm.items = items
+            self.vm.SetItemCount(len(items))
+            if self.vm.sel is not None:
+                self.vm.EnsureVisible(self.vm.sel)
+
+        def OnSize(self, event):
+            w,h = self.GetClientSizeTuple()
+            self.vm.SetDimensions(0, 0, w, h)
+    
+    def __init__(self, parent, root):
+        wxDialog.__init__(self, parent, -1, "Menu item names and hotkey bindings.",
+                          size=(640,480), style=wxRESIZE_BORDER|wxDEFAULT_DIALOG_STYLE)
+        
+        self.root = root
+        self.vmu = self.VirtualMenu(self)
+        sizer = wxBoxSizer(wxVERTICAL)
+        
+        sizer.Add(wxStaticText(self, -1,
+                               "Double click on an entry to change the name and/or hotkey.  Most any hotkey should work fine.  Give it a try.\n"
+                               "Name changes with accelerators should work fine, as long as there are no accelerator key collisions."))
+        sizer.Add(self.vmu, 1, wxGROW)
+        
+        s2 = wxBoxSizer(wxHORIZONTAL)
+
+        ok = wxButton(self, wxOK, "OK")
+        clear = wxButton(self, wxNewId(), "Clear Hotkey")
+        revert = wxButton(self, wxNewId(), "Revert Name and Hotkey")
+        cancel = wxButton(self, wxCANCEL, "Cancel")
+        
+        s2.Add(ok)
+        s2.Add(clear)
+        s2.Add(revert)
+        s2.Add(cancel)
+        sizer.Add(s2, 0, wxALIGN_RIGHT)
+        
+        self.SetSizer(sizer)
+        self.SetAutoLayout(True)
+        
+        EVT_BUTTON(self, wxOK, self.OnOK)
+        EVT_BUTTON(self, clear.GetId(), self.OnClear)
+        EVT_BUTTON(self, revert.GetId(), self.OnRevert)
+        EVT_BUTTON(self, wxCANCEL, self.OnCancel)
+    
+    def OnOK(self, evt):
+        global MENUPREF
+        global MENULIST
+        nmu = {}
+        changed = 0
+        for heir, cn, da, ca, hk in self.vmu.vm.items:
+            if MENUPREF[heir] != (cn, ca):
+                changed = 1
+            nmu[heir] = (cn, ca)
+        if changed:
+            MENUPREF.clear()
+            MENUPREF.update(nmu)
+            MENULIST[:] = self.vmu.vm.items
+            self.root.dialog("You must restart in order for your\n"
+                             "menu item changes to go into effect.",
+                             "Restart Required")
+        self.Destroy()
+
+    def OnClear(self, evt):
+        IL = self.vmu.vm
+        items = IL.items
+        indx = IL.sel
+        items[indx] = items[indx][:3] + ('', items[indx][4])
+        IL.RefreshItem(indx)
+
+    def OnRevert(self, evt):
+        IL = self.vmu.vm
+        items = IL.items
+        indx = IL.sel
+        item = items[indx]
+        items[indx] = (item[0], item[0].split('->')[-1], item[2], item[2], item[4])
+        IL.RefreshItem(indx)
+
+    def OnCancel(self, evt):
+        self.Destroy()
+
 class lastused:
     #Implementation of a length-limited O(1) LRU cache
     class Node:
@@ -3203,6 +3518,7 @@ class findinfiles(wxDialog):
         
         self.running = 0
         self.stopping = 0
+        self.starting = 0
         
         def static(text, style=wxALIGN_LEFT, self=self):
             return wxStaticText(self, -1, text, style=style)
@@ -3272,6 +3588,9 @@ class findinfiles(wxDialog):
         
         self.SetSizer(sizer)
         self.SetAutoLayout(True)
+        tid = wxNewId()
+        self.timer = wxTimer(self, tid)
+        EVT_TIMER(self, tid, self.OnFindButtonClick)
 
     def OpenFound(self, e):
         selected = self.results.GetSelection()
@@ -3305,14 +3624,46 @@ class findinfiles(wxDialog):
 
     def OnFindButtonClick(self, e):
         if self.stopping:
+            #already stopping
             return
-        buttonlabels = ["Start Search", "Stop Search"]
-        self.running = (self.running+1)%2
-        self.b.SetLabel(buttonlabels[self.running])
-        if not self.running:
+        
+        elif self.running:
+            #running, we want to try to stop
             self.stopping = 1
             self.status.SetValue("Stopping...please wait.")
+            self.b.SetLabel("Start Search")
             return
+
+        if e.GetId() == self.b.GetId():
+            if self.starting:
+                #previously was waiting to start due to an
+                #external yield, abort waiting and cancel
+                #search
+                self.starting = 0
+                self.status.SetValue("Search cancelled.")
+                self.b.SetLabel("Start Search")
+                return
+        elif not self.starting:
+            #I was a waiting timer event, but I don't
+            #need to start anymore
+            return
+
+        #try to start
+        self.starting = 1
+        self.b.SetLabel("Stop Search")
+
+        try:
+            wxYield()
+        except:
+            #would have tried to start while in another function's
+            #wxYield() call.  Will wait 100ms and try again
+            self.status.SetValue("Waiting for another process to stop, please wait.")
+            self.timer.Start(100, wxTIMER_ONE_SHOT)
+            return
+
+        #am currently the topmost call, so will continue.
+        self.starting = 0
+        self.running = 1
         wxYield()
 
         def getlist(c):
@@ -3385,7 +3736,7 @@ class findinfiles(wxDialog):
             for filename in file_iterator(path, subd, extns):
                 wxYield()
                 filecount += 1
-                if self.running:
+                if not self.stopping:
                     r = sfunct(filename, search, case)
                     if r:
                         try:
@@ -3400,14 +3751,18 @@ class findinfiles(wxDialog):
                     self.status.SetValue((ss%(foundcount, filefcount, filecount)) + '...searching...')
                 else:
                     break
-        if self.running:
+        if self.stopping:
+            self.stopping = 0
+            ex = '...cancelled.'
+            #was stopped by a button press
+        else:
             self.running = 0
             ex = '...done.'
-        else:
-            ex = '...cancelled.'
         self.b.SetLabel("Start Search")
         self.status.SetValue((ss%(foundcount, filefcount, filecount)) + ex)
         self.stopping = 0
+        self.running = 0
+        self.starting = 0
 
     def searchST(self, filename, pattern, casesensitive):
         try:
@@ -3417,6 +3772,7 @@ class findinfiles(wxDialog):
         found = []
         if not casesensitive:
             pattern = pattern.lower()
+        spt = spaces_per_tab*' '
         for i in range(len(lines)):
             try:
                 if not casesensitive:
@@ -3426,7 +3782,7 @@ class findinfiles(wxDialog):
                 if line.find(pattern) > -1:
                     if not found:
                         found.append(filename)
-                    found.append('  '+`i+1` + ': '+lines[i].rstrip())
+                    found.append('  '+`i+1` + ': '+lines[i].rstrip().replace('\t', spt))
             except: pass
             wxYield()
         return found
@@ -3437,14 +3793,16 @@ class findinfiles(wxDialog):
         except:
             lines = []
         found = []
+        spt = spaces_per_tab*' '
         for i in range(len(lines)):
             try:
                 line = lines[i]
                 if pattern.search(line) is not None:
                     if not found:
                         found.append(filename)
-                    found.append('  '+`i+1` + ': '+line.rstrip())
+                    found.append('  '+`i+1` + ': '+line.rstrip().replace('\t', spt))
             except: pass
+            wxYield()
         return found
 
 #--------------------------- And the main...*sigh* ---------------------------

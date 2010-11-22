@@ -1,3 +1,51 @@
+(PyPE 1.9)
+(fixed) a bug that resulted in PyPE closing down without warning if the Find
+or Find/Replace dialog was attempted to be open while another was already
+opened.
+(added) a dialog and support code for changing menu item names and hot-key
+bindings.  This has been in the works for a while, and hopefully will get some
+use.  Even though the description of this change is only a few lines long, the
+implementation is over 250 lines.  The current implementation is limited to
+adding hotkeys to items that are in the main menus and do not contain
+submenus.  Any hotkey combination desired will likely work (Shift+Tab seems to
+have a problem due to the automatic button/entry navigation in dialogs, and
+likely other platform-specific key combinations will not work).
+(cleaned) out most (if not all) old hotkey-support in OnKeyPressed, now all
+menu hotkeys are a dictionary lookup.
+(fixed) maximizing and restoring will now result in more stable browsable
+source tree widths.
+(changed) parsing has been moved back into the core process and is multiplexed
+with wxYield() calls.  External parsing is not required with the fast parser
+and wxYield.  If you want to know why it was moved to an external process
+previously, check the changelog.txt included with PyPE.  By not doing any
+external IO, polling files, spawning processes, etc., parsing the file and
+updating all the requisite information is roughly twice as fast as it was in
+1.8.2.
+(tossed) all the unused external process parser stuff.  No need for it now.
+(information and change) there are now two things that can occur that take up
+a measurable amount of time in-process: parsing and finding in files.  Both
+call wxYield() in order to offer the the GUI some time to update if needed.
+Great pains have been taken so that 'find in files' will not occur during a
+wxYield call of the parser, nor will two 'find in files' occur simultaneously.
+(fixed) the listbox control in 'find in files' seemed to have issues with tabs
+displaying correctly.  On display they are automatically replaced with the
+PyPE's default number of spaces per tab.
+(fixed) the forgotten re import that allows for regular expression searches
+in 'find in file'
+(fixed) 'replace all' will now be considered a single modification for the
+purpose of undo/redo.
+(now included) is a modified version of wxProject.py that supports the file
+list as a dragNdrop file source.  For those who want a /really/ ghetto project
+manager, this version of wxProject.py is for you.  Does not work properly when
+run with a unicode-enabled wxPython.  I have no idea why.
+(received) patches to PyPE from Relja Stanisavljevic (no SFID given), which
+resulted in the following (after fixes were applied):
+1. 'Find Again' menu item and functionality.
+2. Untitled documents now have unique numbers, tabs are now named <untitled #>
+3. Comment and uncomment code does the right thing for indented blocks.
+A big thank you goes out to Relja Stanisavljevic.
+
+
 (PyPE 1.8.2)
 (added) an option to allow PyPE to save cursor position information in a
 document.  Even though I don't use such a thing (and loathe it), others may

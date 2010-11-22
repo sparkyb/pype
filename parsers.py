@@ -1,16 +1,7 @@
 #!/usr/bin/python
 import time
-import compiler
-from compiler.ast import Function, Class
-import keyword
 import os
-eol = os.linesep
 
-#def new_kwl():
-#    kwl = {}
-#    for i in keyword.kwlist:
-#        kwl[i] = []
-#    return kwl
 
 def detectLineEndings(text):
     crlf_ = text.count('\r\n')
@@ -26,64 +17,10 @@ def detectLineEndings(text):
     else:# cr_ is mx:
         return '\r'
 
-def recur_compiled(obj, hier, lines):
-    if isinstance(obj, Function) or isinstance(obj, Class):
-        h = hier + [obj.name]
-        docstring = {obj.name:[]}
-        if obj.doc:
-            docstring[obj.name].append(obj.doc)
-        if isinstance(obj, Function):
-            docstring[obj.name].append("%s(%s) %s"%(obj.name, ', '.join(obj.argnames), '.'.join(h)))
-            n = "def %s(%s)"%(obj.name, ', '.join(obj.argnames))
-            if obj.name == '__init__':
-                if hier:
-                    docstring.setdefault(heir[-1], []).extend(docstring[obj.name])
-        else:# isinstance(obj, Class)
-            if obj.bases:
-                n = 'class %s(%s)'%(obj.name, ', '.join(obj.bases))
-            else:
-                n = 'class '+obj.name
-        out = [(n, (obj.name.lower(), obj.lineno-1), leading(lines[obj.lineno-1]), [])]
-        ot = out[0][-1]
-    else:
-        h = hier
-        docstring = {}
-        out = []
-        ot = out
-    for i in obj.getChildNodes():
-        o, d = recur_compiled(i, h, lines)
-        ot.extend(o)
-        for nam, dsl in d.iteritems():
-            docstring.setdefault(nam, []).extend(dsl)
-    return out, docstring
-
-def slow_parser(source, line_ending, flat=0):
-    #docstring = new_kwl()
-
-    lines = source.split(line_ending)
-    mod = compiler.parse(source)
-    hier, docstring = recur_compiled(mod, [], lines)
-    #for nam, dsl in ds.iteritems():
-    #    if nam in docstring: docstring[nam].extend(dsl)
-    #    else: docstring[nam] = dsl
-    new_ds = {}
-    for i,j in docstring.iteritems():
-        #pulling out all the unused ones
-        new_ds[i] = filter(None, j)
-
-    if flat == 0:
-        return hier, new_ds.keys()
-    elif flat == 1:
-        return new_ds
-    elif flat == 2:
-        return hier, new_ds.keys(), new_ds
-    else:
-        return hier, new_ds.keys(), new_ds, []
-
 def leading(line):
     return len(line)-len(line.lstrip())
 
-def fast_parser(source, line_ending, flat=0):
+def fast_parser(source, line_ending, flat, wxYield):
     lines = source.split(line_ending)
     docstring = {} #new_kwl()
     todo = []
@@ -96,6 +33,8 @@ def fast_parser(source, line_ending, flat=0):
     FIL = lambda A:A[1][2]
 
     def fun(i, line, ls, line_no, stk):
+        try: wxYield()
+        except: pass
         na = ls.find('(')
         ds = ls.find(':')
         if na == -1:
@@ -191,68 +130,3 @@ def fast_parser(source, line_ending, flat=0):
         return out, docstring.keys(), docstring
     else:
         return out, docstring.keys(), docstring, todo
-
-def tim(p=1, ct = [None]):
-    if ct[0] == None:
-        ct[0] = time.time()
-    else:
-        ret = time.time() - ct[0]
-        ct[0] = time.time()
-        if p: print ret,
-        return ret
-
-def test():
-    import sys, time
-
-    if len(sys.argv)>1:
-        fil = open(sys.argv[1], 'r')
-        txt = fil.read()
-        fil.close()
-        tim();print 'fast parser...',
-        fast_parser(txt, detectLineEndings(txt))
-        tim();print 'done.\nslow parser...',
-        a,b,c = slow_parser(txt, detectLineEndings(txt), 2)
-        tim();print 'done.'
-        import pprint
-        pprint.pprint(c)
-
-    else:
-        print 'usage:\n python parsers.py <source file>'
-
-def main():
-    import fileinput
-    import sys
-    import os
-    
-    lines = []
-    fil = '-'
-    if len(sys.argv)>1 and sys.argv[-1]:
-        fil = os.path.normpath(sys.argv[-1])
-        a = open(fil, 'rb')
-        toparse = a.read()
-        a.close()
-    else:
-        for line in fileinput.input(fil):
-            lines.append(line)
-        toparse = ''.join(lines)
-    toparse = eval(toparse)
-    le = detectLineEndings(toparse)
-    toprint = fast_parser(toparse, le, 3)
-    
-##    try:
-##        raise ''
-##        if len(toparse) > (1024*512):
-##            raise ''
-##        toprint = slow_parser(toparse, le, 3)
-##    except:
-##        toprint = fast_parser(toparse, le, 3)
-    if fil == '-':
-        print repr(toprint)
-    else:
-        os.remove(fil)
-        a = open("%s.out"%fil, 'w')
-        a.write(repr(toprint))
-        a.close()
-
-if __name__ == '__main__':
-    main()

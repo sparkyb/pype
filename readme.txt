@@ -17,9 +17,26 @@ The included stc-styles.rc.cfg was slightly modified from the original version
 in order to not cause exceptions during style changes, and was also
 distributed with wxPython version 2.4.1.2 for Python 2.2
 
+The included wxProject.py was modified from the original version distributed
+with wxPython in order to support being a drag and drop source for files.  I
+do not know what license it was distributed under, but as the readme.txt says,
+it was from a IBM developerWorks article at:
+http://www-106.ibm.com/developerworks/library/l-wxpy/index.html
+It does not seem to work when run with a version of wxPython with unicode
+support.  I offer no support for wxProject, nor will I accept any bug reports
+or patches to it.  I include it with PyPE because there was a message
+requesting that a 'project manager' be included with PyPE.  So be it.  Now
+there is one.  If someone wants to create a full-blown project manager out of
+it, and distribute it separately, feel free, I won't mind, heck, I'll even
+link you.
+
 If you do not also receive a copy of gpl.txt with your version of this
 software, please inform the me of the violation at the web page at the top of
 this document.
+
+
+Does anyone actually read this?  If so, please contact me, because I don't
+think anyone actually does.  I like to be proven wrong.
 
 #------------------------------- Requirements --------------------------------
 PyPE has only been tested on Python 2.3 and wxPython 2.4.2.4.  It should work

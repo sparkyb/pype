@@ -11,5 +11,5 @@ import pype
 setup(name="PyPE-win32",
       version=pype.VERSION,
       scripts=["pype.py"],
-      data_files=[('', ('stc-styles.rc.cfg', 'readme.txt', 'gpl.txt', 'changelog.txt'))],
+      data_files=[('', ('stc-styles.rc.cfg', 'readme.txt', 'gpl.txt', 'changelog.txt', 'wxProject.py'))],
 )

@@ -113,7 +113,6 @@ extns = {'py' : 'python',
         'xml' : 'xml',
         'txt' : 'text'}
 
-# cmt-001 08/06/2003 - Create a pype configuration directory to store info
 default_homedir = os.path.dirname(os.path.abspath(__file__))
 
 try:
@@ -155,7 +154,6 @@ try:
 except:
     #print "unable to create config directory", homedir
     homedir = default_homedir
-# End cmt-001 08/06/2003
 
 for fil in os.listdir(homedir):
     if fil.find('.tmp.') > -1:
@@ -218,7 +216,7 @@ def validate(dlg, orig):
 
 def getData():
     import zlib
-    return zlib.decompress(
+    a = zlib.decompress(
 'x\xda\x01\xf4\x04\x0b\xfb\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00 \
 \x00\x00\x00 \x08\x06\x00\x00\x00szz\xf4\x00\x00\x00\x04sBIT\x08\x08\x08\x08\
 |\x08d\x88\x00\x00\x04\xabIDATx\x9c\xb5\x97\xcdk\x1bG\x18\xc6\x7f\x93f\x9d \
@@ -268,3 +266,5 @@ Y\xee\xcd\xcf\xa9\xc1\xe88\x9b\xa5y\xb7O\xd5Xe!?\t\xdf4\x8d\xec\xd9#Z\\\xf0\
 \x9c\x13\xd2\xf6\x8fynp\x0e\x80\xea^ji\x8dr\xaf\x8bK\xc7\xf3@\xf3]\xa1\x17R\
 \x07\xcfse\xebz \xf1\xde\x96\x9a\x85\xbc\x0ci\xcf\x02\xbcB\x9aK\xcf\xab\xba\
 \xb2\xff\x07\n$<\xcc\x9c\x11r\xaf\x00\x00\x00\x00IEND\xaeB`\x82_YY\xda' )
+    del zlib
+    return a
