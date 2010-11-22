@@ -59,3 +59,22 @@ extns = {'py' : 'python',
        'shtm' : 'html',
       'shtml' : 'html',
         'xml' : 'xml'}
+
+def detectLineEndings(text):
+    crlf_ = text.count('\r\n')
+    lf_ = text.count('\n')
+    cr_ = text.count('\r')
+    mx = max(lf_, cr_)
+    if not mx:
+        return eol
+    elif crlf_ >= mx/2:
+        return '\r\n'
+    elif lf_ is mx:
+        return '\n'
+    else:# cr_ is mx:
+        return '\r'
+#------------------------- load bookmarked hot-keys --------------------------
+try:
+    from pathmarks import *
+except:
+    paths = {}

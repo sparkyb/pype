@@ -1,4 +1,4 @@
-Readme/Help for PyPE 1.0 (Python Programmer's Editor')
+Readme/Help for PyPE 1.1 (Python Programmer's Editor')
 http://come.to/josiah
 
 PyPE is copyright (c) 2003 Josiah Carlson.
@@ -60,6 +60,18 @@ dialog, which I use to get a folder and path.  I assure you, it saves your
 document properly.
 
 #------------------------------------ FAQ ------------------------------------
+Bookmarked Paths:
+Everyone will surely notice the menu for bookmarked paths.  This menu allows
+you to edit and access bookmarked paths with relative ease.  All it really
+does is remember the paths you tell it to, and when you use one of the hotkeys
+or menu items, it will change the current working directory to that new path.
+If you attempt to open a file immediately afterwards, the open dialog will
+seek to the path of the just used bookmark.  Nifty eh?  I like to think of it
+as being able to have 'projects' without having to specify a project file.  I
+hate project files.
+
+
+
 Find/Replace dialogs:
 One big thing to note is how the find and find/replace dialogs work.  For
 those of you who are annoyed with one's normal inability to enter in things
@@ -84,6 +96,7 @@ To convert from tabs to 8 spaces per tab; replace "\t" with "        "
 To convert from 8 spaces to one tab; replace "        " with "\t"
 
 
+
 CRLF/LF/CR line endings:
 PyPE will attempt to figure out what kind of file was opened, it does this by
 counting the number of different kind of line endings.  Which ever line ending
@@ -102,6 +115,7 @@ Converting between line endings is as easy as the tab and space conversion as
 given above.
 
 
+
 STCStyleEditor.py:
 As I didn't write this, I can offer basically no support for it.  It seems to
 work to edit python colorings, and if you edit some of the last 30 or so lines
@@ -111,4 +125,30 @@ are included.
 If it just doesn't work for you, I suggest you revert to the copy of the
 editor and stc-styles.rc.cfg that is included with the distribution of PyPE
 you received.  As it is a known-good version, use it.
+
+
+
+Expandable/collapseable scope:
+Since the beginning, there have been expandable and collapseale scopes thanks
+to wxStyledTxtCtrl.  How to use them...
+Given the below...
+- class nada:
+-     def funct(self):
+-         if 1:
+|             #do something
+|             pass
+Shift-clicking the '-' next to the class does this;
+- class nada:
++     def funct(self):
+
+Or really, it collapses completely those scopes contained within the larger
+scope.
+Shift-clicking on the '-' a second time does nothing.
+Shift-clicking on a '+' expands that item completely.
+
+Control-clicking on a '+' or '-' collapses or expands the entirety of the
+scopes contained within.
+
+I don't know about you, but I'm a BIG fan of shift-clicking classes.  Yeah.
+Play around with them, you'll get to loving how they work.
 #------------------------------- End of file. --------------------------------

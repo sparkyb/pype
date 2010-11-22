@@ -1,3 +1,52 @@
+(PyPE 1.1)
+(cleaned) I did some house cleaning and started using wxNewId to generate
+event ids rather than doing them manually.  This required a few tweaks to the
+menu generation code, but it cleaned up nicely.  It is also quite consistent
+now (wheee, consistency).
+(cleaned) I also added a few more functions to deal with previously opened
+files easier.
+(added) wxSplitterWindow control to hold some extra goodies on the left of the
+window.  Just wait for what I have in store for you.  As the controls that I
+have added do not support keypress events (other than the menu alt-commands),
+hot-keys are only useful when a document is open, or when you haven't touched
+the splitter bar or other controls after documents have been closed.
+(confirmed) The line ending corruption fix for 1.0.1 seem to be working great.
+(fixed) Discovered and removed a bug when inserting a comment would mess up
+line endings in the surrounding lines, making it look like there was an extra
+blank line inserted on windows systems.  Replaced a '+1' with
+'+len(win.format)'.  I like easy fixes.
+(tweaked) Line ending detection so that it does something a bit more
+intelligent.  It works better on strange files now.
+(fixed) undoing and redoing previously wouldn't mark the document as being
+'dirty', this is fixed and merged with the code for cut and paste making the
+document dirty through the use of a dictionary.  This brings up the question
+as to whether or not ALL keypress events should just be a dictionary lookup
+rather than a sequence of if, elif, else statements.  They probably should.
+Maybe in the next minor version.
+(removed) the aforementioned splitter window for now.
+(cleaned) up the handling of many of the hotkeys that are used via a
+ctrl-<key> combinations.  Basically all but two of the ctrl hotkeys are in a
+dictionary for O(1) lookups.  I like that.
+(reorganized) some of the menu command locations.
+(added) pathmark support.  Viewing pathmarks, editing pathmarks, deleting
+pathmarks and saving pathmarks to the configuration file.  MMM, pathmarks.
+(added) more status bar text updates, like closing, opening, creating new, and
+other such things.  I like updates.
+(fixed) undoing and redoing of changing tabs is now done by the entire block
+that was tabbed/untabbed, not by the individual line as before.
+(discovered) how to use the shift and control clicking of the scope-based
+collapseable blocks.  Updated the help to explain how they work.
+(contemplated) adding drag and drop support.  After spending some time mucking
+around it, I have decided it can wait until the next minor release.
+(contemplated) adding code snippet support.  It's where you have a listing of
+named code snippets that double clicking will cause to replace the current
+selection (or insert at the current cursor position).  I'm trying to decide
+how/where to place the code snippets.  I've come to enjoy having a full screen
+for editing code, and to lose some of it to code snippets, almost seems
+strange.  It'll probably be in the next point release with file drag and drop
+support.
+
+
 (PyPE 1.0.1)
 (fixed) Thanks to a message from Lunar Linux guru Jeff Hodges, I was turned on
 to Pychecker.sourceforge.net and have discovered two previously unknown
