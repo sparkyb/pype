@@ -31,6 +31,8 @@ class pseudo_logger:
         self.lg = data[-1:] == '\n'
         x = fixle(data)
         self.buffer.write(x)
+        if isinstance(x, str):
+            x = x.decode('latin1')
         sys.__stdout__.write(x.encode('utf8'))
     
     def flush(self):
@@ -66,7 +68,9 @@ class logger(wx.TextCtrl):
         x = fixle(data)
         self.data.put(x)
         try:
-            sys.__stdout__.write(data.encode('utf8'))
+            if isinstance(x, str):
+                x = x.decode('latin1')
+            sys.__stdout__.write(x.encode('utf8'))
         except:
             pass
         wx.CallAfter(self.handle_writes)

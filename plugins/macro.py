@@ -7,6 +7,8 @@ import time
 import random
 import mylistmix
 import keydialog
+import thread
+import threading
 __main__ = _pype
 import wx
 
@@ -66,6 +68,15 @@ hlp = '''\
 #    ...
 '''
 
+def kill_main_thread_in(condition, seconds=6):
+    a = threading.Thread(target=_kill_main_thread_in, args=(condition, seconds))
+    a.setDaemon(1)
+    a.start()
+
+def _kill_main_thread_in(condition, seconds):
+    time.sleep(seconds)
+    if condition:
+        thread.interrupt_main()
 
 red = wx.ListItemAttr()
 red.SetTextColour(wx.Colour(200, 0, 0))
@@ -366,17 +377,23 @@ class macroPanel(wx.Panel):
             self.root.dialog(nostart, 'Sorry')
             return
         
-        finished = 0
         ## self.play.SetLabel("Stop\nMacro")
+        
+        finished = 0
         start_macro()
+        condition = [None]
+        kill_main_thread_in(condition)
         try:
             try:
                 getattr(module, 'macro')(stc)
-            except:
+            except Exception, why:
+                _ = condition.pop()
                 end_macro()
                 finished = 1
                 self.root.exceptDialog("Failure in macro!")
         finally:
+            if condition:
+                _ = condition.pop()
             if not finished:
                 end_macro()
 

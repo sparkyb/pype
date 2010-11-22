@@ -41,7 +41,7 @@ Beta 2
 * Make optional drag and drop file support on STC instances.
 * Smart Case
 * Replace In Selection
-? Save/load search criteria (like workspace).
+- Save/load search criteria (like workspace). (used history instead)
 
 
 2.1:
@@ -52,14 +52,14 @@ Beta 2
 2.2:
 * Add support for #encoding in python files (on open/save, but do not change).
 ? Add search support for unicode/#encoding defined files that are not open.
-(done in 2.3) ? Add PyShell from PyCrust as a Python console, but use the
+(done in 2.3) * Add PyShell from PyCrust as a Python console, but use the
 external process support to run the shell in another process.  Caveat:
-  ? PyShell would not get all the really neat introspection capabilities
+  * PyShell would not get all the really neat introspection capabilities
   without significant additional work (which I probably won't ever have time
   for)
-(used thread in 2.4) ? Use external command support to spawn persistant slow
+(used thread in 2.4) - Use external command support to spawn persistant slow
 parser for tooltips, calltips, and better parsing.
-(done in 2.3) ? Use optional listening socket to support later callings of
+(done in 2.3) * Use optional listening socket to support later callings of
 (done in 2.2.2) PyPE pushing document opening into a single PyPE instance
 ("One PyPE")
 
@@ -77,8 +77,8 @@ parser for tooltips, calltips, and better parsing.
       navigation with arrows, home, end, etc., backspace, delete, ...
     * Most menu commands with or without shortcuts
     * will need to come up with a reasonably macro'd list.
-- Document abstraction for modifying documents via script in debug mode.
-? Something like keymap["ctrl-d"] = lambda doc:doc.delete_current_line()
+* Document abstraction for modifying documents via script in debug mode.
+* Something like keymap["ctrl-d"] = lambda doc:doc.delete_current_line()
 
 2.6:
 * Add indicator for macro recording.
@@ -106,3 +106,11 @@ SubErthaEdit would be quite neat.
 
 * Optional indicators for stdout/stderr from Python and Command shells.
 * Display Macro buttons as text or bitmaps.
+
+Fix Shells for Mac
+* Fix line number column width for large files
+* Check/fix %L for triggers
+
+2.6.6+/2.7
+Better autocomplete for self. methods
+"Find all" tool

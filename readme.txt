@@ -170,6 +170,14 @@ failure, it will display to the user with a failure notice.  These options
 have no effect on the Windows distributions of PyPE, or wherever 
 ``hasattr(sys, 'frozen')`` is true.
 
+--fontsize
+==========
+If you provide ``--fontsize=12``, PyPE will change the font size for all open
+documents to 12.  The default font size that PyPE uses is 10.  If you want
+text to be bigger, use a number larger than 10.  If you want text to be
+smaller, use a number smaller than 10.  The line number margin will be scaled
+proportional to the font size specified.
+
 --nothread
 ==========
 This command line option will disable the threaded parser, which may cause
@@ -178,13 +186,87 @@ the "Tools" menu, due to the faster and not necessarily correct parser.
 
 --macros
 ========
-PyPE 2.6 has an almost fully-functioning macro system.  The Python 2.5
-``--macros`` command line option is now ignored because macros are enabled by
-default in 2.6+.
+PyPE 2.6 has what I would consider to be a fully-functioning macro system.
+The Python 2.5 ``--macros`` command line option is now ignored because macros
+are enabled by default in 2.6+.
 
 -------------------------------
 PyPE features and functionality
 -------------------------------
+
+Encoding detection for opening files
+====================================
+If you are using the Unicode version of PyPE, when opening a file, PyPE will
+attempt to decode your file using the following encodings in order:
+
+1. The encoding specified by the BOM, if any (PyPE writes BOMs for UTF-*
+   encodings by default).
+
+2. Encodings specified by "coding directives" in the first two lines of
+   source, if any.
+
+3. Ascii (only allows for values from 0...127)
+
+4. Latin-1 (allows for values 0...255)
+
+If options 1-3 above fail, then 4 will succeed, but may not necessarily
+display the correct content, and may cause corruption if you were to save the
+document.
+
+In 2.6.3 and earlier, PyPE would try 1, 2, then 3, but not 4.
+
+Note that PyPE does not default to assuming XML or HTML files are UTF-8 as per
+spec: http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl due to
+backwards compatability concerns with PyPE 2.6.3 and earlier. Users desiring
+UTF-8 decoding support should make sure that their xml/html files include a
+UTF-8 encoding directive or BOM at the beginning of their file.
+
+
+Encoding detection for saving files
+===================================
+If you are using the Unicode version of PyPE, when saving a file, PyPE will
+attempt to encode your file using the following encodings in order:
+
+1. Any encoding specified by the Document -> Encodings menu option (note that
+   a specification of 'other' will be ignored, and will assume the existance
+   of a "coding" directive.
+
+2. Encodings specified by "coding directives" in the first two lines of
+   source, if any.
+
+3. Ascii (only allows for values from 0...127)
+
+4. Latin-1/iso-8859-1 (allows for values 0...255)
+
+5. UTF-8
+
+If options 1-4 above fail, 5 will succeed.  If the first encoding option does
+not succeed: say, for instance, that you have specified "other" as the
+Document -> Encodings option, then used the iso-8859-9 coding declaration for
+Turkish, but included some Arabic letters in a comment somewhere, PyPE will
+inform you that your intended encoding (iso-8859-9) does not match the first
+encoding to succeed (UTF-8), and ask you if it is ok to continue.
+
+In 2.6.3 and earlier, PyPE would try 1, 2, 3, then 5.
+
+
+What is a "coding directive"?
+=============================
+If in the first two lines of your source file (all initial blank lines being
+ignored), the following regular expression matches something::
+    
+    coding[=:](?:["'\s]*)([-\w.]+)
+
+... then you have a properly specified "coding directive".  This regular
+expression was intended to match things like::
+
+    # -*- coding: ENCODING_NAME -*-
+    # vim:fileencoding=ENCODING_NAME
+    <?xml version='1.0' encoding='ENCODING_NAME' ?>
+
+... in [X]Emacs or Vim style encoding declarations for Python source, or
+XML-style declarations in XML or HTML source.
+
 
 What is Sloppy Cut/Copy?
 ========================
@@ -431,28 +513,6 @@ Otherwise if the first letter of the found string is upper or lowercase, then
 its replacement will have the first letter be upper or lowercase respectively.
 
 
-What is up with the "Enable File Drops" checkbox in the 'Edit' menu?
-====================================================================
-1. Select some text.
-
-2. Now click on it.
-
-Q: Do you want the selection to go away, and your cursor to be close to where
-you clicked?
-
-A1: If yes, uncheck the box and restart if necessary.
-
-A2: If no, check the box and restart if necessary.
-
-(The check is effective for any opened document from then on, but does not
-change the behavior of already opened documents.)
-
-One should always be able to drag and drop text.  One should always be able to
-drag and drop files everywhere, except for the text editor portion.  If
-checked, you can drop files on the editor portion, if unchecked, you won't be
-able to drop files on the text editor portion.
-
-
 How do I use the 'Todo' list?
 =============================
 On a line by itself (any amount of leading spaces), place something that
@@ -479,15 +539,20 @@ The following lines are all valid todos ::
     
     #I am not a valid todo...: because there is punctuation on the left
 
+In PyPE 2.6.5 and later, for Python, C/C++, and TeX files, PyPE supports the
+use of ``#>`` (or equivalents for non-XML/HTML languages) as a "strict" todo,
+with the option to only recognize these "strict" todos.
+
 
 What are the known issues within PyPE's parser?
 ===============================================
 
 The C/C++ parser
 ----------------
-The recently added C/C++ parser uses a combination of regular expressions and
-a few checks to extract function definition information.  Note that it can
-handle things like the following and their variations::
+PyPE 2.6.1 and later added a C/C++ parser that uses a combination of regular
+expressions and some post-processing to extract function definition
+information.  Note that it can handle things like the following and their
+variations::
 
     int ** foo(char* arg1, int larg1) \{ ...
     
@@ -503,8 +568,8 @@ respectively::
     (#ys+i\(i(?:,s*i)*\))
     (?:(cs*\([^\)]*\))[^{;\)]*[;{])
 
-Where the following replacements are made, in-order to the regular expressions
-prior to matching::
+Where the following replacements are made to the regular expressions prior to
+matching::
     
     c -> (?:i|operator[^\w]+)
     i -> (?:[a-zA-Z_]\w*)
@@ -512,12 +577,13 @@ prior to matching::
     y -> (?:[dD][eE][fF][iI][nN][eE])
 
 The function-like macros are returned unchanged, while the possible function
-matches have various other tests performed on them, and the addition of
-everything on the same line as the potential function definition.
+matches have various other tests performed on them and everything on the same
+line as the potential function definition.
 
 Note that the parser doesn't recognize struct definitions, data members of
-classes, class hierarchies, functions with default values, etc.  It should be
-sufficient for most navigation and/or 
+classes, class hierarchies, functions with default values, etc., but it should
+generally be sufficient for most navigation and/or file-specific autocomplete
+and calltips.
 
 
 The Python parser
@@ -556,15 +622,14 @@ in the following lines would be seen as a function, and not part of a string. ::
 This parser will also not pull out doc strings or handle multi-line function
 definitions properly.
 
-PyPE still needs a real parser for C, so it only extracts \\todo: items.  What
-precisely a parser would do on TeX/LaTeX, HTML or XML is beyond me, so they
-also only extract %todo: and <!-- todo: --> items respectively.
+What precisely a parser would do on TeX/LaTeX, HTML or XML is beyond me, so
+they only extract %todo: and <!-- todo: --> items respectively.
 
 
 How do you get usable Calltips?
 ===============================
 Hit F5.  This will also rebuild the browsable source tree, autocomplete
-listing, and todo list.
+listing, filter, and todo list.
 
 
 How do you get autocompletion?
@@ -671,6 +736,8 @@ Macro" button, whose contents are something like the following::
     
         creation_date = 'Wed Jul 12 21:35:34 2006'
         name = 'macro: Wed Jul 12 21:35:34 2006'
+        hotkeydisplay = ""
+        hotkeyaccept = ""
         
         def macro(self):
             pass
@@ -682,6 +749,16 @@ Macro" button, whose contents are something like the following::
 ``name``
     is the name you will see in the macro list.  If this value is
     missing, you will see the file name instead.
+
+``hotkeydisplay``
+    if you have created a hotkey for this macro, this represents how the
+    hotkey would be displayed to PyPE.  To get usable values for
+    ``hotkeydisplay``, use the 'Create Hotkey' button.
+
+``hotkeyaccept``
+    if you have created a hotkey for this macro, this represents the
+    actual underlying keyboard keypresses necessary to make the macro run.  To
+    get usable values for ``hotkeyaccept``, use the 'Create Hotkey' button.
 
 ``def macro(self):``
     is the initial definition of the macro.  You can have any number of helper
@@ -731,8 +808,12 @@ normal control subclass has, with a few caveats.
         self.lines.curline          # manipulation of the line the cursor is on
         self.lines.curlinei         # manipulation of the index where the cursor is
         self.lines.curlinep         # manipulation of the column in the line where the cursor is
-        self.lines.selectedlines    # manipulation of the lines where a selection exists
-        self.lines.selectedlinesi   # manipulation of the indices where a selection exists
+        self.lines.selectedlines    # manipulation of the lines where the selection exists
+        self.lines.selectedlinesi   # manipulation of the indices where the selection exists
+        self.lines.targetlines      # manipulation of the lines where the target exists
+        self.lines.targetlinesi     # manipulation of the indices where the target exists
+                                    # the target is like an invisible selection
+        
         
         #to force the selection of all of all lines where a selection currently exists:
         self.lines.selectedlinesi = self.lines.selectedlinesi

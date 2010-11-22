@@ -70,13 +70,16 @@ def partition(st, sep):
         return st[:p], sep, st[p+len(sep):]
     return st, '', ''
 
+workingplatforms = ('win32', 'linux2')
+
 if sys.platform == 'win32':
-    prefix = os.environ.get("COMSPEC", "cmd.exe")
-    if " " in prefix:
-        prefix = '"%s"'%prefix
-    prefix += " /c "
+    command = os.environ.get("COMSPEC", "cmd.exe")
+    if " " in command:
+        command = '"%s"'%command
+elif sys.platform == 'linux2':
+    command = '/bin/sh --noediting -i'
 else:
-    prefix = "/bin/sh -c "
+    command = '/bin/sh'
 
 def rsplit(st):
     st = list(st)
@@ -107,11 +110,10 @@ GetSaveState jump GetText SetText Undo Redo changeStyle pos_ch OnUpdateUI
 do'''.split()
 pypeprefix = '''SetSaveState'''.split()
 
-console_help = '''import sys;print 'Python %s on %s\\n%s'%(sys.version,\
- sys.platform, 'Type \\'help\\', \\'copyright\\', \\'credits\\' or \\'license\\'\
- for more information.');sys.__stdout__ = sys.stdout = sys.__stderr__;del sys;\
- import __builtin__;__builtin__.quit = __builtin__.exit = \
- 'use Ctrl-Break to restart *this* interpreter';del __builtin__;'''
+python_cmd = '''python -u -c "import sys;sys.stderr=sys.__stderr__=\
+ sys.stdout;import __builtin__;__builtin__.quit=__builtin__.exit=\
+ 'use Ctrl-Break to restart *this* interpreter';import code;\
+ code.interact(readfunc=raw_input)"'''
 
 encode_error = '''\
 UnicodeEncodeError: '%s' codec cannot encode characters from line %i column \
@@ -120,9 +122,16 @@ UnicodeEncodeError: '%s' codec cannot encode characters from line %i column \
 
 pypestc = None
 
-MAXLINES = 10000
+MAXLINES = 1000
 COLS = 100
 MAXDATA = MAXLINES*COLS
+LIMIT_LENGTH = 0
+
+osxshellmessage = '''\
+Your shell may not output a prompt even if it is working otherwise.
+If you would like to help fix this, please contact the author.
+'''
+
 
 class MyShell(stc.StyledTextCtrl):
     if 1:
@@ -131,12 +140,12 @@ class MyShell(stc.StyledTextCtrl):
     def __init__(self, parent, id, root, trees=None, filter=1):
         stc.StyledTextCtrl.__init__(self, parent, id)
         self.lines = lineabstraction.LineAbstraction(self)
+        self.NEWDOCUMENT = _pype.NEWDOCUMENT+1
         
         global pypestc
         if not pypestc:
             if not __name__ == '__main__':
-                import __main__
-                pypestc = __main__.PythonSTC
+                pypestc = _pype.PythonSTC
             else:
                 class _pypestc:
                     pass
@@ -144,12 +153,13 @@ class MyShell(stc.StyledTextCtrl):
         
         self.root = root
         self.parent = parent
-        self.filter = filter
+        self.filter = filter==1
         self._config()
         self.promptPosEnd = 0
         for i in unimplemented:
             setattr(self, i, unimpl_factory(i))
-        self.restart = 0
+        self.restartable = filter != 3
+        self.restart = not self.restartable
         self.more = False
         self.Restart(None)
         for name in cpy:
@@ -180,8 +190,8 @@ class MyShell(stc.StyledTextCtrl):
         self.MakeClean = self.MakeDirty
         self.noteMode = 0
         ## wx.stc.StyledTextCtrl.SetText(self, "def foo():\n...     pass")
-        self.trimt = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self._trim, self.trimt)
+        if sys.platform not in workingplatforms and self.filter == 0 and self.restartable:
+            self.write(osxshellmessage)
     
     def _config(self):
         self.setStyles(FACES)
@@ -200,12 +210,16 @@ class MyShell(stc.StyledTextCtrl):
             pass
     
     def getshort(self):
-        if self.filter:
-            return "<Python Shell %i>"%self.NEWDOCUMENT
+        if self.filter==1:
+            x = "<Python Shell %i>"
+        elif self.filter==0 and self.restartable:
+            x = "<Command Shell %i>"
         else:
-            return "<Command Shell %i>"%self.NEWDOCUMENT
+            x = "<Command Output %i>"
+        x = x%self.NEWDOCUMENT
+        return x
     def getlong(self):
-        return ''
+        return self.getshort()
     
     def SetSaveState(self, state):
         state['FOLD'] = state['BM'] = []
@@ -213,7 +227,8 @@ class MyShell(stc.StyledTextCtrl):
     
     def kill(self):
         self.restart = 1
-        self.remote.Kill("SIGKILL")
+        if hasattr(self, 'remote'):
+            self.remote.Kill("SIGKILL")
     
     def clear(self):
         self.ClearAll()
@@ -285,6 +300,8 @@ class MyShell(stc.StyledTextCtrl):
     
     def real_poll(self, input=''):
         #todo: fix for unicode
+        if not self.remote:
+            return
         o = self.remote.Poll(input)
         sc = bool(o[0] or o[1])
         if sc:
@@ -362,6 +379,7 @@ class MyShell(stc.StyledTextCtrl):
         lines = self.lines
         
         if print_transfer==1: print '<--', len(data), repr(data)
+        data = data.replace('\r', '')
         s,e = self.GetSelection()
         lp = self.promptPosEnd
         x = self.GetTextLength() #to handle unicode and line endings
@@ -372,8 +390,6 @@ class MyShell(stc.StyledTextCtrl):
         
         ld = self.GetTextLength()-x #to handle unicode and line endings
         self.promptPosEnd += ld
-        
-        ## x=0
         
         if __name__ != '__main__':
             indic = __main__.SHELL_NUM_TO_INDIC[__main__.SHELL_OUTPUT]
@@ -386,32 +402,38 @@ class MyShell(stc.StyledTextCtrl):
                 self.IndicatorSetForeground(2, __main__.SHELL_COLOR)
                 
                 self.StartStyling(style, stc.STC_INDIC2_MASK^0xff)
-        self.SetSelection(s+ld, e+ld)
-        ## self.trimt.Start(15, wx.TIMER_ONE_SHOT)
-        ## if len(lines) > 500:
-            ## self._trim(None)
-    
-    def _trim(self, e):
-        pass
-        ## lines = self.lines
-        ## gtl = self.GetTextLength()
-        ## if len(lines) > MAXLINES or gtl > MAXDATA:
-            ## x = self.GetTextLength()
-            ## for i in xrange(MAXLINES, len(lines)):
-                ## lines[0] = ''
-            ## x -= self.GetTextLength()
-            ## self.promptPosEnd -= x
+        
+        x = 0
+        
+        if LIMIT_LENGTH:
+            lm = 0
+            #handle too much raw data
+            gtl = self.GetTextLength()
+            if gtl > MAXDATA:
+                posn = gtl-MAXDATA
+                ll = 0
+                lm = len(lines)
+                
+                while ll < lm:
+                    lmi = (ll+lm)//2
+                    if lines._line_range(lmi)[1] < posn:
+                        ll = lmi + 1
+                    else:
+                        lm = lmi
             
-            ## ogtl = gtl = self.GetTextLength()
-            ## while gtl > MAXDATA:
-                ## l = lines[0]
-                ## gtl -= len(l)
-                ## if not l.endswith('\r\n'):
-                    ## gtl -= 1
-                ## lines[0] = ''
+            #handle too many lines
+            if len(lines) > MAXLINES:
+                lm = max(lm, len(lines)-MAXLINES)
             
-            ## ogtl -= self.GetTextLength()
-            ## self.promptPosEnd -= x
+            #adjust the actual content
+            if lm:
+                lines.selectedlinesi = 0, lm+1
+                lines.selectedlines = []
+                gtl -= self.GetTextLength()
+                x = gtl
+        
+        self.promptPosEnd -= x
+        self.SetSelection(s+ld-x, e+ld-x)
     
     def processLine(self):
         thepos = self.GetCurrentPos()
@@ -521,27 +543,67 @@ class MyShell(stc.StyledTextCtrl):
         list = traceback.format_exception_only(type, value)
         map(self.write, list)
     def Restart(self, evt):
+        ## print "Restart"
         #we start up the console in the future so that if we get a Restart
         #call from the subprocess ending, we can *hopefully* pull the
         #exception from the subprocess shell
-        try:
-            if not self.restart:
-                self.restart = 1
-                wx.FutureCall(100, self._Restart, evt)
-        except:
-            pass
         
-    def _Restart(self, evt):
-        global remote
+        if not self.restart:
+            ## print "not restart"
+            self.restart = 1
+            if self.restartable:
+                ## print "restartable!"
+                wx.FutureCall(100, self._Restart, evt)
+            else:
+                ## print "not restartable"
+                wx.FutureCall(100, self._close, evt)
+        else:
+            ## print "tried to close!"
+            self._close(evt)
+            ## raise Exception
+        
+        ## try:
+        ## except:
+            ## pass
+    def _close(self, evt):
+        ## print "_close", evt
         if evt:
             print "Process Ended, pid:%s,  exitCode: %s"%(evt.GetPid(), evt.GetExitCode())
             remote.remove(self.remote)
+            del self.remote
+            if not self.restartable:
+                self.write('\n**** End of process output ****\n')
+    def _Restart(self, evt):
+        ## print "_Restart"
+        if evt and not isinstance(evt, tuple):
+            self._close(evt)
         self.queue = []
         
-        if self.filter:
-            self.remote = shell.process(self, prefix + 'python -u -i -c "%s"'%console_help, self.Restart)
+        if self.restartable:
+            ## print "Restartable!"
+            d = ''
+            if self.filter:
+                c = python_cmd
+            else:
+                c = command
+        elif isinstance(evt, tuple) and len(evt) == 2:
+            ## print "Starting!"
+            d, c = evt
         else:
-            self.remote = shell.process(self, rsplit(prefix), self.Restart)
+            ## print "quitting!"
+            return
+        
+        if d:
+            x = os.getcwd()
+            try:
+                os.chdir(d)
+            except:
+                self.write("could not switch to %r\n"%d)
+                return
+        self.remote = shell.process(self, c, self.Restart)
+        if d:
+            os.chdir(x)
+        
         print "Process started, pid:%s"%self.remote.process.pid
         remote.append(self.remote)
         self.restart = 0

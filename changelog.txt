@@ -1,3 +1,68 @@
+#-------------------------------- PyPE 2.6.5 ---------------------------------
+(added) command line option for setting the base font size of the text in the
+editor window.
+(added) documentation for 2.6.3 features: lines.targetlines[i] for the
+manipulation of the stc's target attribute, as well as the hotkeydisplay and
+hotkeyaccept variables defined for macros (and how to get usable values).
+(fixed) error on startup when the path to a user profile contains a character
+in the ascii 128-255 range.  Bug report thanks to Ianare Sevi.
+(fixed) closing shells causing a "do you want to save?" dialog.
+(fixed) lack of shell number/type in the documents list and tabs.
+(added) method to easily set clipboard data for macros, etc., (use
+_pype.SetClipboardText(text), will return if it was successful or not).
+(added) method to strip/reindent shared leading whitespace from a string, use
+self._StripPrefix(string, newindent=0, include_firstline=1) .
+(added) new macro sample for 'Run selected text in Python Shell'
+(fixed) maximization + close removing PyPE's size/position information.  Thank
+you to Jonathan Henry for the report and patch.
+(fixed) line number margin not being wide enough when documents have many
+lines.  Thank you to Jonathan Henry for the report and patch.
+(fixed) AttributeError when opening files if you are using a slightly older
+version of wxPython.
+(fixed) PyPE and Command Shells not producing prompts and/or not working on
+Mac and Linux.  Thank you to Ernesto Costa for the bug report.
+(fixed) PyPE will no longer indiscriminantly add additional lines to your
+files when manupulating the last line (now will only add an additional line if
+your last line ends with a line ending character.
+(fixed) 'Run selected text in Python Shell' macro.
+(added) new macro sample for "Run current file", currently supports .py files.
+(fixed) lack of shell name when using either of the sample "Run" macros.
+(fixed) when closing a shell on non-Windows platforms, it should now properly
+kill the process tree from that shell.
+(added) search in commented lines support for non-Python languages.
+(added) option to search in uncommented portions of lines for all languages.
+(fixed) todo discovery for C/C++ files.
+(added) "Strict Todo" option, which requires todos to be prefixed with //>,
+%>, #>, or ##> for C/C++, TeX/LaTeX, and Python respectively.  Ignored for xml
+and html, because requiring it for them would be silly.
+(fixed) %L handling for triggers.
+(fixed) Options->One Tab now properly displays the current editor state.
+(fixed) Smart Paste when there is a selection.  Will now properly indent the
+first line; previously the first line would get incorrect indendation.
+(fixed) a condition where macros in Python 2.3 wouldn't die after 5 seconds
+under some situations (the macro named "Timeout Failure in Python 2.3" is now
+named "Timeout Non-Failure #3 in Python 2.3").
+(added) support for html/xml <?xml encoding=['"]...['"]?> discovery in the
+first two lines of the source file.  Does not assume utf-8 as per spec:
+http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl due to backwards
+compatability concerns.  Users desiring utf-8 decoding support should make
+sure that their xml/html files include a utf-8 encoding directive or BOM at
+the beginning of their file.
+(changed) slightly the behavior of encoding discovery during load/save of a
+source file.  In most cases, this will not change how a file is loaded or
+saved, but it is much easier to understand, and succeeds in more cases than it
+used to.  See the help/readme for more information on PyPE's current behavior
+and how it differs from the old behavior.
+(added) dragging and dropping of both files and text onto the editor control
+simultaneously, thanks to Anthony Wiese.  Dropping text onto the editor now
+has the same behavior as pasting with the cursor at that particular position.
+(updated) the documentation with information about strict todos, and finished
+an incomplete sentence about C/C++ parsing.
+(added) message to non-Windows/Linux platforms that the shell may not provide
+a prompt, even if it is otherwise working.
+(added) support for utf-32 variants on platforms where they are supported.
+
+
 #-------------------------------- PyPE 2.6.3 ---------------------------------
 (changed) only per-document state information that is different from the
 default for the current file's type will actually be stored when the

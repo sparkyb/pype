@@ -1,4 +1,4 @@
 """PyPE version information"""
 
-VERSION_ = VERSION = "2.6.3"
+VERSION_ = VERSION = "2.6.5"
 

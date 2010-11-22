@@ -94,7 +94,10 @@ class LineAbstraction(object):
         def set(self, value):
             self.selectedlinesi = self.selectedlinesi
             p = self.stc.GetSelection()[0]
-            self.stc.ReplaceSelection(self.stc.format.join([i.rstrip('\r\n') for i in value] + ['']))
+            if value and (value[-1].endswith('\r') or value[-1].endswith('\n')):
+                #we don't want to use += here!
+                value = value + ['']
+            self.stc.ReplaceSelection(self.stc.format.join([i.rstrip('\r\n') for i in value]))
             self.stc.SetSelection(p, self.stc.GetSelection()[1])
         
         def de1(self):
@@ -143,7 +146,10 @@ class LineAbstraction(object):
         
         def set(self, value):
             self.targetlinesi = self.targetlinesi
-            self.stc.ReplaceTarget(self.stc.format.join([i.rstrip('\r\n') for i in value] + ['']))
+            if value and (value[-1].endswith('\r') or value[-1].endswith('\n')):
+                #we don't want to use += here!
+                value = value + ['']
+            self.stc.ReplaceTarget(self.stc.format.join([i.rstrip('\r\n') for i in value]))
         
         def de1(self):
             self.targetlinesi = self.targetlinesi

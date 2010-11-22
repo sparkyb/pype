@@ -314,7 +314,7 @@ class SpellCheck(scrolled.ScrolledPanel):
             doc = doc.encode('ascii')
         except:
             tt = non_word
-        print type(doc), type(tt)
+        
         wrds = doc.translate(tt).split()
         wc = len(wrds)
         for i in wrds:

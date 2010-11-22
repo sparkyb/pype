@@ -5,8 +5,14 @@ import wx
 import wx.stc
 
 cn = 'Courier New'
-faces = {'times': cn, 'mono' : cn, 'helv' : cn, 'other': cn, 'lucd': cn,
-         'size' : 10, 'size2': 10, 'lnsize': 10, "backcol": "#FFFFFF"}
+fs = 10
+
+def update_faces():
+    global faces
+    faces = {'times': cn, 'mono' : cn, 'helv' : cn, 'other': cn, 'lucd': cn,
+             'size' : fs, 'size2': fs, 'lnsize': fs, "backcol": "#FFFFFF"}
+
+update_faces()
 
 def partition(st, sep):
     if sep not in st:

@@ -90,11 +90,15 @@ class StartupError(Exception):
 close_stdin = "<CLOSE STDIN>"
 blocksize = 512
 
+flags = 0
+if sys.platform != 'win32':
+    flags = wx.EXEC_MAKE_GROUP_LEADER 
+
 class process:
     def __init__(self, parent, cmd, end_callback):
         self.process = wx.Process(parent)
         self.process.Redirect()
-        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC, self.process)
+        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC|flags, self.process)
         self.b = []
         if self.process.pid:
             #what was up with wx.Process.Get*Stream names?

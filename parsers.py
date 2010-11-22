@@ -11,13 +11,15 @@ from compiler import ast
 from compiler import consts
 from plugins import exparse
 
-todoexp = re.compile('([a-zA-Z0-9 ]+):(.*)', re.DOTALL)
+todoexp = re.compile('(>?[a-zA-Z0-9 ]+):(.*)', re.DOTALL)
 
 _bad_todo = dict.fromkeys('if elif else def cdef class try except finally for while lambda'.split())
 _bad_urls = dict.fromkeys('http ftp mailto news gopher telnet file'.split())
 
-def is_url(left, right):
+def is_url(left, right, ml=0):
     if left.lstrip().lower() in _bad_urls and right[:2] == '//':
+        return 1
+    if not ml and _pype.STRICT_TODO and left[:1] != '>':
         return 1
     return 0
 
@@ -146,7 +148,7 @@ def c_parser(source, line_ending, flat, wxYield):
     for line in source.split(line_ending):
         line_no += 1
         ls = line.strip()
-        if ls[:2] == '\\\\':
+        if ls[:2] == '//':
             r = texp.match(ls, 2)
             if not r:
                 continue
@@ -154,6 +156,8 @@ def c_parser(source, line_ending, flat, wxYield):
             tpl = r.groups()
             if is_url(*tpl):
                 continue
+            if tpl[0][:1] == '>':
+                tpl = tpl[0][1:], tpl[1]
             todo.append((tpl[0].strip().lower(),
                       line_no,
                       tpl[1].count('!'),
@@ -178,11 +182,14 @@ def slower_parser(source, _1, flat, _2):
             r = texp.match(ls, 1 + ls.startswith('##'))
             if r:
                 tpl = r.groups()
-                if tpl[0].split()[0] not in bad_todo and not is_url(*tpl):
-                    todo.append((tpl[0].strip().lower(),
-                            line_no+1,
-                            tpl[1].count('!'),
-                            tpl[1].strip()))
+                if tpl[0].split()[0] in bad_todo or is_url(*tpl):
+                    continue
+                if tpl[0][:1] == '>':
+                    tpl = tpl[0][1:], tpl[1]
+                todo.append((tpl[0].strip().lower(),
+                        line_no+1,
+                        tpl[1].count('!'),
+                        tpl[1].strip()))
     
     return out, docstring.keys(), docstring, todo
 #
@@ -241,11 +248,15 @@ def faster_parser(source, line_ending, flat, wxYield):
             r = texp.match(ls, 1 + ls.startswith('##'))
             if r:
                 tpl = r.groups()
-                if tpl[0].split()[0] not in bad_todo and not is_url(*tpl):
-                    todo.append((tpl[0].strip().lower(),
-                                 line_no,
-                                 tpl[1].count('!'),
-                                 tpl[1].strip()))
+                if tpl[0].split()[0] in bad_todo or is_url(*tpl):
+                    continue
+                if tpl[0][:1] == '>':
+                    tpl = tpl[0][1:], tpl[1]
+                todo.append((tpl[0].strip().lower(),
+                        line_no+1,
+                        tpl[1].count('!'),
+                        tpl[1].strip()))
+
         #elif ls[:3] == '#>>':
         #    fun('#>>', line, ls, line_no, stk)
 
@@ -308,6 +319,8 @@ def latex_parser(source, line_ending, flat, _):
                 tpl = r.groups()
                 if is_url(*tpl):
                     continue
+                if tpl[0][:1] == '>':
+                    tpl = tpl[0][1:], tpl[1]
                 todo.append((tpl[0].strip().lower(),
                              line_no,
                              tpl[1].count('!'),
@@ -365,7 +378,7 @@ def ml_parser(source, line_ending, flat, _):
             continue
         
         tpl = r.groups()
-        if is_url(*tpl):
+        if is_url(tpl[0], tpl[1], 1):
             continue
         
         todo.append((tpl[0].strip().lower(),

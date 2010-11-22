@@ -26,9 +26,8 @@ available features.
 """
 
 import sys
-import time
 
-if [i for i in sys.argv if 'wininst' in i or 'rpm' in i]:
+if [i for i in sys.argv if 'wininst' in i or 'rpm' in i or 'bdist' in i]:
     print '''
 You seem to be attempting a bdist_wininst or bdist_rpm distribution creation.
 According to my experience, running the results of PyPE + bdist_wininst will
@@ -39,17 +38,17 @@ version, and packaging it up with some platform-specific tool.
 '''
     sys.exit(1)
 
-from distutils.core import setup
 import __version__
-
 if 'py2exe' in sys.argv:
     import pype
     try:
         import py2exe
     except:
         raise SystemExit("py2exe needs to be installed to create Windows binaries")
+from distutils.core import setup
 import glob
 import os
+import time
 
 nam = "PyPE"
 if sys.platform == 'win32' and 'py2exe' in sys.argv:

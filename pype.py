@@ -22,6 +22,15 @@ DEBUG = '--debug' in sys.argv
 USE_THREAD = '--nothread' not in sys.argv
 
 PRINTMACROS = 0
+#get font size modifications
+for i in sys.argv:
+    if i.startswith('--fontsize='):
+        try:
+            FONTSIZE = int(i[11:])
+        except:
+            pass
+        else:
+            break
 
 def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
     os.chdir(orig_path)
@@ -31,8 +40,14 @@ def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
     
     os.execvp(args[0], args + ['--last'])
 
-sys.argv = [i for i in sys.argv if i not in ('--ansi', '--unicode', '--debug', '--nothread', '--macros')]
+def keep(i):
+    if i in ('--ansi', '--unicode', '--debug', '--nothread', '--macros'):
+        return 0
+    if i.startswith('--fontsize='):
+        return 0
+    return 1
 
+sys.argv = [i for i in sys.argv if keep(i)]
 #-------------- Create reference to this module in __builtins__ --------------
 if isinstance(__builtins__, dict):
     __builtins__['_pype'] = sys.modules[__name__]
@@ -79,6 +94,8 @@ class cancelled(Exception):
 class pass_keyboard(cancelled): pass
 
 def isdirty(win):
+    if not isinstance(win, PythonSTC):
+        return False
     if win.dirty:
         return True
 
@@ -94,6 +111,11 @@ def isdirty(win):
         win.MakeDirty()
     return r
 
+#change the standard font size
+import StyleSetter
+if 'FONTSIZE' in globals():
+    StyleSetter.fs = FONTSIZE
+    StyleSetter.update_faces()
 #plugin-type thing imports
 from plugins import documents
 from plugins import logger
@@ -345,6 +367,7 @@ if 1:
     USEBOM_ID = wxNewId()
     ONE_TAB = wxNewId()
     TD_ID = wxNewId()
+    STRICT_TODO_ID = wxNewId()
     FINDBAR_BELOW_EDITOR = wxNewId()
     NO_FINDBAR_HISTORY = wxNewId()
     CLEAR_FINDBAR_HISTORY = wxNewId()
@@ -462,10 +485,17 @@ if 1:
     BOM = [('+/v8-', 'utf-7'),
           ('\xef\xbb\xbf', 'utf-8'),
           ('\xfe\xff', 'utf-16-be'),
-          ('\xff\xfe\xff\xfe', 'utf-16'),
           ('\xff\xfe', 'utf-16-le'),
           ('', 'ascii'),
           ('', 'other')]
+    try:
+        _ = u'\ufeff'.encode('utf-32')
+    except:
+        pass
+    else:
+        BOM.insert(2, ('\xff\xfe\0\0', 'utf-32-le'))
+        BOM.insert(3, ('\0\0\xfe\xff', 'utf-32-be'))
+        
     ADDBOM = {}
     ENCODINGS = {}
     for i,j in BOM:
@@ -532,15 +562,28 @@ def GDI(name):
     return -1
 #
 
+def get_filetype(fn):
+    return extns.get(fn.split('.')[-1].lower(), 'python')
+
 def GetClipboardText():
-    a = wxClipboard()
-    if not a.Open():
-        return
-    b = wxTextDataObject()
-    if not a.GetData(b):
-        return
-    a.Close()
-    return b.GetText()
+    success = False
+    do = wx.TextDataObject()
+    if wx.TheClipboard.Open():
+        success = wx.TheClipboard.GetData(do)
+        wx.TheClipboard.Close()
+
+    if success:
+        return do.GetText()
+    return None
+
+def SetClipboardText(txt):
+    do = wx.TextDataObject()
+    do.SetText(txt)
+    if wx.TheClipboard.Open():
+        wx.TheClipboard.SetData(do)
+        wx.TheClipboard.Close()
+        return 1
+    return 0
 
 RESET = {'cursorposn':0,
          'BM':[],
@@ -639,6 +682,7 @@ class MainWindow(wxFrame):
             self.fileHistory.UseMenu(recentmenu)
             self.configPath = homedir
             self.loadHistory()
+            self.Maximize(LASTWINDOWSTATE)
             self.SetSize(LASTSIZE)
             self.SetPosition(LASTPOSITION)
             self.restart = 0
@@ -926,19 +970,20 @@ class MainWindow(wxFrame):
                 st = "All new or unknown documents will be highlighted as %s"%name
                 menuAdd(self, stylemenu2, name, st, self.OnDefaultStyleChange, mid, typ)
     
-            optionsmenu.AppendSeparator()
-            menuAdd(self, optionsmenu, "Enable File Drops", "Enable drag and drop file support onto the text portion of the editor", self.OnDNDToggle, DND_ID, wxITEM_CHECK)
+            ## optionsmenu.AppendSeparator()
+            ## menuAdd(self, optionsmenu, "Enable File Drops", "Enable drag and drop file support onto the text portion of the editor", self.OnDNDToggle, DND_ID, wxITEM_CHECK)
             optionsmenu.AppendSeparator()
             menuAdd(self, optionsmenu, "Use Icons", "When checked, the editor uses filetype-specific icons next to file names", self.OnIconToggle, IT_ID, wxITEM_CHECK)
             menuAdd(self, optionsmenu, "Editor on top", "When checked, the editor is above the Todos, Log, etc., otherwise it is below (requires restart)", self.OnLogBarToggle, LB_ID, wxITEM_CHECK)
             menuAdd(self, optionsmenu, "Editor on left", "When checked, the editor is left of the source trees, document list, etc., otherwise it is to the right (requires restart)", self.OnDocBarToggle, DB_ID, wxITEM_CHECK)
             menuAdd(self, optionsmenu, "Show Wide Tools", "Shows or hides the tabbed tools that are above or below the editor", self.OnShowWideToggle, WIDE_ID, wxITEM_CHECK)
             menuAdd(self, optionsmenu, "Show Tall Tools", "Shows or hides the tabbed tools that are right or left of the editor", self.OnShowTallToggle, TALL_ID, wxITEM_CHECK)
-            menuAdd(self, optionsmenu, "Wide Todo", "When checked, the todo list will be near the Log tab, when unchecked, will be near the Documenst tab (requires restart)", self.OnTodoToggle, TD_ID, wxITEM_CHECK)
             menuAdd(self, optionsmenu, "One Tab", "When checked, the name, line, filter, and todo lists all share a tab (requires restart)", self.OnOneTabToggle, ONE_TAB, wxITEM_CHECK)
             menuAdd(self, optionsmenu, "One PyPE", "When checked, will listen on port 9999 for filenames to open", self.OnSingleToggle, SINGLE_ID, wxITEM_CHECK)
             if UNICODE:
                 menuAdd(self, optionsmenu, "Always Write BOM", "If checked, will write BOM when coding: directive is found, otherwise not", self.OnBOMToggle, USEBOM_ID, wxITEM_CHECK)
+            menuAdd(self, optionsmenu, "Wide Todo", "When checked, the todo list will be near the Log tab, when unchecked, will be near the Documenst tab (requires restart)", self.OnTodoToggle, TD_ID, wxITEM_CHECK)
+            menuAdd(self, optionsmenu, "Strict Todo", "When checked, todos must also begin with > character (except xml/html)", self.OnStrictTodoToggle, STRICT_TODO_ID, wxITEM_CHECK)
             
             optionsmenu.AppendSeparator()
             
@@ -1039,18 +1084,20 @@ class MainWindow(wxFrame):
             self.dpm = 0
             self.menubar.Check(AUTO, showautocomp)
             self.menubar.Check(WRAPL, wrapmode != wxSTC_WRAP_NONE)
-            self.menubar.Check(DND_ID, dnd_file)
+            ## self.menubar.Check(DND_ID, dnd_file)
             self.menubar.Check(IT_ID, USE_DOC_ICONS)
             self.menubar.Check(LB_ID, logbarlocn)
             self.menubar.Check(DB_ID, docbarlocn)
             self.menubar.Check(WIDE_ID, SHOWWIDE)
             self.menubar.Check(TALL_ID, SHOWTALL)
+            self.menubar.Check(ONE_TAB, ONE_TAB_)
             self.menubar.Check(SINGLE_ID, single_pype_instance)
             if UNICODE:
                 self.menubar.Check(USEBOM_ID, always_write_bom)
             self.menubar.Check(SHELL_NUM_TO_ID[SHELL_OUTPUT], 1)
             self.menubar.Check(IMAGE_BUTTONS, macro_images)
             self.menubar.Check(TD_ID, TODOBOTTOM)
+            self.menubar.Check(STRICT_TODO_ID, STRICT_TODO)
             self.menubar.Check(USETABS, use_tabs)
             self.menubar.Check(INDENTGUIDE, indent_guide)
             self.menubar.Check(lexers3[DEFAULTLEXER], 1)
@@ -1283,10 +1330,26 @@ class MainWindow(wxFrame):
                 win.parent.SetSashPosition(-size)
         except cancelled:
             pass
+        # Save window size before it is maximized
+        if not self.IsMaximized():
+            global LASTSIZE, LASTPOSITION
+            LASTSIZE = self.GetSizeTuple()
+            LASTPOSITION = self.GetPositionTuple()
 
     def single_instance_poller(self, evt=None):
         if single_pype_instance:
             single_instance.poll()
+        try:
+            win = self.getNumWin()[1]
+            x = win.GetMarginWidth(0)
+            if x:
+                #we are supposed to have a margin...
+                y = len(str(win.GetLineCount()))
+                z = int(.9*StyleSetter.fs*max(4, y+1))
+                if x != z:
+                    win.SetMarginWidth(0, z)
+        except cancelled:
+            pass
 
     def OnSashDrag(self, event):
         if event.GetDragStatus() == wxSASH_STATUS_OUT_OF_RANGE:
@@ -1318,8 +1381,9 @@ class MainWindow(wxFrame):
     def exceptDialog(self, title="Error"):
         k = cStringIO.StringIO()
         traceback.print_exc(file=k)
-        k.seek(0)
-        dlg = wxScrolledMessageDialog(self, k.read(), title)
+        k = k.getvalue()
+        print k
+        dlg = wxScrolledMessageDialog(self, k, title)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1469,6 +1533,7 @@ class MainWindow(wxFrame):
                             ('SASH2', 300),
                             ('LASTSIZE', (900,600)),
                             ('LASTPOSITION', self.GetPositionTuple()),
+                            ('LASTWINDOWSTATE', 0),
                             ('logbarlocn', 1),
                             ('docbarlocn', 1),
                             ('dnd_file', 1),
@@ -1499,7 +1564,8 @@ class MainWindow(wxFrame):
                             ('SHELL_OUTPUT', 0),
                             ('SHELL_COLOR', '#d0d0d0'),
                             ('macro_images', 1),
-                            ('show_recent', 1)
+                            ('show_recent', 1),
+                            ('STRICT_TODO', 0),
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -1537,8 +1603,9 @@ class MainWindow(wxFrame):
         #saving document state
         self.config['lastopen'] = sav
         self.config['LASTUSED'] = self.lastused.items() + LASTOPEN
-        self.config['LASTSIZE'] = self.GetSizeTuple()
-        self.config['LASTPOSITION'] = self.GetPositionTuple()
+        self.config['LASTSIZE'] = LASTSIZE
+        self.config['LASTPOSITION'] = LASTPOSITION
+        self.config['LASTWINDOWSTATE'] = self.IsMaximized()
         self.config['SASH1'] = self.BOTTOM.GetSizeTuple()[1]
         self.config['SASH2'] = self.RIGHT.GetSizeTuple()[0]
         
@@ -1586,6 +1653,7 @@ class MainWindow(wxFrame):
         self.config['SHELL_COLOR'] = SHELL_COLOR
         self.config['macro_images'] = macro_images
         self.config['show_recent'] = show_recent
+        self.config['STRICT_TODO'] = STRICT_TODO
         try:
             if UNICODE:
                 path = os.sep.join([self.configPath, 'history.u.txt'])
@@ -1819,6 +1887,7 @@ class MainWindow(wxFrame):
             txt = f.read()
             f.close()
         else:
+            fn = ' '
             FN = ''
             txt = ''
         
@@ -1839,7 +1908,7 @@ class MainWindow(wxFrame):
             state = dict(state)
             state['wrapmode'] = 1
             state['whitespace'] = 0
-            nwin = interpreter.MyShell(split, wxNewId(), self, None, shell&1)
+            nwin = interpreter.MyShell(split, wxNewId(), self, None, shell)
 
         nwin.filename = fn
         nwin.dirname = d
@@ -1900,7 +1969,9 @@ class MainWindow(wxFrame):
         ## print 4
         split.Initialize(nwin)
         ## print 5
-        self.control.AddPage(split, nwin.getshort(), switch)
+        shortname = nwin.getshort()
+        ## print 'Adding page with name:', shortname
+        self.control.AddPage(split, shortname, switch)
         nwin.MakeClean()
         ## self.OnRefresh(None, nwin)
         self.updateWindowTitle()
@@ -2143,11 +2214,6 @@ class MainWindow(wxFrame):
         win.SetFocus()
 
 #----------------------------- View Menu Methods -----------------------------
-
-    def Maximize(self, b):
-        wxFrame.Maximize(b)
-        wxPostEvent(wxSizeEvent((0,0), self.GetId()))
-
     def OnZoom(self, e):
         wnum, win = self.getNumWin(e)
         if e.GetId() == ZI:incr = 1
@@ -2295,7 +2361,7 @@ class MainWindow(wxFrame):
 
     def OnNumberToggle(self, e):
         n, win = self.getNumWin(e)
-        win.SetMarginWidth(0, (win.GetMarginWidth(0)+40)%80)
+        win.SetMarginWidth(0, not win.GetMarginWidth(0))
 
     def OnMarginToggle(self, e):
         n, win = self.getNumWin(e)
@@ -2511,9 +2577,6 @@ class MainWindow(wxFrame):
             self.RIGHT.Hide()
         self.OnSize(None)
     
-    def OnTodoToggle(self, e):
-        global TODOBOTTOM
-        TODOBOTTOM = not TODOBOTTOM
     def OnOneTabToggle(self, e):
         global ONE_TAB_
         ONE_TAB_ = not ONE_TAB_
@@ -2543,6 +2606,13 @@ class MainWindow(wxFrame):
                 self.menubar.Check(SINGLE_ID, single_pype_instance)
             else:
                 single_pype_instance = 1
+    def OnTodoToggle(self, e):
+        global TODOBOTTOM
+        TODOBOTTOM = not TODOBOTTOM
+    
+    def OnStrictTodoToggle(self, e):
+        global STRICT_TODO
+        STRICT_TODO = not STRICT_TODO
     
     def OnBOMToggle(self, e):
         global always_write_bom
@@ -2883,6 +2953,21 @@ message_lookup_table = {
     2347:'LineEndDisplay',
     2348:'LineEndDisplayExtend'
 }
+encoding_template = '''\
+        Based on BOM detection, coding declarations,
+        and defined defaults for the file type you are
+        opening, PyPE determined that your file was
+        likely encoded as %r, but its attempt to decode
+        your document failed due to:
+        %s
+        It will now try to decode your document as %r,
+        and depending on the content of your file, may
+        result in data corruption if this decision was
+        not correct and you attempt to save your file.
+        
+        If you believe PyPE to be in error, do not save
+        your file, and contact PyPE's author.'''.replace(8*' ', '')
+#
 class PythonSTC(wxStyledTextCtrl):
     def __init__(self, notebook, ID, parent):
         wxStyledTextCtrl.__init__(self, parent, ID)#, style = wxNO_FULL_REPAINT_ON_RESIZE)
@@ -2913,8 +2998,8 @@ class PythonSTC(wxStyledTextCtrl):
         self.recording = 0
         self.macro = []
 
-        #Text is included in the original, but who drags text?  Below for dnd file support.
-        if dnd_file: self.SetDropTarget(FileDropTarget(self.root))
+        #drop file and text support
+        self.SetDropTarget(DropTargetFT(self.root))
 
         #for command comlpetion
         self.SetKeyWords(0, " ".join(keyword.kwlist))
@@ -2937,7 +3022,8 @@ class PythonSTC(wxStyledTextCtrl):
         self.SetMarginMask(2, wxSTC_MASK_FOLDERS)
         self.SetMarginSensitive(2, True)
         self.SetMarginWidth(2, 12)
-        self.SetPasteConvertEndings(1)
+        if hasattr(self, 'SetPasteConvertEndings'):
+            self.SetPasteConvertEndings(1)
 
         if collapse_style: # simple folder marks, like the old version
             self.MarkerDefine(wxSTC_MARKNUM_FOLDER, wxSTC_MARK_BOXPLUS, "navy", "white")
@@ -3007,6 +3093,34 @@ class PythonSTC(wxStyledTextCtrl):
         self.CmdKeyClear(ord('C'), wxSTC_SCMOD_CTRL)
         self.CmdKeyClear(ord('V'), wxSTC_SCMOD_CTRL)
         self.CmdKeyClear(ord('A'), wxSTC_SCMOD_CTRL)
+        
+        ## self.dragstartok = 0
+        ## self.dragging = 0
+        ## sekf.have_selection = 0
+        
+        ## self.Bind(wx.EVT_MOTION, self._checkmouse)
+        ## self.Bind(wx.EVT_LEFT_DOWN, self._checkmouse2)
+        ## self.Bind(wx.EVT_LEFT_UP, self._checkmouse3)
+    
+    def _checkmouse(self, evt):
+        if self.dragging or not self.dragstartok or not evt.Dragging():
+            return
+        self._startdrag(evt)
+    
+    def _checkmouse2(self, evt):
+        self.dragstartok = 1
+        evt.Skip()
+    
+    def _checkmouse3(self, evt):
+        self.dragstartok = 0
+        evt.Skip()
+    
+    def _startdrag(self, evt):
+        if self.SelectionIsRectangle():
+            return evt.Skip()
+        
+        #Need to differentiate between discovering the initial selection
+        #and dragging that selection.  Still working on making it reliable.
     
     def getshort(self):
         if self.dirname:
@@ -3080,14 +3194,16 @@ class PythonSTC(wxStyledTextCtrl):
             posn = p = self.GetSelection()[0]
             todos = tr.split('%C')
             for y, todo in enumerate(todos):
-                if '\n' in todo:
-                    ts = todo.split('%L')
-                    for x, line in enumerate(ts):
-                        self.ReplaceSelection(line)
-                        if x != len(ts)-1:
-                            self._autoindent()
-                else:
-                    self.ReplaceSelection(todo)
+                for i in re.split('(%L)', todo): # '(%-?L)'
+                    if i == '%L':
+                        self._autoindent()
+                    ## elif i == '%-L':
+                        ## self._autoindent()
+                        ## l = max(self.GetSelection())
+                        ## self.SetSelection(l,l)
+                        ## self.Dent(None, -1)
+                    else:
+                        self.ReplaceSelection(i)
                 if y != len(todos)-1:
                     posn = self.GetSelection()[0]
             
@@ -3314,7 +3430,7 @@ class PythonSTC(wxStyledTextCtrl):
         self.SetProperty("tab.timmy.whinge.level", "10"[bool(saved['use_tabs'])])
         self.SetTabWidth(saved['spaces_per_tab'])
         self.SetIndent(saved['indent'])
-        self.SetMarginWidth(0, 40*saved['line_margin'])
+        self.SetMarginWidth(0, saved['line_margin'])
         self.SetMarginWidth(1, 16*saved['marker_margin'])
         self.SetEdgeColumn(saved['col_line'])
         self.SetEdgeMode(saved['col_mode'])
@@ -3348,102 +3464,62 @@ class PythonSTC(wxStyledTextCtrl):
 #-------------------- fix for SetText for the 'dirty bit' --------------------
     def SetText(self, txt, emptyundo=1):
         self.SetEOLMode(fmt_mode[self.format])
-        self.enc = actual = 'ascii'
+        tryencodings = ['ascii']
+        foundbom = 0
         if UNICODE:
+            ## if get_filetype(self.filename) in ('xml', 'html'):
+                ## #default XML and HTML encodings are utf-8 by spec:
+                ## #http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl
+                ## tryencodings.append('utf-8')
             for bom, enc in BOM:
-                if txt[:len(bom)] == bom:
-                    self.enc = actual = enc
+                if bom and txt[:len(bom)] == bom:
+                    tryencodings.append(enc)
                     txt = txt[len(bom):]
-                    ## print "chose", enc
-                    break
-            twolines = txt.split(self.format, 2)[:2]
+                    foundbom += 1
+            twolines = txt.lstrip().split(self.format, 2)[:2]
             foundcoding = 0
             for line in twolines:
-                x = re.search('coding[=:]\s*([-\w.]+)', line)
+                x = re.search('''coding[=:](?:["'\s]*)([-\w.]+)''', line)
                 if not x:
                     continue
                 x = x.group(1).lower()
                 ## print "ENCODING:", x
-                if x in ADDBOM:
-                    if actual != 'ascii' and actual != x:
-                        #BOM did not match coding: directive.
-                        #We are going to decode based on the BOM, but claim
-                        #whatever
-                        self.enc = x
-                    else:
-                        self.enc = actual = x
-                else:
-                    self.enc = x
-                    if actual == 'ascii':
-                        actual = x
-                foundcoding = 1
+                #always try to decode with the BOM first
+                tryencodings.insert(len(tryencodings)-foundbom, x)
+                foundcoding += 1
                 break
             
-            while 1:
+            te = []
+            while tryencodings:
+                i = tryencodings.pop()
+                if i not in te:
+                    te.append(i)
+            
+            te.reverse()
+            
+            while len(te) > 1:
+                prev = te[-1]
+                if te[-1] == 'ascii':
+                    te[-1] = 'latin-1'
                 try:
-                    txt = txt.decode(actual)
+                    txt = txt.decode(te[-1])
                 except Exception, why:
-                    
-                    if self.enc != actual:
-                        self.root.dialog(('''\
-                            You have declared %r as your encoding, but
-                            your document included a BOM for %r.
-                            PyPE was not able to decode your document as
-                            %r due to:
-                            %s
-                            PyPE will now attempt to decode your document as
-                            %r.'''%(self.enc, actual, actual, why, self.enc)).replace(28*' ', ''),
-                            "%r decoding error"%actual)
-                        actual = self.enc
-                        continue
-                    
-                    if foundcoding:
-                        self.root.dialog(('''\
-                            You have used %r as your encoding
-                            declaration, but PyPE was unable to decode
-                            your document due to:
-                            %s
-                            PyPE will load your document as ASCII.
-                            Depending on the content of your file, this
-                            may cause data loss if you save the opened
-                            version.  You do so at your own risk, and
-                            have now been warned.
-                            
-                            To prevent loss or corruption of data, it
-                            is suggested that you close the document,
-                            do not save.  Then try to open the document
-                            with the application you originally created
-                            it with.  If PyPE was the original creator
-                            and only editor of the document, please
-                            contact the author and submit a bug report.'''%(actual, why)).replace(28*' ', ''),
-                            "%r decoding error"%actual)
-                    else: #foundbom
-                        self.root.dialog(('''\
-                            While attempting to decode your document
-                            as %r based on the BOM included with it,
-                            there  was a unicode decoding error:
-                            %s
-                            PyPE will load your document as ASCII.
-                            Depending on the content of your file, this
-                            may cause data loss if you save the opened
-                            version.  You do so at your own risk, and
-                            have now been warned.
-                            
-                            To prevent loss or corruption of data, it
-                            is suggested that you close the document,
-                            do not save.  Then try to open the document
-                            with the application you originally created
-                            it with.  If PyPE was the original creator
-                            and only editor of the document, please
-                            contact the author and submit a bug report.'''%(actual, why)).replace(28*' ', ''),
-                            "Unicode decoding error.")
-                        
-                    self.enc = 'ascii'
-                break
+                    te[-1] = prev
+                    self.root.dialog(encoding_template%(te[-1], why, te[-2]),
+                                     "%r decoding error"%(te[-1],))
+                    _ = te.pop()
+                    continue
+                else:
+                    te[-1] = prev
+                    break
+            
+            self.enc = te[-1]
             
             if self.enc not in ADDBOM:
                 self.enc = 'other'
-
+        else:
+            self.enc = tryencodings[-1]
+        
         wxStyledTextCtrl.SetText(self, txt)
         self.ConvertEOLs(fmt_mode[self.format])
         self.opened = 1
@@ -3454,32 +3530,46 @@ class PythonSTC(wxStyledTextCtrl):
     def GetText(self):
         self.ConvertEOLs(fmt_mode[self.format])
         if UNICODE:
+            tryencodings = ['utf-8', 'ascii']
+            ## if get_filetype(self.filename) in ('xml', 'html'):
+                ## #default XML and HTML encodings are utf-8 by spec:
+                ## #http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl
+                ## tryencodings.append('utf-8')
+            
             txt = otxt = wxStyledTextCtrl.GetText(self)
-            twolines = txt.split(self.format, 2)[:2]
-            x = None
+            twolines = txt.lstrip().split(self.format, 2)[:2]
             #pull the encoding
             for line in twolines:
-                x = re.search('coding[=:]\s*([-\w.]+)', line)
+                x = re.search('''coding[=:](?:["'\s]*)([-\w.]+)''', line)
                 if not x:
                     continue
-                x = str(x.group(1).lower())
+                tryencodings.append(str(x.group(1).lower()))
                 break
             
-            #try self.enc, the discovered coding, ascii, then utf-8 in that order
+            if self.enc != 'other':
+                tryencodings.append(self.enc)
+            
+            te = []
+            while tryencodings:
+                i = tryencodings.pop()
+                if i not in te:
+                    te.append(i)
+            
             why = None
-            z = {}
-            for i in [j for j in (self.enc, x, 'ascii', 'utf-8') if j and j != 'other']:
-                if i in z:
-                    continue
-                z[i] = None
+            for i in te:
+                prev = i
+                if i == 'ascii':
+                    i = 'latin-1'
                 try:
                     txt = otxt.encode(i)
                 except UnicodeEncodeError, wh:
+                    i = prev
                     if why is None:
                         why = wh
                 else:
+                    i = prev
                     if (self.enc != 'other' and self.enc != i) or \
-                       (self.enc == 'other' and x != i):
+                       (self.enc == 'other' and i != te[0]):
                         y = os.path.join(self.dirname, self.filename)
                         if self.root.dialog(('''\
                                 While trying to save the file named:
@@ -3491,13 +3581,13 @@ class PythonSTC(wxStyledTextCtrl):
                                 Due to:
                                     %s
                                 Would you like for PyPE to instead use %r as an encoding?
-                                '''%(y, x, why, i)).replace(32*' ', ''),
+                                '''%(y, te[0], why, i)).replace(32*' ', ''),
                                 "Continue with alternate encoding?", wxYES_NO) != wxID_YES:
                             raise cancelled
                         self.root.SetStatusText("Using %r encoding for %s"%(i, y))
                     
                     ## print 'SAVED ENCODING:', i
-                    if (always_write_bom and i == x) or (i != x):
+                    if (always_write_bom and i == te[0]) or (i != te[0]):
                         ## print "added BOM for", i
                         txt = ADDBOM.get(i, '') + txt
                     return txt
@@ -3562,13 +3652,49 @@ class PythonSTC(wxStyledTextCtrl):
         if self.sloppy and not self.SelectionIsRectangle():
             self.SelectLines()
         self.do(wxStyledTextCtrl.Copy, 0)
+    
+    def _StripPrefix(self, d, newindent=0, dofirst=1):
+        if d is None or '\n' not in d:
+            return ''
+            
+        #sanitize the information to be pasted
+        lines = d.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+            
+        #find the leading indentation for the text
+        tabwidth = self.GetTabWidth()
+        repl = tabwidth*' '
+        x = []
+        z = len(d)
+        for line in lines:
+            leading_whitespace = line[:len(line)-len(line.lstrip())]
+            rest = line[len(leading_whitespace):]
+            leading_whitespace = leading_whitespace.replace('\t', repl)
+            llw = len(leading_whitespace)
+            if not rest:
+                llw = z
+            x.append((llw, leading_whitespace, rest))
+            
+        #reindent the clipboard text
+        base = newindent*' '
+        min_i = min(x)[0]
+        usetabs = self.GetUseTabs()
+        out = []
+        for y, (li, lw, lr) in enumerate(x):
+            lw = lw[min_i:]
+            if dofirst or y:
+                lw = base + lw
+            if usetabs:
+                lw = lw.replace(repl, '\t')
+            out.append(lw+lr)
+            
+        return self.format.join(out)
+    
     def Paste(self):
         if self.recording:
             self.macro.append((2179, 0, 0))
         while self.smartpaste:
             x,y = self.GetSelection()
-            if x != y:
-                break
+            dofirst = x != y
             d = GetClipboardText()
             if d is None or '\n' not in d:
                 break
@@ -3578,43 +3704,17 @@ class PythonSTC(wxStyledTextCtrl):
             try:
                 curline = self.LineFromPosition(x)
                 x = self.GetLineEndPosition(curline)
-                self.SetSelection(x,x)
-                if self.GetLineIndentation(curline)+self.PositionFromLine(curline) != x:
+                if not dofirst:
+                    self.SetSelection(x,x)
+                if not dofirst and self.GetLineIndentation(curline)+self.PositionFromLine(curline) != x:
                     self._tdisable(self._autoindent, self)
                 
-                #sanitize the information to be pasted
-                lines = d.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+                newindent = self.GetLineIndentation(self.LineFromPosition(self.GetSelection()[0]))
+                x = self._StripPrefix(d, newindent, dofirst)
                 
-                #find the leading indentation for the clipboard text
-                tabwidth = self.GetTabWidth()
-                repl = tabwidth*' '
-                x = []
-                z = len(d)
-                for line in lines:
-                    leading_whitespace = line[:len(line)-len(line.lstrip())]
-                    rest = line[len(leading_whitespace):]
-                    leading_whitespace = leading_whitespace.replace('\t', repl)
-                    llw = len(leading_whitespace)
-                    if not rest.strip():
-                        llw = z
-                    x.append((llw, leading_whitespace, rest))
-                
-                #reindent the clipboard text
-                base = self.GetLineIndentation(self.LineFromPosition(self.GetSelection()[0]))*' '
-                min_i = min(x)[0]
-                usetabs = self.GetUseTabs()
-                out = []
-                for y, (li, lw, lr) in enumerate(x):
-                    lw = lw[min_i:]
-                    if y:
-                        ## print "non-first line", lr
-                        lw = base + lw
-                    if usetabs:
-                        lw = lw.replace(repl, '\t')
-                    out.append(lw+lr)
-                
-                x = self.format.join(out)
-                #insert the clipboard text
+                #insert the text
+                if dofirst:
+                    self.lines.selectedlines = []
                 self.ReplaceSelection(x)
             finally:
                 self.EndUndoAction()
@@ -3629,11 +3729,7 @@ class PythonSTC(wxStyledTextCtrl):
 #--------- Ahh, the style change code...isn't it great?  Not really. ---------
     def changeStyle(self, stylefile, language):
         try:
-            #from StyleSupport import initSTC
-            ## from STCStyleEditor import initSTC
-            from StyleSetter import initSTC
-            initSTC(self, stylefile, language)
-            ## self.SetLexer(wxSTC_LEX_NULL)
+            StyleSetter.initSTC(self, stylefile, language)
             self.lexer = language
         except:
             
@@ -3880,43 +3976,6 @@ class PythonSTC(wxStyledTextCtrl):
                 lines.curlinep = curi
             else:
                 lines.curlinep = curp + curi - chari
-        
-        return
-        
-        incr *= self.GetIndent()
-        x,y = self.GetSelection()
-        if x==y:
-            lnstart = self.GetCurrentLine()
-            lnend = lnstart
-            if incr < 0:
-                a = self.GetLineIndentation(lnstart)%(abs(incr))
-                if a:
-                    incr = -a
-            pos = self.GetCurrentPos()
-            col = self.GetColumn(pos)
-            linestart = pos-col
-            a = max(linestart+col+incr, linestart)
-        else:
-            lnstart = self.LineFromPosition(x)
-            lnend = self.LineFromPosition(y-1)
-        self.BeginUndoAction()
-        try:
-            for ln in xrange(lnstart, lnend+1):
-                count = self.GetLineIndentation(ln)
-                m = (count+incr)
-                m += cmp(0, incr)*(m%incr)
-                m = max(m, 0)
-                self.SetLineIndentation(ln, m)
-            if x==y:
-                pos = pos + (m-count) - min(0, col + (m-count))
-                self.SetSelection(pos, pos)
-            else:
-                p = 0
-                if lnstart != 0:
-                    p = self.GetLineEndPosition(lnstart-1) + len(self.format)
-                self.SetSelection(p, self.GetLineEndPosition(lnend))
-        finally:
-            self.EndUndoAction()
 
     def OnIndent(self, e):
         self.Dent(e, 1)
@@ -4329,6 +4388,52 @@ class TextDropTarget(wxTextDropTarget):
         #This is so that you can keep your document unchanged while adding
         #code snippets.
         return False
+
+#DropTargetFT basis thanks to Anthony Wiese
+class DropTargetFT(wx.PyDropTarget):
+    def __init__(self, window):
+        wx.PyDropTarget.__init__(self)
+        self.window = window
+        self.initObjects()
+
+    def initObjects(self):
+        self.data = wx.DataObjectComposite()
+        self.textDataObject = wx.TextDataObject()
+        self.fileDataObject = wx.FileDataObject()
+        self.data.Add(self.textDataObject, True)
+        self.data.Add(self.fileDataObject, False)
+        self.SetDataObject(self.data)
+
+    def OnEnter(self, x, y, dragResult):
+        return dragResult
+
+    def OnDrop(self, x, y):
+        return True
+
+    def OnDragOver(self, x, y, dragResult):
+        return dragResult
+
+    def OnData(self, x, y, dragResult):
+        if self.GetData():
+            files = self.fileDataObject.GetFilenames()
+            text = self.textDataObject.GetText()
+            
+            if len(files) > 0:
+                self.window.OnDrop(files)
+            elif(len(text) > 0):
+                if SetClipboardText(text):
+                    try:
+                        win = self.window.getNumWin()[1]
+                    except cancelled:
+                        self.window.newTab('', '', 1)
+                        wx.CallAfter(self.window.OnPaste, None)
+                    else:
+                        p = win.PositionFromPointClose(x,y)
+                        win.SetSelection(p,p)
+                        win.Paste()
+            else:
+                self.window.SetStatusText("can't read this dropped data")
+        self.initObjects()
 
 class SplitterWindow(wxSplitterWindow):
     if 1:

@@ -26,7 +26,27 @@ import compiler
 newlines = re.compile(r'((\r\n)|(\r)|(\n))')
 quotedPattern=re.compile(
     r'''((?:"(?:[^\\"]*(?:\\.[^\\"]*)*)["])|(?:'(?:[^\\']*(?:\\.[^\\']*)*)[']))''')
-commentedPattern=re.compile(r"[^#]*#(.*)$")
+
+commentedPatterns = {
+    'cpp'       :re.compile('[^/]*//(.*)$'),
+    'python'    :re.compile('[^#]*#(.*)$'),
+    'html'      :re.compile('.*?<!--(.*?)(?=-->)?$'),
+    'tex'       :re.compile('(?=[^%]|\%)*%(.*)$')
+}
+
+commentedPatterns['text'] = commentedPatterns['pyrex'] = commentedPatterns['python']
+commentedPatterns['xml'] = commentedPatterns['html']
+
+uncommentedPatterns = {
+    'cpp'       :re.compile('((.*(?=//))|(.*))'),
+    'python'    :re.compile('(^[^#]*)'),
+    'html'      :re.compile('(.*?)(?=<!--)?'),
+    'tex'       :re.compile('([^%]|\%)*')
+}
+
+uncommentedPatterns['text'] = uncommentedPatterns['pyrex'] = uncommentedPatterns['python']
+uncommentedPatterns['xml'] = uncommentedPatterns['html']
+
 
 def fixnewlines(string):
     return newlines.sub('\n', string)
@@ -479,15 +499,21 @@ class FindInFiles(wx.Panel):
         self.ww = checkb("Whole Word", fc['whole_word'])
         self.quoted = checkb("Quoted", fc['quoted'])
         self.commented = checkb("Commented", fc['commented'])
+        self.uncommented = checkb("Uncommented", fc['uncommented'])
         opt_sizer2.Add(self.ww, flag=wx.ALIGN_LEFT|wx.TOP, border=2)
         opt_sizer2.Add(self.quoted, flag=wx.ALIGN_LEFT|wx.TOP, border=2)
         opt_sizer2.Add(self.commented, flag=wx.ALIGN_LEFT|wx.TOP, border=2)
+        opt_sizer2.Add(self.uncommented, flag=wx.ALIGN_LEFT|wx.TOP, border=2)
         opt_sizer2.Layout()
         #row+=1
         gbs.Add(opt_sizer2, (row,3), (1,2),
             wx.RIGHT, outsideBorder)
-
+        self.Bind(wx.EVT_CHECKBOX, self.VerifyChecks, self.commented)
+        self.Bind(wx.EVT_CHECKBOX, self.VerifyChecks, self.uncommented)
         row+=1
+        
+        
+        
         self.line = wx.StaticLine(
             self.scrolledPanel, -1, style=wx.LI_HORIZONTAL)
         gbs.Add(self.line, (row,0), allSpan,
@@ -580,12 +606,15 @@ class FindInFiles(wx.Panel):
         wx.EVT_TIMER(self, tid, self.OnFindButtonClick)
 
     #-------------------------------------------------------------------------
+    def VerifyChecks(self, evt):
+        if self.commented.IsChecked() and self.uncommented.IsChecked():
+            if evt.GetEventObject() == self.commented:
+                self.uncommented.SetValue(0)
+            else:
+                self.commented.SetValue(0)
 
     def getfn(self, win):
-        if win.dirname and win.filename:
-            return os.path.join(win.dirname, win.filename)
-        else:
-            return '<untitled %i>'%win.NEWDOCUMENT
+        return win.getlong()
     
     def OnScopeChoice(self, event):
         scope=event.GetString()
@@ -742,7 +771,7 @@ class FindInFiles(wx.Panel):
         exclude = self.exclude.GetValue().split(';')
         caseSensitive = self.cs.IsChecked()
         wholeWord = self.ww.IsChecked()
-        self.checkComment = self.commented.IsChecked()
+        self.checkComment = self.commented.IsChecked()*2 + self.uncommented.IsChecked()
         self.checkQuoted = self.quoted.IsChecked()
         multiline = self.multiline.IsChecked()
         subd = self.ss.IsChecked()
@@ -943,13 +972,20 @@ class FindInFiles(wx.Panel):
         found = []
         search=self.pattern.search
         pth = os.path.split(fileName)[0] #for tags support
+        language = _pype.get_filetype(fileName)
         for number, line in enumerate(lines):
             itemOrig=line
-            if self.checkComment:
-                match=commentedPattern.search(line)
+            if self.checkComment == 2:
+                match=commentedPatterns[language].search(line)
                 if match is None:
                     continue
                 line=match.group(1)
+            elif self.checkComment == 1:
+                match=uncommentedPatterns[language].search(line)
+                if match is None:
+                    continue
+                line=match.group(1)
+                
             if self.checkQuoted:
                 matches=quotedPattern.finditer(line)
                 if matches is None:
@@ -989,6 +1025,9 @@ class FindInFiles(wx.Panel):
         prefs.setdefault('whole_word', 0)
         prefs.setdefault('quoted', 0)
         prefs.setdefault('commented', 0)
+        prefs.setdefault('uncommented', 0)
+        if prefs['commented'] and prefs['uncommented']:
+            prefs['uncommented'] = 0
 
         prefs.setdefault('scope', 'Current File')
         prefs.setdefault('dirs', [])
@@ -1027,6 +1066,7 @@ class FindInFiles(wx.Panel):
             'whole_word': self.ww.IsChecked(),
             'quoted': self.quoted.IsChecked(),
             'commented': self.commented.IsChecked(),
+            'uncommented': self.uncommented.IsChecked(),
 
             'dirs': getlist(self.sdirs),
             'include': getlist(self.include),
