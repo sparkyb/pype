@@ -1,3 +1,10 @@
+
+'''
+This software is licensed under the GPL (GNU General Public License) version 2
+as it appears here: http://www.gnu.org/copyleft/gpl.html
+It is also included with this archive as `gpl.txt <gpl.txt>`_.
+'''
+
 """
 This is a test version of an alternate find in files ui.
 """
@@ -6,6 +13,7 @@ This is a test version of an alternate find in files ui.
 # Based on work from Josiah Carlson and others.
 # License GPL
 # Further work by parameter@sourceforge (Dave Schuyler).
+# Further further work by Josiah Carlson.
 
 from wx import ImageFromStream, BitmapFromImage, Yield
 from wx.stc import StyledTextCtrl

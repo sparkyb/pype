@@ -1,5 +1,12 @@
 
 '''
+This software is licensed under the GPL (GNU General Public License) version 2
+as it appears here: http://www.gnu.org/copyleft/gpl.html
+It is also included with this archive as `gpl.txt <gpl.txt>`_.
+'''
+
+
+'''
 If MyShell is passed a boolean true filter value, it will attempt to parse
 lines recieved as if it were recieving Python.  This allows you to add and
 change code you want sent to the interpreter until you get it right.  When a

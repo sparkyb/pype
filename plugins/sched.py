@@ -1,3 +1,16 @@
+
+'''
+This module is derived from the sched.py included with Python 2.6 .  I have
+modified it and am re-licensing it under the GPL v2, as is allowed by the PSF
+license:
+http://svn.python.org/view/python/trunk/LICENSE?revision=68142&view=markup
+
+This software is licensed under the GPL (GNU General Public License) version 2
+as it appears here: http://www.gnu.org/copyleft/gpl.html
+It is also included with this archive as `gpl.txt <gpl.txt>`_.
+'''
+
+
 """A generally useful event scheduler class.
 
 Each instance of this class manages its own queue.

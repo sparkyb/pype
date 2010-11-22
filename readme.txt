@@ -27,11 +27,9 @@ This software is licensed under the GPL (GNU General Public License) version 2
 as it appears here: http://www.gnu.org/copyleft/gpl.html
 It is also included with this archive as `gpl.txt <gpl.txt>`_.
 
-The included STCStyleEditor.py, which is used to support styles, was released
-under the wxWindows license and is copyright (c) 2001 - 2002 Riaan Booysen.
-The copy included was also distributed with the wxPython Demos and Docs for
-wxPython version 2.6 for Python 2.3, and may or may not have been modified by
-the time you read this.  The wxWindows license and the LGPL license it
+The portions of STCStyleEditor.py included in StyleSetter.py, which is used to
+support styles, was released under the wxWindows license and is copyright (c)
+2001 - 2002 Riaan Booysen.  The wxWindows license and the LGPL license it
 references are included with this software as `wxwindows.txt <wxwindows.txt>`_
 and `lgpl.txt <lgpl.txt>`_.
 

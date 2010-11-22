@@ -1,4 +1,11 @@
 
+'''
+This software is licensed under the GPL (GNU General Public License) version 2
+as it appears here: http://www.gnu.org/copyleft/gpl.html
+It is also included with this archive as `gpl.txt <gpl.txt>`_.
+'''
+
+
 import wx
 import wx.lib.mixins.listctrl as listmix
 import __main__ as _main

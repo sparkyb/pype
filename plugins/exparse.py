@@ -9,7 +9,10 @@ also recognises parameter names and values, and baseclasses. Names are now
 returned in order also.
 
 July 25, 2006
-Adapted from Synopsis package, which is LGPL licensed.
+Adapted from Synopsis package:
+http://synopsis.fresco.org/viewsvn/Synopsis/trunk/Synopsis/Parsers/Python/exparse.py?rev=187&view=markup
+...which is LGPL v2 licensed:
+http://synopsis.fresco.org/viewsvn/Synopsis/trunk/COPYING?rev=974&view=markup
 """
 
 import compiler
