@@ -70,8 +70,8 @@ for i in [logger, findbar, lru, filehistory, browser, workspace, todo,
     i.isdirty = isdirty
 
 #
-VERSION = "2.2"
-VERSION_ = "2.2"
+VERSION = "2.2.1"
+VERSION_ = "2.2.1"
 
 if 1:
     #under an if so that I can collapse the declarations
@@ -1519,7 +1519,7 @@ class MainWindow(wxFrame):
         self.control.AddPage(split, fn, switch)
         ## self.OnRefresh(None, nwin)
         self.updateWindowTitle()
-        nwin.SetFocus(True)
+        nwin.SetFocus()
         return nwin.enc
 
     def OnReload(self, e, win=None):
