@@ -78,7 +78,7 @@ for i in [logger, findbar, lru, filehistory, browser, workspace, todo,
     i.isdirty = isdirty
 
 #
-VERSION_ = VERSION = "2.3"
+VERSION_ = VERSION = "2.3.1"
 
 #some definitions
 if 1:

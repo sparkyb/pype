@@ -1,3 +1,10 @@
+#-------------------------------- PyPE 2.3.1 ---------------------------------
+(fixed) Find previous NameError.
+(fixed) Find/Replace for non-\n line endings.
+(fixed) Find previous for unicode.
+(fixed) Replace All and Replace in Selection.
+
+
 #--------------------------------- PyPE 2.3 ----------------------------------
 (fixed) setup.py for non-Windows platforms.
 (added) embedded Python shell.  Uses the platform-defined 'python' to run an
@@ -68,7 +75,7 @@ english-words.10 for examples of input.
 'with' statement.
 (added) \section, \subsection, \subsubsection, \label, and %todo: support for
 latex.
-(added) \\todo: support for C/C++
+(added) \\todo: support for C/C++ and %todo: support for LaTeX
 (wanted) a decent parser for C/C++
 (fixed) pasting in Python/command shells to properly handle pasting of text
 without line endings.

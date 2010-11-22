@@ -184,10 +184,18 @@ class ReplaceBar(wx.Panel):
         win.EnsureVisible(line)
         win.EnsureCaretVisible()
     
-    def getRange(self, win, start, chars):
+    def getRange(self, win, start, chars, dire=1):
         end = start
+        if dire==1:
+            fcn = win.PositionAfter
+        else:
+            fcn = win.PositionBefore
         for i in xrange(chars):
-            end = win.PositionAfter(end)
+            z = fcn(end)
+            y = win.GetCharAt(end)
+            x = abs(z-end)==2 and (((dire==1) and (y == 13)) or ((dire==0) and (y == 10)))
+            ## print y, z-end
+            end = z - x
         return start, end
     
     def isWholeWord(self, start, chars, win):
@@ -212,7 +220,9 @@ class ReplaceBar(wx.Panel):
             flags |= wx.stc.STC_FIND_WHOLEWORD
         
         #handle finding next item, handling wrap-arounds as necessary
-        st = win.GetSelection()[1-incr]
+        gs = win.GetSelection()
+        gs = min(gs), max(gs)
+        st = gs[1-incr]
         posn = win.FindText(st, win.GetTextLength(), findTxt, flags)
         if posn != -1:
             self.sel(posn, posn+len(findTxt), '', win)
@@ -239,7 +249,8 @@ class ReplaceBar(wx.Panel):
         
         
         #handle finding previous item, handling wrap-arounds as necessary
-        st = max(win.GetSelection()[0]-len(ft), 0)
+        st = min(self.getRange(win, min(win.GetSelection()), len(findTxt), 0))
+        print win.GetSelection(), st, 
         posn = win.FindText(st, 0, findTxt, flags)
         if posn != -1:
             self.sel(posn, posn+len(findTxt), '', win)
@@ -404,6 +415,7 @@ class ReplaceBar(wx.Panel):
             win.SetSelection(ostart, ostart)
         else:
             win.SetSelection(0, 0)
+        self.OnFindN(None, ris)
         
         self.replacing = 1
         wx.CallAfter(self.ReentrantReplace, (ostart, oend, ris, win))
