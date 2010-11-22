@@ -1,3 +1,27 @@
+(PyPE 1.6.3)
+(fixed) a visual bug that existed from the beginning.  When saving, it used to
+say 'open' on the button...now it says 'save'.  No big deal.  But still neat.
+(fixed) a problem with paths on windows systems with recursive environment
+variables (like HOME=%USERPROFILE%).
+(known bug) there exists a bug in automatic word wrapping.  This is within
+wxSTC, not PyPE.  For an example of this bug in action, I've provided some
+code in the wxWindows bug page here:
+http://sourceforge.net/tracker/index.php?func=detail&aid=816227&group_id=9863&atid=109863
+(slight refactor) I didn't like the repeated 'parent' references for different
+items when it wasn't so much a 'parent' as much as it was referring to the
+actual topmost frame of the application (especially when such references
+called functions that only existed in the topmost frame).  I've changed such
+references from 'parent' to 'root', where it makes sense, as well as creating
+some other names in other classes where appropriate.
+(fixed) a bug involving creating a dialog describing an exception when an
+exception occurred.
+(fixed) a few tiny bugs in find/replace (one would only notice the non-fatal
+bugs if one switched tabs during a find/replace dialog).
+(fixed) aforementioned bug from the 1.6 changelog with recently open files.  I
+completely forgot about it until I was reading the older changelogs today to
+remember how far PyPE has come.
+
+
 (PyPE 1.6.2)
 (fixed) apparently the textwrap module in Python 2.3 doesn't work the way I
 wanted it to.  As a result, text wrapping with Python 2.3 and the Windows
@@ -91,7 +115,7 @@ version of PyPE.   No worries, it is now a part of the editor, so should just
 work.
 (fixed) there seemed to be a long-standing bug in calling PyPE with relative
 command line arguments for files to open.  This has been fixed.  There is a
-minor but relating to the recently open files menu, but that'll be fixed when
+minor bug relating to the recently open files menu, but that'll be fixed when
 I get back from vacation.
 (fixed) my constant misspellings of hierarchy, I had been incorrectly spelling
 it as heirarchy.  Misspelling pointed out by my wife.

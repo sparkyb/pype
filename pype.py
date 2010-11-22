@@ -35,6 +35,7 @@ if __name__ == '__main__':
         elif (sys.argv[1] == '--exec'):
             del sys.argv[1]
             import os
+            cwd = os.getcwd()
             if sys.argv[1] != '*':
                 os.chdir(sys.argv[1])
             if sys.platform=='win32':
@@ -43,7 +44,7 @@ if __name__ == '__main__':
                 os.spawnvp(os.P_NOWAIT, sys.argv[2], sys.argv[2:])
             sys.exit(0)
 
-import os, threading
+import os
 import keyword, traceback, cStringIO, imp
 import exceptions, time, pprint
 from wxPython.wx import *
@@ -61,7 +62,7 @@ from configuration import *
 #---------------------------- Event Declarations -----------------------------
 if 1:
     #under an if so that I can collapse the declarations
-    VERSION = "1.6.2"
+    VERSION = "1.6.3"
     VREQ = '2.4.1.2'
 
     import string
@@ -556,7 +557,8 @@ class MainWindow(wxFrame):
         for i in fnames:
             if (not '\\' in i) and (not '/' in i):
                 i = '/'.join([os.getcwd(), i])
-            i = os.path.normcase(os.path.normpath(i))
+            i = os.path.normcase(os.path.normpath(os.path.realpath(i)))
+            print i
             if self.isAbsOpen(i):
                 if len(fnames)==1:
                     self.selectAbsolute(i)
@@ -653,7 +655,7 @@ class MainWindow(wxFrame):
             del self.openfiles[self.getAbsolute(fn, dn)]
 
     def getAbsolute(self, fn, dn):
-        return os.path.normcase(os.path.normpath(os.path.join(dn, fn)))
+        return os.path.normcase(os.path.normpath(os.path.realpath(os.path.join(dn, fn))))
     def splitAbsolute(self, path):
         return os.path.split(os.path.normcase(path))
 
@@ -684,7 +686,7 @@ class MainWindow(wxFrame):
     def OnSaveAs(self,e):
         wnum, win = self.getNumWin(e)
         
-        dlg = wxFileDialog(self, "Save file as...", os.getcwd(), "", "All files (*.*)|*.*", wxOPEN)
+        dlg = wxFileDialog(self, "Save file as...", os.getcwd(), "", "All files (*.*)|*.*", wxSAVE)
         rslt = dlg.ShowModal()
         if rslt == wxID_OK:
             fn=dlg.GetFilename()
@@ -1031,6 +1033,7 @@ class MainWindow(wxFrame):
         for wnum in xrange(wcount):
             win = self.control.GetPage(wnum).GetWindow1()
             win.gcp = win.GetCurrentPos()
+            #print win.gcp, "found gcp"
             win.last = 0
         data = wxFindReplaceData()
         dlg = wxFindReplaceDialog(self, data, "Find")
@@ -1131,11 +1134,15 @@ class MainWindow(wxFrame):
     def OnFindClose(self, evt):
         #self.log.write("wxFindReplaceDialog closing...\n")
         evt.GetDialog().Destroy()
-        wnum, win = self.getNumWin(evt)
-        if win.last == -1:
-            win.SetSelection(win.gcp, win.gcp)
-            win.ScrollToColumn(0)
-        
+        for win in self.control:
+            try:
+                if win.last == -1:
+                    #print win.gcp, "setting gcp"
+                    win.SetSelection(win.gcp, win.gcp)
+                    win.ScrollToColumn(0)
+            except:
+                continue
+
 #------------------ Format Menu Commands and Style Support -------------------
     def OnStyleChange(self,e):
         wnum, win = self.getNumWin(e)
@@ -1222,7 +1229,7 @@ class MainWindow(wxFrame):
     def OnRefresh(self, e, win=None):
         if win is None:
             num, win = self.getNumWin(e)
-        start = time.time()
+        #start = time.time()
         if win.refresh:
             return
         win.refresh = 1
@@ -1678,20 +1685,21 @@ class MainWindow(wxFrame):
 
 #------------- Ahh, Styled Text Control, you make this possible. -------------
 class PythonSTC(wxStyledTextCtrl):
-    def __init__(self, parent, ID, prnt):
-        wxStyledTextCtrl.__init__(self, prnt, ID, style = wxNO_FULL_REPAINT_ON_RESIZE)
+    def __init__(self, notebook, ID, parent):
+        wxStyledTextCtrl.__init__(self, parent, ID, style = wxNO_FULL_REPAINT_ON_RESIZE)
         
         self.hierarchy = []
         self.kw = []
         self.tooltips = {}
 
-        self.prnt = prnt
         self.parent = parent
+        self.notebook = notebook #should also be equal to self.parent.parent
+        self.root = self.notebook.root
         self.dirty = 0
         self.refresh = 0
         
         #Text is included in the original, but who drags text?  Below for dnd file support.
-        if dnd_file: self.SetDropTarget(FileDropTarget(self.parent.parent))
+        if dnd_file: self.SetDropTarget(FileDropTarget(self.root))
 
         #for command comlpetion
         self.SetKeyWords(0, " ".join(keyword.kwlist))
@@ -1742,7 +1750,7 @@ class PythonSTC(wxStyledTextCtrl):
 
         EVT_STC_UPDATEUI(self,    ID, self.OnUpdateUI)
         EVT_STC_MARGINCLICK(self, ID, self.OnMarginClick)
-        EVT_KEY_DOWN(self, self.parent.parent.OnKeyPressed)
+        EVT_KEY_DOWN(self, self.root.OnKeyPressed)
 
         # Make some styles,  The lexer defines what each style is used for, we
         # just have to define what each style looks like.  This set is adapted from
@@ -1768,7 +1776,7 @@ class PythonSTC(wxStyledTextCtrl):
         self.filename = ''
         self.dirname = ''
         self.opened = 0
-        self.AutoCompStops(' .,;:([)]}\'"\\<>%^&+-=*/|`')
+        self.AutoCompStops(' .,;:()[]{}\'"\\<>%^&+-=*/|`')
 
 #-------------------- fix for SetText for the 'dirty bit' --------------------
     def SetText(self, txt, emptyundo=1):
@@ -1787,8 +1795,8 @@ class PythonSTC(wxStyledTextCtrl):
     def MakeDirty(self, e=None):
         if (not self.dirty) and self.opened:
             self.dirty = 1
-            self.parent.SetPageText(self.parent.GetSelection(), '* '+self.filename)
-            self.parent.Refresh(False)
+            self.notebook.SetPageText(self.notebook.GetSelection(), '* '+self.filename)
+            self.notebook.Refresh(False)
             self.do(self.nada)
         if e:
             e.Skip()
@@ -1798,8 +1806,8 @@ class PythonSTC(wxStyledTextCtrl):
 
     def MakeClean(self, e=None):
         self.dirty = 0
-        self.parent.SetPageText(self.parent.GetSelection(), self.filename)
-        self.parent.Refresh(False)
+        self.notebook.SetPageText(self.notebook.GetSelection(), self.filename)
+        self.notebook.Refresh(False)
         self.do(self.nada, 0)
         if e:
             e.Skip()
@@ -1807,9 +1815,9 @@ class PythonSTC(wxStyledTextCtrl):
     def do(self, funct, dirty=1):
         if dirty: self.MakeDirty(None)
         funct(self)
-        a = self.prnt.GetSashPosition()
-        self.prnt.SetSashPosition(a-1)
-        self.prnt.SetSashPosition(a)
+        a = self.parent.GetSashPosition()
+        self.parent.SetSashPosition(a-1)
+        self.parent.SetSashPosition(a)
         #self.parent.Refresh(False)
         #self.prnt.Refresh(False)
         #self.prnt.GetWindow2().Refresh(False)
@@ -1828,7 +1836,7 @@ class PythonSTC(wxStyledTextCtrl):
             initSTC(self, stylefile, language)
 
         except:
-            self.parent.parent.exceptDialog("Style Change failed, assuming Python")
+            self.root.exceptDialog("Style Change failed, assuming Python")
             
 #----------------- Defaults, incase the other code was bad. ------------------
             #for some default font styles
@@ -1990,23 +1998,23 @@ class PythonSTC(wxStyledTextCtrl):
 
 #------------------------- Ahh, the tabbed notebook --------------------------
 class MyNB(wxNotebook):
-    def __init__(self, parent, id, pparent):
+    def __init__(self, root, id, parent):
         #the left-tab, while being nice, turns the text sideways, ick.
-        wxNotebook.__init__(self, pparent, id, style=
+        wxNotebook.__init__(self, parent, id, style=
                             wxNB_TOP
                             #wxNB_BOTTOM
                             #wxNB_LEFT
                             #wxNB_RIGHT
                             )
-        self.parent = parent
+        self.root = root
 
         #for some reason, the notebook needs the next line...the text control
         #doesn't.
-        EVT_KEY_DOWN(self, self.parent.OnKeyPressed)
+        EVT_KEY_DOWN(self, self.root.OnKeyPressed)
 
         EVT_NOTEBOOK_PAGE_CHANGED(self, self.GetId(), self.OnPageChanged)
         
-        self.SetDropTarget(FileDropTarget(self.parent))
+        self.SetDropTarget(FileDropTarget(self.root))
 
     def __iter__(self):
         count = self.GetPageCount()
@@ -2043,11 +2051,11 @@ class MyNB(wxNotebook):
         #self.Refresh(False)
 
 class FileDropTarget(wxFileDropTarget):
-    def __init__(self, parent):
+    def __init__(self, root):
         wxFileDropTarget.__init__(self)
-        self.parent = parent
+        self.root = root
     def OnDropFiles(self, x, y, filenames):
-        self.parent.OnDrop(filenames)
+        self.root.OnDrop(filenames)
 
 class TextDropTarget(wxTextDropTarget):
     def __init__(self, parent):
@@ -2061,9 +2069,9 @@ class TextDropTarget(wxTextDropTarget):
         return False
 
 class CodeSnippet(wxPanel):
-    def __init__(self, parent, id, pparent, display2code, displayorder):
-        wxPanel.__init__(self, pparent, id)
-        self.parent = parent
+    def __init__(self, root, id, parent, display2code, displayorder):
+        wxPanel.__init__(self, parent, id)
+        self.root = root
 
         self.display2code = display2code
         self.displayorder = displayorder
@@ -2102,7 +2110,7 @@ class CodeSnippet(wxPanel):
             e.Skip()
 
     def OnListBoxDClick(self, e):
-        num, win = self.parent.getNumWin(e)
+        num, win = self.root.getNumWin(e)
         sel = self.lb.GetSelection()
         if sel < 0:
             return e.Skip()
@@ -2146,15 +2154,15 @@ class CodeSnippet(wxPanel):
                 nam = None
             dlg.Destroy()
             if nam != None:
-                if not nam: rpt = 2;self.parent.SetStatusText("Snippet name will not display")
+                if not nam: rpt = 2;self.root.SetStatusText("Snippet name will not display")
                 elif not nam in self.display2code:
                     self.display2code[nam] = text[:]
                     self.displayorder.append(nam)
                     self.lb.Append(nam)
                     self.dirty = 1
-                    return self.parent.SetStatusText("Snippet %s added"%nam)
-                else: rpt = 1;self.parent.SetStatusText("Snippet name already used")
-            else: self.parent.SetStatusText("Snippet addition aborted");return
+                    return self.root.SetStatusText("Snippet %s added"%nam)
+                else: rpt = 1;self.root.SetStatusText("Snippet name already used")
+            else: self.root.SetStatusText("Snippet addition aborted");return
 
     def seladj(self, incr):
         cnt = self.lb.GetCount()
@@ -2167,9 +2175,9 @@ class CodeSnippet(wxPanel):
         self.seladj(1)
 
 class RunShell(wxMenu):
-    def __init__(self, parent):
+    def __init__(self, root):
         wxMenu.__init__(self)
-        self.parent = parent
+        self.root = root
         
         cur = [("Run current file", "Run the current open file", self.runScript),
                ("View shell commands", "View the list of shell command working paths and the command that would be executed", self.viewShellCommands),
@@ -2180,7 +2188,7 @@ class RunShell(wxMenu):
         for i in range(5):
             a = wxNewId()
             self.Append(a, cur[i][0], cur[i][1])
-            EVT_MENU(self.parent, a, cur[i][2])
+            EVT_MENU(self.root, a, cur[i][2])
 
         self.AppendSeparator()
         
@@ -2195,7 +2203,7 @@ class RunShell(wxMenu):
         self.cnt = 6
 
     def runScript(self, evt):
-        num, win = self.parent.getNumWin(evt)
+        num, win = self.root.getNumWin(evt)
         use = self.makeuse(win.dirname, win.filename)
         os.system("%s --exec %s %s"%(runme, use['path'], use['full']))
 
@@ -2205,7 +2213,7 @@ class RunShell(wxMenu):
         for i in self.order:
             out.append("%i          %s    "%(count, repr(self.menu[i])))
             count += 1
-        dlg = wxSingleChoiceDialog(self.parent, "order      (name, working dir, command, arguments)", titl, out, styl|wxDD_DEFAULT_STYLE)
+        dlg = wxSingleChoiceDialog(self.root, "order      (name, working dir, command, arguments)", titl, out, styl|wxDD_DEFAULT_STYLE)
         if self.order:
             dlg.SetSelection(min(len(self.order)-1, sel))
         if dlg.ShowModal() == wxID_OK:
@@ -2230,7 +2238,7 @@ class RunShell(wxMenu):
                 del self.order[tmp+1]
                 del self.menu[a]
                 self.Delete(a)
-            self.parent.SetStatusText("Edited shell command named %s"%a1)
+            self.root.SetStatusText("Edited shell command named %s"%a1)
             tmp = self.viewShellCommands(event, title, style, min(tmp, len(self.order)))
 
     def addShellCommand(self, event, a1='', a2='', a3='', posn=-1):
@@ -2265,29 +2273,29 @@ class RunShell(wxMenu):
         """.replace('        ', '')
 
         while 1:
-            dlg = wxTextEntryDialog(self.parent, "What would you like your command to be called?", "Command name")
+            dlg = wxTextEntryDialog(self.root, "What would you like your command to be called?", "Command name")
             dlg.SetValue(commandname)
             rslt = dlg.ShowModal()
             commandname = dlg.GetValue()
             dlg.Destroy()
             if rslt != wxID_OK:
-                return self.parent.SetStatusText(scaa)
+                return self.root.SetStatusText(scaa)
             
-            dlg = wxTextEntryDialog(self.parent, hlp, "Choose a working directory (if any)")
+            dlg = wxTextEntryDialog(self.root, hlp, "Choose a working directory (if any)")
             dlg.SetValue(recentcwd)
             rslt = dlg.ShowModal()
             recentcwd = dlg.GetValue()
             dlg.Destroy()
             if rslt != wxID_OK:
-                return self.parent.SetStatusText(scaa)
+                return self.root.SetStatusText(scaa)
             
-            dlg = wxTextEntryDialog(self.parent, hlp, "Enter the command as you would in a console (including arguments)")
+            dlg = wxTextEntryDialog(self.root, hlp, "Enter the command as you would in a console (including arguments)")
             dlg.SetValue(recentexec)
             rslt = dlg.ShowModal()
             recentexec = dlg.GetValue()
             dlg.Destroy()
             if rslt != wxID_OK:
-                return self.parent.SetStatusText(scaa)
+                return self.root.SetStatusText(scaa)
             
             cmd = recentexec
             
@@ -2295,12 +2303,12 @@ class RunShell(wxMenu):
             if recentcwd:
                 out += 'cd %s\n'%recentcwd%ex
             out += cmd%ex
-            if self.parent.dialog(out, "Is this correct?", styl=wxYES_NO) == wxID_YES:
+            if self.root.dialog(out, "Is this correct?", styl=wxYES_NO) == wxID_YES:
                 self.appendShellCommand(commandname, recentcwd, recentexec, posn)
-                self.parent.SetStatusText("Added shell command")
+                self.root.SetStatusText("Added shell command")
                 return 1
             else:
-                self.parent.SetStatusText("Editing shell command")
+                self.root.SetStatusText("Editing shell command")
 
     def removeShellCommand(self, event):
         title = "Choose a shell command to remove"
@@ -2311,14 +2319,14 @@ class RunShell(wxMenu):
             b = self.menu[a]
             del self.menu[a]
             self.Delete(a)
-            self.parent.SetStatusText("Removed shell command named %s"%b[0])
+            self.root.SetStatusText("Removed shell command named %s"%b[0])
             tmp = self.viewShellCommands(event, title, style, min(tmp, len(self.order)))
 
     def OnMenu(self, evt):
         try:
             (name, path, command) = self.menu[evt.GetId()]
             try:
-                num, win = self.parent.getNumWin(evt)
+                num, win = self.root.getNumWin(evt)
                 dn = win.dirname
                 fn = win.filename
             except:
@@ -2332,10 +2340,9 @@ class RunShell(wxMenu):
             else:
                 if (path.find(' ')+1): path = path.replace(' ', '\\ ')
                 if (command.find(' ')+1): command = command.replace(' ', '\\ ')
-
             os.system("%s --exec %s %s"%(runme, path or '*', command)%use)
         except:
-            self.parent.exceptDialog()
+            self.root.exceptDialog()
 
     def makeuse(self, dn, fn):
         use = {}
@@ -2362,14 +2369,13 @@ class RunShell(wxMenu):
         else:
             self.Insert(posn+self.cnt, a, name)
             self.order.insert(posn, a)
-        EVT_MENU(self.parent, a, self.OnMenu)
+        EVT_MENU(self.root, a, self.OnMenu)
         self.menu[a] = (name, path, command)
 
 class hierCodeTreePanel(wxPanel):
     class TreeCtrl(wxTreeCtrl):
-        def __init__(self, parent, prnt, tid):
-            wxTreeCtrl.__init__(self, prnt, tid, style=wxTR_DEFAULT_STYLE|wxTR_HAS_BUTTONS|wxTR_HIDE_ROOT)
-            self.parent = parent
+        def __init__(self, parent, tid):
+            wxTreeCtrl.__init__(self, parent, tid, style=wxTR_DEFAULT_STYLE|wxTR_HAS_BUTTONS|wxTR_HIDE_ROOT)
             
             isz = (16,16)
             il = wxImageList(isz[0], isz[1])
@@ -2403,27 +2409,26 @@ class hierCodeTreePanel(wxPanel):
                         lst[txt] = [ch]
             return lst
 
-    def __init__(self, parent, prnt):
+    def __init__(self, root, parent):
         # Use the WANTS_CHARS style so the panel doesn't eat the Return key.
-        wxPanel.__init__(self, prnt, -1, style=wxWANTS_CHARS)
+        wxPanel.__init__(self, parent, -1, style=wxWANTS_CHARS)
         EVT_SIZE(self, self.OnSize)
 
-        self.parent = parent
+        self.root = root
 
         tID = wxNewId()
 
-        self.tree = self.TreeCtrl(parent, self, tID)
-        self.root = self.tree.AddRoot("Unseen Root")
-        self.tree.root = self.root
+        self.tree = self.TreeCtrl(self, tID)
+        self.tree.troot = self.tree.AddRoot("Unseen Root")
 
         #self.tree.Expand(self.root)
         EVT_LEFT_DCLICK(self, self.OnLeftDClick)
-        EVT_TREE_ITEM_ACTIVATED (self, tID, self.OnActivate)
+        EVT_TREE_ITEM_ACTIVATED(self, tID, self.OnActivate)
 
     def new_hierarchy(self, hier):
         #self.tree.DeleteAllItems()
-        root = [self.root]
-        stk = [(self.tree.getchlist(self.root), hier)]
+        root = [self.tree.troot]
+        stk = [(self.tree.getchlist(self.tree.troot), hier)]
         while stk:
             chlist, cur = stk.pop()
             while cur:
@@ -2462,11 +2467,11 @@ class hierCodeTreePanel(wxPanel):
 
     def OnLeftDClick(self, event):
         #pity this doesn't do what it should.
-        num, win = self.parent.getNumWin(event)
+        num, win = self.root.getNumWin(event)
         win.SetFocus()
 
     def OnActivate(self, event):
-        num, win = self.parent.getNumWin(event)
+        num, win = self.root.getNumWin(event)
         dat = self.tree.GetItemData(event.GetItem()).GetData() 
         if dat == None:
             return event.Skip()

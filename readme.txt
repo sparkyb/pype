@@ -1,4 +1,4 @@
-Readme/Help for PyPE 1.6 (Python Programmer's Editor')
+Readme/Help for PyPE 1.7 (Python Programmer's Editor')
 http://come.to/josiah
 
 PyPE is copyright (c) 2003 Josiah Carlson.
@@ -53,14 +53,10 @@ the built-in features, and this is likely as much of a learning experience for
 me as you.
 
 #-------------------------------- Visual bugs --------------------------------
-Save As dialog:
-When the Save As dialog opens for you to save a document, rather than 'save',
-it lists 'open'.  This is the result of using the standard wxPython browse
-dialog, which I use to get a folder and path.  I assure you, it saves your
-document properly.  Remember, visual bug, NOT functonality bug.
+None currently known.
 
 #------------------------------------ FAQ ------------------------------------
-What is the difference between the Refresh (fast) and Refresh (slow)?
+What is the difference between the fast and slow parser?
 The fast one uses custom parser that basically splits the file into lines,
 does a check to see if there is a function or class definition, then saves the
 heirarchy information based on the level of indentation and what came before

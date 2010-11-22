@@ -7,9 +7,10 @@ from wxPython.stc import wxSTC_EOL_CRLF, wxSTC_EOL_LF, wxSTC_EOL_CR
 from parsers import *
 
 #--------- If I'm wrong on any of the line endings, please tell me. ----------
-crlf = ["nt", "dos", "ce", "os2"]
-lf = ["posix", "riscos", "java"]
-cr = ["mac"]
+#nevermind, they don't matter anymore...
+#crlf = ["nt", "dos", "ce", "os2"]
+#lf = ["posix", "riscos", "java"]
+#cr = ["mac"]
 fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
               "\n":wxSTC_EOL_LF,
               "\r":wxSTC_EOL_CR}
@@ -105,8 +106,24 @@ except:
 try:
     # create the config directory if it
     # doesn't already exist
+    def expandfull(var, rem=3):
+        if not rem:
+            return os.path.expandvars(var)
+        a = os.path.expandvars(var)
+        b = []
+        d = [b.extend(i.split('\\')) for i in a.split('/')]
+        c = []
+        for i in b:
+            if '%' in i:
+                c.append(expandfull(i), rem-1)
+            else:
+                c.append(i)
+        return '\\'.join(c)
+    if eol == "\r\n" and '%' in homedir:
+        homedir = expandfull(homedir)
     if not os.path.exists(homedir):
         os.mkdir(homedir)
 except:
-    print "unable to create config directory", homedir
+    #print "unable to create config directory", homedir
+    homedir = default_homedir
 # End cmt-001 08/06/2003
