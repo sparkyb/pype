@@ -1,4 +1,4 @@
-Readme/Help for PyPE 1.1 (Python Programmer's Editor')
+Readme/Help for PyPE 1.2 (Python Programmer's Editor')
 http://come.to/josiah
 
 PyPE is copyright (c) 2003 Josiah Carlson.
@@ -27,11 +27,11 @@ on later versions of Python and wxPython.
 #----------------------------------- Help ------------------------------------
 The majority of PyPE was written from 10:30PM on the 2nd of July through
 10:30PM on the 3rd of July.  Additional features were put together on the 4th
-of July along with some bug fixing and more testing.  Truthfully, I've been
-using it to edit itself since the morning of the 3rd of July, and believe it
-is pretty much feature-complete (in terms of standard Python source editing).
-There are a few more things I think it would be nice to have, and they will be
-added in good time.
+of July along with some bug fixing and more testing for version 1.0.
+Truthfully, I've been using it to edit itself since the morning of the 3rd of
+July, and believe it is pretty much feature-complete (in terms of standard
+Python source editing).  There are a few more things I think it would be nice
+to have, and they will be added in good time.
 
 On the most part, this piece of software should work exactly the way you
 expect it to.  That is the way I wrote it.  As a result, you don't get much
@@ -57,18 +57,60 @@ Save As dialog:
 When the Save As dialog opens for you to save a document, rather than 'save',
 it lists 'open'.  This is the result of using the standard wxPython browse
 dialog, which I use to get a folder and path.  I assure you, it saves your
-document properly.
+document properly.  Remember, visual bug, NOT functonality bug.
 
 #------------------------------------ FAQ ------------------------------------
+Shell Commands:
+I don't know how much other people use this feature, but I use it enough to
+warrant the time I spent implementing it.  Basically this allows you to run
+shell commands or scripts or even the script you are currently editing.  It
+SHOULD just work for most things.  I know that it works on windows, and I
+believe that it should work in *nix thanks to os.spawnvp (windows lacks a
+os.spawnvp, but this can be basically emulated thanks to os.system and the
+often underutilized 'start <cmd>', which will spawn a process...like
+os.spawnvp should in windows (with an occasional extra console window floating
+around).
+
+Play around with it, and remember to read the titles of the windows.
+
+
+
+Code Snippets:
+Ahh, what are code snippets?  Basically it is a saved-state multiple-entry
+clipboard.  What is the use of that?  Well, let us say that you have a
+template for interfaces to, let us say, commands for an interactive online
+multiplayer game.  Each command needs to have a specific format, and with this
+code snippet support, you don't need to switch to your template file, copy,
+switch back and paste.  You can select your insertion point, and double click.
+There are, of course, hot-keys for using code snippets while editing your
+document.  Why?  Because I like having that option.  You can navigate and
+insert code snippets without ever having your hands leave the keyboard.
+Deleting a code snippet is a easy as making sure the listbox has keyboard
+focus, and hitting 'delete' when the snippet you want to remove is selected.
+Play around with it, you will (I believe) come to enjoy it.
+
+Code Snippets are saved at program exit automatically.  If you mess up the
+snippets, and want one back, don't close the program.  Open up snippets.py,
+copy the code for that snippet.  They are stored in Python string format,
+which means tabs are \t, newlines are \n, etc.  A quick;
+print eval("python string")
+will convert it back into something that you can paste into your code snippets
+again.
+
+If there is feedback/desire for being able to reorganize code snippets, I'll
+add that support.
+
+
+
 Bookmarked Paths:
-Everyone will surely notice the menu for bookmarked paths.  This menu allows
-you to edit and access bookmarked paths with relative ease.  All it really
-does is remember the paths you tell it to, and when you use one of the hotkeys
-or menu items, it will change the current working directory to that new path.
-If you attempt to open a file immediately afterwards, the open dialog will
-seek to the path of the just used bookmark.  Nifty eh?  I like to think of it
-as being able to have 'projects' without having to specify a project file.  I
-hate project files.
+Everyone will surely notice the menu for Pathmarks.  This menu allows you to
+edit and access bookmarked paths with relative ease.  All it really does is
+remember the paths you tell it to, and when you use one of the hotkeys or menu
+items, it will change the current working directory to that new path. If you
+attempt to open a file immediately afterwards, the open dialog will seek to
+the path of the just used bookmark.  Nifty eh?  I like to think of it as being
+able to have 'projects' without having to specify a project file.  I hate
+project files.
 
 
 
@@ -137,12 +179,12 @@ Given the below...
 -         if 1:
 |             #do something
 |             pass
-Shift-clicking the '-' next to the class does this;
+Shift-clicking the '-' next to the class does this...
 - class nada:
 +     def funct(self):
 
-Or really, it collapses completely those scopes contained within the larger
-scope.
+Or really, it's like ctrl-clicking on each of the functions declared in the
+scope of the definition.
 Shift-clicking on the '-' a second time does nothing.
 Shift-clicking on a '+' expands that item completely.
 
@@ -151,4 +193,35 @@ scopes contained within.
 
 I don't know about you, but I'm a BIG fan of shift-clicking classes.  Yeah.
 Play around with them, you'll get to loving how they work.
+
+#-------------------------------- Thank You's --------------------------------
+Certainly there are some people I should thank, because without them, the
+piece of software you are using right now, just wouldn't be possible.
+
+Guido van Rossum - without Guido, not only would I not have Python, I also
+wouldn't have had some of the great inspiration that IDLE has offered.  IDLE
+is a great editor, has some excellent ideas in terms of functionality, but it
+unfortunately does not offer the extended functionality I want, and it hurts
+my brain to use tk, so I cannot add it myself.  Guido, my hat comes off for
+you.
+
+The people writing wxWindows and wxPython - without you, this also would not
+have been possible.  You have made the most self-consistent GUI libraries that
+I have ever used, made them easy to use, and offer them on every platform that
+I would ever want or need.  You rock.
+
+The people writing Scintilla - as wxStyledTextCtrl is a binding for scitilla
+for wxWindows, which then has bindings for wxPython, basically ALL the REAL
+functionality of the editor you are now using is the result of Scintilla.
+The additional things like tabbed editing, hotkeys, etc., they are mere
+surface decorations in comparison to what it would take to write everything
+required for a text editor from scratch.  Gah, an editor widget that just
+works?  Who would have figured?
+
+To everyone who I have already thanked: thank you for making PyPE an almost
+trivial task.  It would have been impossible to go so far so fast in any other
+language using any other GUI toolkit or bindings.
+
+My wife - because without her, I would likely be a pathetic shell of a man.
+What is funny is that you think I'm kidding.
 #------------------------------- End of file. --------------------------------

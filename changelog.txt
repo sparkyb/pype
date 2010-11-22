@@ -1,3 +1,70 @@
+(PyPE 1.2)
+(changed) pathmarks are always saved on program exit.
+(added) command line argument support with the use of os.path.abspath for all
+the relational and absolute path references for all systems.  I like when what
+I need has already been implemented.  Multiple file arguments also just work.
+(fixed) a bug with path normalization and whether a file was open already.
+(forgot) to remove some of the drag and drop stuff in the previous version...
+(added) drag and drop file support.  Enabled by default, but can be disabled
+in the text-editing portion for text dnd support.  Why don't I just write a
+control for dnd text and files?  Because I REALLY don't want to, and don't
+know if it can even be done (I have a feeling it can be, just not with
+wxFileDropTarget and wxTextDropTarget).
+(discovered) os.linesep, a great little declaration that has replaced a few if
+then elif then else statements in configuration.py.  I knew there had to be
+something like that in the os module.
+(added) an 'open module' functionality similar to what I remember of older
+IDLE, though this one searches in an identical fashion to the way an 'import'
+statement would in later versions of Python, that is, it includes heirarchical
+module importing, as well as the current path in the search for a module.
+(cleaned) some duplicated code out.  Opening a file, a module, or dropping a
+file onto PyPE causes the same code to run.  Isn't that nice?  I think so.
+Code duplication leads to bugs.  Bugs are bad.
+(fixed) save as dialog would offer multiple wildcards, made it give *.*
+instead so that I wouldn't have to write automatic file extension code for
+right now.  This may actually be added by the time this minor release is
+released.
+(fixed) if you loaded a document and undo once, it will clear the document.  I
+kept forgetting to get rid of this, but thanks to the project's first official
+bug report on sourceforge, I had the reason to add the line required to
+pype.PythonSTC.SetText - thanks anonymous bug poster.
+(fixed) that REALLY ugly code for changing style update information.  It used
+to create an entirely new page, load the text, copy all the state information
+(except for undo), then replace the current page.  It has now been replaced by
+the same style change that is done upon loading, and it just works.  I like it
+when that happens.  No messy copying, wxStyledTextCtrl just works.
+(made pretty) the menu item hotkeys used to be vertically aligned as best I
+could by hand...then I noticed how they do menus in the wxPython demo; tabs.
+Repaired all the menu items with tabs, and now they are consistent, if not
+pretty (insert maniacal laugh).
+(made better) you know how pathmarks used to always have that menu that was
+filled up, even when no pathmarks were being used?  Not anymore.  They now
+change as your pathmarks are changing.  How's that for spiffy?  Idea thanks to
+the wxPython demo app.
+(fixed) previously when one would go step by step in the find/replace dialog,
+it wouldn't select the next found object when a replacement had been made.
+This has been fixed.
+(fixed) small bug that caused an exception after finding and replacing all, it
+wouldn't kill PyPE, but it was a foolish mistake.
+(added) code snippet support.  See the FAQ portion of the readme for how to
+use it.  They are available as menu commands in the lower portion of the view
+menu.
+(fixed) when adding or deleting pathmarks, when the window pops up again, it
+used to select the first entry every time, it now selects the previously
+selected entry.  This should stop you from losing your first pathmark if you
+accidentally hit 'OK' on a deletion.
+(added) shell command execution support.  Uses os.spawnv in windows,
+os.spawnvp everywhere else that supports it.  The windows version is not able
+to scan your paths to find an executable (hence why it is 'v' and not 'vp').
+Whether this is a limitation of something in windows, python or otherwise, I
+have no idea.  Just don't blame me.  Dynamic menus abound.
+(cleaned) up some exception dialog stuff.  Removed some duplicated code.
+(reorganized) the menus somewhat.  Items have been relocated to menus that are
+much more intuitive.
+(changed) along with pathmarks; code snippets and shell commands are saved at
+program exit.  All three are stored in pathmarks.py
+
+
 (PyPE 1.1)
 (cleaned) I did some house cleaning and started using wxNewId to generate
 event ids rather than doing them manually.  This required a few tweaks to the

@@ -11,13 +11,10 @@ cr = ["mac"]
 fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
               "\n":wxSTC_EOL_LF,
               "\r":wxSTC_EOL_CR}
-if os.name in crlf: eol = "\r\n"
-elif os.name in lf: eol = "\n"
-elif os.name in cr: eol = "\r"
-else:               eol = "\n"
+eol = os.linesep
 eolmode = fmt_mode[eol]
 
-runpath = os.path.split(sys.argv[0])[0]
+runpath = os.path.split(os.path.normcase(os.path.normpath(sys.argv[0])))[0]
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
@@ -37,13 +34,16 @@ collapse_style = 0
 indent = 4
 use_tabs = 0
 
+#if the following is set to 1, then drag and drop TEXT support will not work
+#in the editor control, but will enable drag and drop FILE support in the
+#editor control.  Enabled by default.  Why?  Because I drag files, I cut and
+#paste text.
+dnd_file = 1
+
 #for open/save dialogs
-wildcard = "All python files (*.py*)|*.py*|"\
-           "C/C++ files (*.c*)|*.c*|"\
-           "C/C++ headers (*.h)|*.h|"\
-           "XML files (*.xml)|*.xml|"\
-           "HTML files (*.htm*)|*.htm*|"\
-           "SHTML files (*.shtm*)|*.shtm*|"\
+wildcard = "All python files (*.py *.pyw)|*.py;*.pyw;*.PY;*.PYW|"\
+           "C/C++ files (*.c* *.h)|*.c*;*.h;*.C*;*.H|"\
+           "HTML/XML files (*.htm* *.shtm* *.xml)|*.htm*;*.shtm*;*.xml;*.HTM*;*.SHTM*;*.XML|"\
            "All files (*.*)|*.*"
 
 #for style mappings from extensions
@@ -73,8 +73,14 @@ def detectLineEndings(text):
         return '\n'
     else:# cr_ is mx:
         return '\r'
-#------------------------- load bookmarked hot-keys --------------------------
+
+#--------------- load pathmarks, snippets, and shell commands ----------------
+paths = {}
+display2code={}
+displayorder=[]
+shellcommands = []
 try:
     from pathmarks import *
 except:
-    paths = {}
+    pass
+
