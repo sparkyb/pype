@@ -57,7 +57,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.6.5.3"
+    VERSION = "1.6.5.4"
     VREQ = '2.4.2.4'
 
     import string
@@ -429,7 +429,8 @@ class MainWindow(wxFrame):
                     else:             a = i
                     self.SetStatusText("Opened %s"%a)
                 except:
-                    self.exceptDialog("File open failed")
+                    if error:
+                        self.exceptDialog("File open failed")
 
     def SetStatusText(self, text, number=0):
         if (number == 0) and text:
@@ -592,13 +593,10 @@ class MainWindow(wxFrame):
         #- cmt-001 - 08/06/2003  changed os.getcwd to wd
         dlg = wxFileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wxOPEN|wxMULTIPLE|wxHIDE_READONLY)
         if dlg.ShowModal() == wxID_OK:
-            dn = dlg.GetDirectory()
-            filenames = dlg.GetFilenames()
-            for fn in filenames:
-                self.OnDrop([self.getAbsolute(fn, dn)])
+            self.OnDrop(dlg.GetPaths())
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
 # Add the just-opened file to the file history menu and set the last directory 
-            self.config['lp'] = dn
+            self.config['lp'] = dlg.GetDirectory()
 #--------------------------- end cmt-001 - 08/06/2003 ----------------------------
         dlg.Destroy()
 

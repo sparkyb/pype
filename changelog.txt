@@ -1,3 +1,9 @@
+(PyPE 1.6.5.4)
+(fixed) a bug when opening up multiple documents that are in the root of a
+drive in Windows.  Thank you once again francescoa@sourceforge's for the bug
+report and pointing out where it was messing up.
+
+
 (PyPE 1.6.5.3)
 (fixed) a bug when starting up PyPE with more than one relative paths to files
 as arguments.  Thanks francescoa@sourceforge's for the bug report.
