@@ -1,3 +1,12 @@
+(PyPE 1.9.3)
+(changed) find now searches from the current cursor position, rather than the
+beginning (search down) or end (search up).
+(removed) event binding for EVT_STC_POSCHANGED, which has been removed in
+2.5.1.5.
+(fixed) a bug that resulted from opening an empty file.
+(fixed) a bug that resultef from opening a file without line endings.
+
+
 (PyPE 1.9.2)
 (improved) the find and find/replace dialogs will now remember the case, whole
 word setting, and direction (if applicable) for the last time the find/replace

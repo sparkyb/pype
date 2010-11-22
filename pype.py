@@ -55,7 +55,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.9.2"
+    VERSION = "1.9.3"
     VREQ = '2.4.2.4'
 
     try:
@@ -982,8 +982,12 @@ class MainWindow(wxFrame):
             txt = f.read()
             f.close()
             nwin.mod = os.stat(FN)[8]
-            nwin.format = detectLineEndings(txt)
-            nwin.SetText(txt)
+            if len(txt) == 0:
+                nwin.format = eol
+                nwin.SetText('')
+            else:
+                nwin.format = detectLineEndings(txt)
+                nwin.SetText(txt)
             
             #if FN in self.config['LASTOPEN']:
             #    state = self.config['LASTOPEN'][FN]
@@ -1389,9 +1393,9 @@ class MainWindow(wxFrame):
                 win.SetSelection(a, a+len(findTxt))
         elif et == wxEVT_COMMAND_FIND:
             if wxFR_DOWN&flags:
-                win.last = win.FindText(0, win.GetTextLength(), findTxt, flags)
+                win.last = win.FindText(win.GetSelection()[1], win.GetTextLength(), findTxt, flags)
             else:
-                win.last = win.FindText(win.GetTextLength(), 0, findTxt, flags)
+                win.last = win.FindText(win.GetSelection()[0], 0, findTxt, flags)
             if win.last > -1:
                 win.SetSelection(win.last, win.last+len(findTxt))
         else:# et == wxEVT_COMMAND_FIND_NEXT:
@@ -1412,7 +1416,7 @@ class MainWindow(wxFrame):
         win.EnsureVisible(win.GetCurrentLine())
         win.EnsureCaretVisible()
         if win.last == -1:
-            self.dialog("Reached the end of the document.", "")
+            self.dialog("Reached the %s of the document."%(['beginning', 'end'][bool(wxFR_DOWN&flags)], ""))
 
         return None
 
@@ -2247,7 +2251,8 @@ class PythonSTC(wxStyledTextCtrl):
         
         EVT_STC_CHARADDED(self, ID, self.key_up)
         EVT_STC_CHANGE(self, ID, self.cha)
-        EVT_STC_POSCHANGED(self, ID, self.pos)
+        #unavailable in 2.5.1.2, didn't work in previous versions of wxPython
+        # EVT_STC_POSCHANGED(self, ID, self.pos)
         EVT_STC_SAVEPOINTREACHED(self, ID, self.MakeClean)
         EVT_STC_SAVEPOINTLEFT(self, ID, self.MakeDirty)
         self.SetModEventMask(wxSTC_MOD_INSERTTEXT|wxSTC_MOD_DELETETEXT|wxSTC_PERFORMED_USER|wxSTC_PERFORMED_UNDO|wxSTC_PERFORMED_REDO)

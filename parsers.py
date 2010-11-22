@@ -9,7 +9,7 @@ def detectLineEndings(text):
     cr_ = text.count('\r')
     mx = max(lf_, cr_)
     if not mx:
-        return eol
+        return os.linesep
     elif crlf_ >= mx/2:
         return '\r\n'
     elif lf_ is mx:
