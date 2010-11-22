@@ -1,5 +1,7 @@
 
-'''
+from __future__ import with_statement
+
+"""
 This module is derived from the sched.py included with Python 2.6 .  I have
 modified it and am re-licensing it under the GPL v2, as is allowed by the PSF
 license:
@@ -8,10 +10,11 @@ http://svn.python.org/view/python/trunk/LICENSE?revision=68142&view=markup
 This software is licensed under the GPL (GNU General Public License) version 2
 as it appears here: http://www.gnu.org/copyleft/gpl.html
 It is also included with this archive as `gpl.txt <gpl.txt>`_.
-'''
 
 
-"""A generally useful event scheduler class.
+--- below from the original module
+
+A generally useful event scheduler class.
 
 Each instance of this class manages its own queue.
 No multi-threading is implied; you are supposed to hack that
@@ -41,7 +44,6 @@ has another way to reference private data (besides global variables).
 # XXX instead of having to define a module or class just to hold
 # XXX the global state of your particular time and delay functions.
 
-from __future__ import with_statement
 import heapq
 
 __all__ = ["scheduler"]
