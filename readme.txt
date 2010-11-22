@@ -75,8 +75,8 @@ for your convenience (so you don't have to install Python and wxPython).
 
 At the current time, the Windows binaries are constructed with Python 2.3 and
 wxPython 2.6.3.0 .  I have considered moving to Python 2.5 or even 2.4 with
-wxPython 2.7, but switching to Python 2.4 with wxPython 2.6.x adds 700k to the
-binary distribution, and going with Python 2.5 and wxPython 2.7 (there are
+wxPython 2.8, but switching to Python 2.4 with wxPython 2.6.x adds 700k to the
+binary distribution, and going with Python 2.5 and wxPython 2.8 (there are
 currently no wxPython 2.6.3.* releases for Python 2.5) adds 2.2 megs to the
 binary distribution, some of which is the Python 2.4-2.5 size difference, much
 of it being the necessity to include the gdi plus dll for non-XP/Vista
@@ -344,12 +344,34 @@ ignored), the following regular expression matches something::
 expression was intended to match things like::
 
     # -*- coding: ENCODING_NAME -*-
-    # -*- cOdInG: ENCODING_NAME -*-
+    # -*- cOdInG: ENCODING-NAME -*-
     # vim:fileencoding=ENCODING_NAME
-    <?xml version='1.0' encoding='ENCODING_NAME' ?>
+    <?xml version='1.0' encoding='ENCODING-NAME' ?>
 
 ... in [X]Emacs or Vim style encoding declarations for Python source, or
 XML-style declarations in XML or HTML source.
+
+
+Shells
+======
+PyPE includes the ability to open up Python or command shells.  See the File
+menu.  To choose which Python is used in the "New Python Shell" or "Run
+Selected Code", see "Options -> Shell Options".
+
+When using "New Python shell" or the "Run Selected Code", you may notice that
+when you run wxPython code, any initial wx.Frame.Show() calls may not actually
+show the frame on Windows.  To work around this, use a .Show(), followed by a
+.Hide(), followed by a .Show() again.  This should work around the issue on
+Windows platforms.
+
+When using "Run Selected Code", PyPE will try to find some open Python shell.
+If one is not found, PyPE will open a new Python shell using the Python
+specified in "Options -> Shell Options".  PyPE will then send the selected
+code to the Python shell after reindenting it.
+
+When using "Run Current File", PyPE will try to find a currently unused output
+document that was previously created.  If it cannot find one, it will open a
+new output document and use that.
 
 
 Vim options
@@ -374,7 +396,7 @@ stop typing), using the same indicator as defined in Options -> Shell Options.
 
 Syntax checking for Python source files is only enabled if you have chosen a
 delay in the Options -> Realtime Options submenu.  If your file is fewer than
-200,000 bytes long, it will take max(SYNTAX_CHECK_TIME, 1)*CHOICE_IN_SECONDS,
+200,000 bytes long, it will take max(SYNTAX_CHECK_TIME, 1)\*CHOICE_IN_SECONDS,
 and wait that long after you have stopped using your keyboard, etc., to check
 the syntax, indicating the first error, if any, using the same indicator as
 defined in Options -> Shell Options.
@@ -384,7 +406,7 @@ Filter tool, Todo listing, autocomple entries, and calltips is only enabled if
 you have chosen a delay for update tools in the Options -> Realtime Options
 submenu.  Otherwise you need to use Document -> Refresh (or the equivalent key
 binding).  Similar to syntax checking above, it will take max(REFRESH_TIME, 1)
-*CHOICE_IN_SECONDS, and wait that long after you have stopped using your
+\*CHOICE_IN_SECONDS, and wait that long after you have stopped using your
 keyboard, etc., to do the automatic Document -> Refresh call.
 
 Note that PyPE will only check syntax or rebuild the tree if the content has

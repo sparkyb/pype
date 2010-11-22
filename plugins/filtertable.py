@@ -154,6 +154,7 @@ def get_line_counts(h, lang):
         
         while cur:
             name, line_no, leading, children = cur.pop()
+            
             if lang == 'python':
                 pre, shortname1 = name.split(None, 1)
                 shortname = partition(partition(shortname1, ':')[0], '(')[0]
@@ -165,11 +166,12 @@ def get_line_counts(h, lang):
             elif lang.endswith('ml'):
                 key, shortname = name, line_no[2]
             
-            if lastn:
+            if lastn and not name.startswith('--'):
                 counts.setdefault(lastn, []).append(line_no[1]-lastl)
             
-            lastn = key
-            lastl = line_no[1]
+            if not name.startswith('--'):
+                lastn = key
+                lastl = line_no[1]
                 
             if children:
                 stk.append(cur)
@@ -194,6 +196,7 @@ class DefinitionList(wx.Panel):
         self.parent = parent
         self.stc = stc
         self.names = []
+        
         sizer = wx.BoxSizer(wx.VERTICAL)
             
         self.filter = wx.TextCtrl(self, -1, "", style=wx.TE_PROCESS_ENTER|wx.WANTS_CHARS)
@@ -203,8 +206,8 @@ class DefinitionList(wx.Panel):
         self.lcs = wx.CheckBox(self, -1, "Subsequence")
         
         s2 = wx.BoxSizer(wx.HORIZONTAL)
-        s2.Add(self.cs, 0, wx.EXPAND|wx.ALL, 3)
-        s2.Add(self.lcs, 0, wx.EXPAND|wx.ALL, 3)
+        s2.Add(self.cs, 1, wx.EXPAND|wx.ALL, 3)
+        s2.Add(self.lcs, 1, wx.EXPAND|wx.ALL, 3)
         
         sizer.Add(s2, 0, wx.EXPAND)
         
@@ -228,6 +231,7 @@ class DefinitionList(wx.Panel):
         self.Bind(wx.EVT_CHECKBOX, self.OnText)
         self.Bind(wx.EVT_COMBOBOX, self.OnText)
         self.cmdlist.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
+        
         self.getoptions()
         self.getting = 0
     

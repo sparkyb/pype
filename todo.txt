@@ -85,16 +85,16 @@ parser for tooltips, calltips, and better parsing.
 * Update filter list columns/save column width.
 * Add line-based document abstraction.
 * Move all document modification to PythonSTC definition, use metaprogramming
-techniques.
+  techniques.
 * Document filtertable semantics
 * Add optional context-sensitive filter
 * Add "find definition" menu item/hotkey: switches to the filter tool, and
-enters in the "current word".
+  enters in the "current word".
 * Remove all unnecessary 0-width columns in list controls.
 * Need a method to allow for better/easier trigger expansions (autoindent,
-easier cursor positioning, etc.).
+  easier cursor positioning, etc.).
 * Option to not save BOM to UTF encoded files when a coding line is in the
-Python source.
+  Python source.
 * Option to do nothing/open for editing/run macro on double click.
 Move PythonSTC definition out of pype.py
 
@@ -102,7 +102,7 @@ Move PythonSTC definition out of pype.py
 * Hotkey support for macros.
 If I can get more than one indicator working, or perhaps disable syntax
 highlighting, getting a remote pair/group programming setup similar to
-SubErthaEdit would be quite neat.
+SubEthaEdit would be quite neat.
 
 * Optional indicators for stdout/stderr from Python and Command shells.
 * Display Macro buttons as text or bitmaps.
@@ -149,9 +149,24 @@ Add support in the future for:
 * Check "run document" macro on linux
     * Replaced "run document" macro with "File -> Run Current File" menu item.
 Try to reproduce/fix cut/copy issue on linux
+    Cannot replicate in Ubuntu
     Cannot replicate in Kubuntu
     Cannot replicate in Xubuntu
     Cannot replicate in Windows
     Could be wxPython version issue, awaiting response from user
 
-Add "split document" ability, perhaps to the bottom/top toolbar.
+* Add "split document" ability
+Fix autoindent for *ML.
+* Make the Search tab run its search in a background thread, posting events to
+  the main GUI (will remove wx.Yield() issues)
+
+See if any "Code Browser" functionality can be duplicated; tree view,
+smalltalk-like view, etc.
+Add new folding commands (like Ctrl+Shift+[1-9] from:
+http://www.compusol.org/ecco/outlining.html ).
+
+Fix folding state saving/restoring.
+Replace View -> Split * commands with a 'split in second window' command.
+
+2.9:
+Add multi-language support via I18N or equivalent.

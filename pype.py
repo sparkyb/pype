@@ -157,6 +157,7 @@ from plugins import keydialog
 from plugins import codetree
 from plugins import filtertable
 from plugins import triggerdialog
+from plugins import window_management
 from plugins.window_management import docstate, _choicebook
 from plugins import methodhelper
 from plugins import lineabstraction
@@ -538,6 +539,19 @@ if 1:
     _MULT = (5, 20, 120, 5)
     _MULT2 = (5, 5, 5, 5)
     
+    #for turning tools on or off
+    TOOLS_ENABLE_L = [
+        (wx.NewId(), 'Name', 'source tree ordered by name', 'leftt', 'tree1'),
+        (wx.NewId(), 'Line', 'source tree ordered by line number', 'rightt', 'tree2'),
+        (wx.NewId(), 'Filter', 'filterable definition list', 'filterl', 'filter'),
+        (wx.NewId(), 'Todo', 'todo listing', 'todot', 'todo'),
+        (wx.NewId(), 'Tags', 'tagged definition filter', 'taglist', 'sourcetags'),
+        (wx.NewId(), 'TagM', 'definition tag manager', 'tagmanage', 'tagger'),
+    ]
+    
+    TOOLS_ENABLE = dict([(j[0], i) for i,j in enumerate(TOOLS_ENABLE_L)])
+    TOOLS_ENABLE_LKP = dict([(i[3], i[4]) for i in TOOLS_ENABLE_L])
+    
     #bookmark support
     BOOKMARKNUMBER = 1
     BOOKMARKSYMBOL = stc.STC_MARK_CIRCLE
@@ -660,7 +674,7 @@ if 1:
     
     DoneParsing, EVT_DONE_PARSING = NewEvent()
     
-    def parse(lang, source, le, which, x, slowparse=0):
+    def _parse(lang, source, le, which, x, slowparse=0):
         source = source.replace('\r\n', '\n').replace('\r', '\n')
         le = '\n'
         if lang in ('python', 'pyrex'):
@@ -680,6 +694,12 @@ if 1:
             return ml_parser(source, le, which, x)
         else:
             return [], [], {}, []
+    
+    def parse(lang, source, le, which, x, slowparse=0):
+        r = _parse(lang, source, le, which, x, slowparse)
+        import parsers
+        r2 = parsers._get_tags(r[0], r[-1])
+        return r + (r2,)
     
     def start_parse_thread(frame):
         a = threading.Thread(target=parse_thread, args=(frame,))
@@ -726,6 +746,8 @@ def _to_str(i):
 def do_nothing(*args):
     return
 
+NULLDOC = None
+
 #---------------------- Frame that contains everything -----------------------
 class MainWindow(wx.Frame):
     def __init__(self,parent,id,title,fnames):
@@ -733,6 +755,8 @@ class MainWindow(wx.Frame):
                          style=wx.DEFAULT_FRAME_STYLE|wx.NO_FULL_REPAINT_ON_RESIZE)
         self.starting = 1
         self.redirect = methodhelper.MethodHelper(self)
+        global root
+        root = self
         
 #------------------------------- configuration -------------------------------
         if 1:
@@ -767,6 +791,8 @@ class MainWindow(wx.Frame):
             wx.EVT_MENU_RANGE(self, wx.ID_FILE1, wx.ID_FILE9, self.OnFileHistory)
             self.lastused = lru.lastused(128+len(lastopen), LASTUSED)
             self.curdocstates = {}
+            
+            window_management.enabled = dict.fromkeys([i for i in window_management.possible if i not in disabled_tools])
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
         self.toparse = []
         self.parsing = 0
@@ -829,7 +855,7 @@ class MainWindow(wx.Frame):
                     rootLabel='main', execStartupScript=False)
                 self.RIGHTNB.AddPage(self.crust, "DEBUG")
             
-            y = [('Name', 'leftt'), ('Line','rightt'), ('Filter', 'filterl'), ('Todo','todot')]
+            y = [('Name', 'leftt'), ('Line','rightt'), ('Filter', 'filterl'), ('Todo','todot')]#, ('Tags', 'taglist'), ('TagM', 'tagmanage')]
             if ONE_TAB_:
                 self.single_ctrl = wx.Choicebook(self.RIGHTNB, -1)
                 self.RIGHTNB.AddPage(self.single_ctrl, "Tools")
@@ -841,7 +867,8 @@ class MainWindow(wx.Frame):
                 else:
                     ctrl = self.RIGHTNB
                 x = _choicebook(ctrl, -1)
-                ctrl.AddPage(x, name)
+                if TOOLS_ENABLE_LKP[i] in window_management.enabled:
+                    ctrl.AddPage(x, name)
                 setattr(self, i, x)
             
             self.macropage = macro.macroPanel(self.RIGHTNB, self)
@@ -861,6 +888,13 @@ class MainWindow(wx.Frame):
             self.RIGHTNB.AddPage(self.docpanel, 'Documents')
             self.pathmarks = browser.FilesystemBrowser(self.RIGHTNB, self, pathmarksn)
             self.RIGHTNB.AddPage(self.pathmarks, "Browse...")
+            self.altview = View(self.BOTTOMNB, wx.NewId(), self.BOTTOMNB)
+            self.BOTTOMNB.AddPage(self.altview, "Split")
+            self.altview2 = View(self.RIGHTNB, wx.NewId(), self.RIGHTNB)
+            self.RIGHTNB.AddPage(self.altview2, "Split")
+            global NULLDOC
+            NULLDOC = self.altview.GetDocPointer()
+            self.altview.AddRefDocument(NULLDOC)
 
 #------------------------- Insert menus into Menubar -------------------------
         global menuBar
@@ -959,6 +993,11 @@ class MainWindow(wx.Frame):
             menuAdd(self, viewmenu, "Previous Bookmark\tShift+F2", "Hop to the previous bookmark in this file", self.OnPreviousBookmark, pypeID_PRIOR_BOOKMARK)
             viewmenu.AppendSeparator()
             menuAdd(self, viewmenu, "Find Definition", "Shows the filter tool and tries to find the current word in the definitions", self.OnFindDefn, wx.NewId())
+            viewmenu.AppendSeparator()
+            menuAdd(self, viewmenu, "Split Wide", "Shows an alternate view of the current document in the wide tools", self.OnSplitW, wx.NewId())
+            menuAdd(self, viewmenu, "Split Tall", "Shows an alternate view of the current document in the tall tools", self.OnSplitT, wx.NewId())
+            menuAdd(self, viewmenu, "Unsplit", "Removes all document views", self.OnUnsplit, wx.NewId())
+            
 
 #------------------------------- Document menu -------------------------------
         if 1:
@@ -1114,6 +1153,12 @@ class MainWindow(wx.Frame):
                 menuAdd(self, moptmenu, "(double click) " + desc, "When double clicking on a macro: %s"%desc, self.OnChangeMacroOptions, iid, typ)
             
             #
+            #ability to enable/disable a tool
+            toolsmenu = wx.Menu()
+            menuAddM(optionsmenu, toolsmenu, "Tool Options", "Enable or disable a particular tool")
+            for i in TOOLS_ENABLE_L:
+                menuAdd(self, toolsmenu, i[1], "Enable "+i[2], self.OnToolToggle, i[0], wx.ITEM_CHECK)
+            
             optionsmenu.AppendSeparator()
             
             caretmenu = wx.Menu()
@@ -1241,6 +1286,10 @@ class MainWindow(wx.Frame):
             if hasattr(self.docpanel, 'recentlyclosed'):
                 self.menubar.Check(DOCUMENT_LIST_OPTION_TO_ID2[document_options2], 1)
             self.menubar.Check(SHOW_RECENT, show_recent)
+            
+            for i in TOOLS_ENABLE_L:
+                if i[4] in window_management.enabled:
+                    self.menubar.Check(i[0], 1)
 
 #------------------------ Drag and drop file support -------------------------
         self.SetDropTarget(FileDropTarget(self))
@@ -1487,12 +1536,12 @@ class MainWindow(wx.Frame):
         
         stc.refresh = 0
         stc.cached = tpl
-        h1, stc.kw, stc.tooltips, todo = tpl
+        h1, stc.kw, stc.tooltips, todo, tags = tpl
         stc.hierarchy = h1
         stc.kw.sort()
         stc.kw = ' '.join(stc.kw)
         ## ex1 = copy.deepcopy(h1)
-        stc.docstate.Update(h1, todo)
+        stc.docstate.Update(h1, todo, tags)
         
         delta += time.time()-t
         stc.lastparse2 = int(max((5,20,120)[HOW_OFTEN2]*delta, (5,20,120)[HOW_OFTEN2])*1000)
@@ -1539,8 +1588,14 @@ class MainWindow(wx.Frame):
     def single_instance_poller(self, evt=None):
         if single_pype_instance:
             single_instance.poll()
+        
+        wins = [self.altview, self.altview2]
         try:
-            win = self.getNumWin()[1]
+            wins.append(self.getNumWin()[1])
+        except cancelled:
+            pass
+        
+        for win in wins:
             x = win.GetMarginWidth(0)
             if x:
                 #we are supposed to have a margin...
@@ -1548,8 +1603,6 @@ class MainWindow(wx.Frame):
                 z = int(.9*StyleSetter.fs*max(4, y+1))
                 if x != z:
                     win.SetMarginWidth(0, z)
-        except cancelled:
-            pass
 
     def OnSize(self, event):
         self.ex_size()
@@ -1759,6 +1812,7 @@ class MainWindow(wx.Frame):
                             ('USED_TIME', 0L),
                             ('HOW_OFTEN1', -1),
                             ('HOW_OFTEN2', -1),
+                            ('disabled_tools', []),
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -1855,6 +1909,7 @@ class MainWindow(wx.Frame):
         self.config['USED_TIME'] = USED_TIME
         self.config['HOW_OFTEN1'] = HOW_OFTEN1
         self.config['HOW_OFTEN2'] = HOW_OFTEN2
+        self.config['disabled_tools'] = [i for i in window_management.possible if i not in window_management.enabled]
         try:
             if UNICODE:
                 path = os.sep.join([self.configPath, 'history.u.txt'])
@@ -2269,7 +2324,6 @@ class MainWindow(wx.Frame):
             self.curdocstates[FN] = state
         
         nwin.SetSaveState(state)
-        ## nwin.SetSaveState({})
 
         ## print 3
         if fn == ' ':
@@ -2540,12 +2594,7 @@ class MainWindow(wx.Frame):
 
         wnum, win = self.getNumWin(e)
         valu = self.getInt('Which line would you like to advance to?', '', win.LineFromPosition(win.GetSelection()[0])+1)
-        valu -= 1
-        if valu < win.GetLineCount():
-            linepos = win.GetLineEndPosition(valu)
-            win.EnsureVisible(valu)
-            win.SetSelection(linepos-len(win.GetLine(valu))+len(win.format), linepos)
-            win.ScrollToColumn(0)
+        win.GotoLineS(valu)
     
     def OnGotoP(self, e):
         wnum, win = self.getNumWin(e)
@@ -2611,6 +2660,10 @@ class MainWindow(wx.Frame):
         self.control.AdvanceSelection(True)
         
     def OnFindDefn(self, e):
+        if 'filter' not in window_management.enabled:
+            self.SetStatusText("Error: you must enable the filter in 'Options -> Tool Options' to use this feature")
+            return
+        
         num, win = self.getNumWin(e)
         
         if hasattr(self, 'single_ctrl'):
@@ -2618,7 +2671,10 @@ class MainWindow(wx.Frame):
         else:
             x = self.RIGHTNB
         
-        x.SetSelection(2)
+        for i in xrange(x.GetPageCount()):
+            if x.GetPage(i) == self.filterl:
+                x.SetSelection(i)
+                break
         
         gcp = win.GetCurrentPos()
         st = win.WordStartPosition(gcp, 1)
@@ -2630,6 +2686,32 @@ class MainWindow(wx.Frame):
         f.how.SetValue('exact')
         f.update()
         f.filter.SetFocus()
+    
+    def OnSplitW(self, e):
+        self._OnSplit(self.altview)
+    def OnSplitT(self, e):
+        self._OnSplit(self.altview2)
+    def _OnSplit(self, alt):
+        num, win = self.getNumWin()
+        alt.SetDocPointer(NULLDOC) #reset the pointer first
+        alt.SetDocPointer(win.GetDocPointer())
+        x = win.GetSaveState(1)
+        del x['FOLD']
+        alt.SetSaveState(x)
+        alt.SetLexer(win.GetLexer())
+        alt.changeStyle(stylefile, self.style(win.filename))
+        
+        for i in xrange(alt.parent.GetPageCount()):
+            if alt.parent.GetPage(i) is alt:
+                alt.parent.SetSelection(i)
+                break
+        
+        if not alt.parent.GetParent().IsSplit():
+            alt.parent.GetParent().Split()
+        
+    def OnUnsplit(self, e):
+        self.altview.SetDocPointer(NULLDOC)
+        self.altview2.SetDocPointer(NULLDOC)
     
 #--------------------------- Document Menu Methods ---------------------------
 
@@ -2904,6 +2986,7 @@ class MainWindow(wx.Frame):
             self.client2.Unsplit()
             ## self.BOTTOM.Hide()
         self.OnSize(None)
+        self.menubar.Check(WIDE_ID, SHOWWIDE)
         
     def OnShowTallToggle(self, e):
         global SHOWTALL
@@ -2915,6 +2998,7 @@ class MainWindow(wx.Frame):
             self.client.Unsplit()
             ## self.RIGHT.Hide()
         self.OnSize(None)
+        self.menubar.Check(TALL_ID, SHOWTALL)
     
     def OnOneTabToggle(self, e):
         global ONE_TAB_
@@ -3154,6 +3238,27 @@ class MainWindow(wx.Frame):
         macro_doubleclick = MACRO_CLICK_OPTIONS[i][0]
         wx.CallAfter(self.control.updateChecks, None)
     
+    def OnToolToggle(self, e):
+        tool = e.GetId()
+        info = TOOLS_ENABLE_L[TOOLS_ENABLE[tool]]
+        if info[4] in window_management.enabled:
+            window_management.enabled.pop(info[4])
+            t = getattr(self, info[3])
+            t.Hide()
+            for i in xrange(t.parent.GetPageCount()):
+                if t.parent.GetPage(i) == t:
+                    t.parent.RemovePage(i)
+                    break
+        else:
+            window_management.enabled[info[4]] = None
+            t = getattr(self, info[3])
+            t.parent.AddPage(t, info[1])
+            for i in self.control:
+                if hasattr(i, '_invalidate_cache'):
+                    i._invalidate_cache()
+            win = self.getNumWin()[1]
+            win.docstate.Show()
+    
     def OnMacroButtonImage(self, e):
         global macro_images
         macro_images = not macro_images
@@ -3202,7 +3307,10 @@ class MainWindow(wx.Frame):
     def OnHelp(self, e):
         if not SHOWWIDE:
             self.OnShowWideToggle(None)
-        self.BOTTOMNB.SetSelection(self.BOTTOMNB.GetPageCount()-1)
+        for i in xrange(self.BOTTOMNB.GetPageCount()):
+            if isinstance(self.BOTTOMNB.GetPage(i), help.MyHtmlWindow):
+                self.BOTTOMNB.SetSelection(i)
+                break
         
         def fixsize():
             h = self.BOTTOM.GetSize()[1]//2
@@ -3235,6 +3343,8 @@ class MainWindow(wx.Frame):
 
         if pagecount:
             if (key==13):
+                if type(self.FindFocus()) not in (PythonSTC, interpreter.MyShell):
+                    return event.Skip()
                 #when 'enter' is pressed, indentation needs to happen.
                 if win.AutoCompActive():
                     return win.AutoCompComplete()
@@ -3245,7 +3355,7 @@ class MainWindow(wx.Frame):
                 if win.AutoCompActive():
                     win.AutoCompCancel()
                 if win.CallTipActive():
-                    win.CalltipCancel()
+                    win.CallTipCancel()
             else:
                 event.Skip()
                 if not (win.GetStyleAt(win.GetCurrentPos())):
@@ -3262,8 +3372,7 @@ class MainWindow(wx.Frame):
                             win.CallTipCancel()
                     if (not win.CallTipActive()) and event.ShiftDown() and (key == ord('9')):
                         ## self._ct(win, 1)
-                        
-                        wx.CallAfter(self._ct, win, 2)
+                        wx.CallAfter(self._ct, win, 1)
                     elif win.showautocomp and bool(win.kw):
                         if keypressed.split('+')[-1] in _keys:
                             return
@@ -3303,11 +3412,11 @@ class MainWindow(wx.Frame):
         if not word:
             return win.AutoCompCancel()
         
-        print "got word:", word
+        ## print "got word:", word
         
         words = None
         if method and win.fetch_methods:
-            print "found method!"
+            ## print "found method!"
             x = win._method_listing(win.lines.curlinei, cur)
             if x:
                 words = [i for i in x if i.startswith(word)]
@@ -3315,14 +3424,14 @@ class MainWindow(wx.Frame):
             words = [i for i in win.kw.split() if i.startswith(word)]
         
         if len(words) == 0:
-            print 'no words!'
+            ## print 'no words!'
             return win.AutoCompCancel()
         if len(words) == 1 and words[-1] == word:
-            print "exact words"
+            ## print "exact words"
             return win.AutoCompCancel()
         
         words = ' '.join(words)
-        print "got words:", repr(words)
+        ## print "got words:", repr(words)
         win.AutoCompSetIgnoreCase(False)
         win.AutoCompShow(len(word), words)
         
@@ -3427,7 +3536,10 @@ class PythonSTC(stc.StyledTextCtrl):
 
         self.parent = parent
         self.notebook = notebook #should also be equal to self.parent.parent
-        self.root = self.notebook.root
+        try:
+            self.root = self.notebook.root
+        except:
+            self.root = root
         self.sloppy = 0
         self.smartpaste = 0
         self.dirty = 0
@@ -3440,7 +3552,7 @@ class PythonSTC(stc.StyledTextCtrl):
         self.fetch_methods_cache = [-1, 0, '', []]
 
         #drop file and text support
-        self.SetDropTarget(DropTargetFT(self.root))
+        self.SetDropTarget(FileDropTarget(self.root))
 
         #for command comlpetion
         self.SetKeyWords(0, " ".join(keyword.kwlist))
@@ -3852,7 +3964,7 @@ class PythonSTC(stc.StyledTextCtrl):
     def OnJumpB(self, e):
         self.jump(-1)
 #------------------------- persistant document state -------------------------
-    def GetSaveState(self):
+    def GetSaveState(self, scp=0):
         BM = []
         FOLD = []
         if self.GetParent().IsSplit():
@@ -3881,7 +3993,7 @@ class PythonSTC(stc.StyledTextCtrl):
                 'showline':self.GetCaretLineVisible(),
                 'fetch_methods':self.fetch_methods,
                }
-        if not self.save_cursor:
+        if not self.save_cursor and not scp:
             del ret['cursor_posn']
         if self.GetTextLength() < MAX_SAVE_STATE_DOC_SIZE:
             ret['checksum'] = md5.new(self.GetText(0)).hexdigest()
@@ -3912,7 +4024,7 @@ class PythonSTC(stc.StyledTextCtrl):
         self.showautocomp = saved['showautocomp']
         self.fetch_methods = saved['fetch_methods']
         self.findbarprefs = dict(saved.get('findbarprefs', {}))
-        self.triggers = saved['triggers']
+        self.triggers = saved.get('triggers', {})
         self.sloppy = saved['sloppy']
         self.smartpaste = saved['smartpaste']
         self.SetCaretLineVisible(saved['showline'])
@@ -3924,21 +4036,26 @@ class PythonSTC(stc.StyledTextCtrl):
         self.save_cursor = saved['save_cursor']
         for bml in saved.get('BM', []):
             self.MarkerAdd(bml, BOOKMARKNUMBER)
-        for exl in saved.get('FOLD', []):
-            a = self.GetLastChild(exl, -1)
-            self.HideLines(exl+1,a)
-            self.SetFoldExpanded(exl, 0)
 
         try: wx.Yield()
         except: pass
 
-        a = saved.get('cursor_posn', 0)
-        self.SetSelection(a,a)
-        self.EnsureCaretVisible()
-        self.ScrollToColumn(0)
+        def posn(self, a):
+            self.SetSelection(a,a)
+            self.EnsureCaretVisible()
+            self.ScrollToColumn(0)
         
         if 'CHECK_VIM' in saved:
             self._check_vim()
+        
+        wx.CallAfter(self._update_fold, saved.get('FOLD', []))
+        wx.CallAfter(posn, self, saved.get('cursor_posn', 0))
+    
+    def _update_fold(self, fold):
+        for exl in fold:
+            a = self.GetLastChild(exl, -1)
+            self.HideLines(exl+1,a)
+            self.SetFoldExpanded(exl, 0)
     
     def _check_vim(self):
         DBG = 0
@@ -5256,6 +5373,62 @@ class PythonSTC(stc.StyledTextCtrl):
         if self.GetTextLength() < 200000:
             return stc.StyledTextCtrl.GetText(self)
         return ''
+    
+    def GotoLineS(self, line):
+        line -= 1
+        if line < self.GetLineCount():
+            linepos = self.GetLineEndPosition(line)
+            self.EnsureVisible(line)
+            self.SetSelection(linepos-len(self.GetLine(line))+len(self.format), linepos)
+            self.ScrollToColumn(0)
+    
+    def _invalidate_cache(self):
+        self.cache = None
+        self.m2 = None
+        self.gotcharacter()
+
+class View(PythonSTC):
+    def __init__(self, *args):
+        PythonSTC.__init__(self, *args)
+        ## self.CmdKeyClearAll()
+        
+        # Clear keys that could modify the document.
+        # This is a hack to get around the fact that
+        # .SetReadOnly() works on a per-document basis,
+        # not per-view as we need.
+        self.CmdKeyClear(ord('T'), stc.STC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('T'), stc.STC_SCMOD_CTRL|stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(ord('L'), stc.STC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('L'), stc.STC_SCMOD_CTRL|stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(ord('D'), stc.STC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('U'), stc.STC_SCMOD_CTRL)
+        self.CmdKeyClear(ord('U'), stc.STC_SCMOD_CTRL|stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_TAB, stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_TAB, 0)
+        self.CmdKeyClear(wx.WXK_RETURN, stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_RETURN, 0)
+        self.CmdKeyClear(wx.WXK_DELETE, 0)
+        self.CmdKeyClear(wx.WXK_DELETE, stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_DELETE, stc.STC_SCMOD_CTRL)
+        self.CmdKeyClear(wx.WXK_DELETE, stc.STC_SCMOD_CTRL|stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_INSERT, 0)
+        self.CmdKeyClear(wx.WXK_INSERT, stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_BACK, 0)
+        self.CmdKeyClear(wx.WXK_BACK, stc.STC_SCMOD_SHIFT)
+        self.CmdKeyClear(wx.WXK_BACK, stc.STC_SCMOD_CTRL)
+        self.CmdKeyClear(wx.WXK_BACK, stc.STC_SCMOD_ALT)
+        self.CmdKeyClear(wx.WXK_BACK, stc.STC_SCMOD_CTRL|stc.STC_SCMOD_SHIFT)
+        
+        #add copying!
+        self.CmdKeyAssign(ord('C'), stc.STC_SCMOD_CTRL, stc.STC_CMD_COPY)
+        
+        #remove the popup menu
+        self.UsePopUp(0)
+        
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+    def OnChar(self, evt):
+        #should prevent non-hotkey modification
+        return
 
 class FileDropTarget(wx.FileDropTarget):
     def __init__(self, root):
@@ -5420,7 +5593,9 @@ def main():
     filehistory.root = root = app.frame = MainWindow(None, -1, "PyPE", docs)
     root.updateWindowTitle()
     app.SetTopWindow(app.frame)
-    app.frame.Show(1)
+    app.frame.Show()
+    app.frame.Hide() #to fix not showing problem on Windows
+    app.frame.Show() #
     if opn:
         app.frame.OnOpenPrevDocs(None)
     app.frame.SendSizeEvent()

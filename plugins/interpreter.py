@@ -381,6 +381,9 @@ class MyShell(stc.StyledTextCtrl):
     def _gotcharacter2(self, e=None):
         pass
     
+    def _update_fold(self, *args):
+        pass
+    
     def _config(self):
         self.setStyles(FACES)
         # Do we want to automatically pop up command completion options?
@@ -488,6 +491,8 @@ class MyShell(stc.StyledTextCtrl):
     
     def real_poll(self, input=''):
         #todo: fix for unicode
+        if not hasattr(self, 'remote'):
+            return
         if not self.remote:
             return
         o = self.remote.Poll(input)
@@ -763,7 +768,7 @@ class MyShell(stc.StyledTextCtrl):
         ## print "_Restart"
         if evt and not isinstance(evt, tuple):
             self._close(evt)
-        self.queue = []
+        del self.queue[:]
         self.killsteps = killsteps[:]
         
         if self.restartable:
@@ -802,7 +807,7 @@ class MyShell(stc.StyledTextCtrl):
         # Prevent modification of previously submitted
         # commands/responses.
         if not self.CanEdit():
-            print "can't edit!"
+            ## print "can't edit!"
             return
         key = GetKeyCode(event)
         # Return (Enter) needs to be ignored in this handler.
@@ -892,6 +897,13 @@ class MyShell(stc.StyledTextCtrl):
 
         if not success:
             return
+        
+        x,y = self.GetSelection()
+        if x < self.promptPosEnd:
+            x = self.promptPosEnd
+        if y < self.promptPosEnd:
+            y = self.promptPosEnd
+        self.SetSelection(x,y)
         
         self.ReplaceSelection('')
         

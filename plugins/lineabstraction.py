@@ -32,6 +32,9 @@ class LineAbstraction(object):
     def __init__(self, stc):
         self.stc = stc
     
+    def _mod(self):
+        self.stc.gotcharacter()
+    
     class curline:
         if 1:
             '''
@@ -42,8 +45,10 @@ class LineAbstraction(object):
             return self[self.curlinei]
         def set(self, value):
             self[self.curlinei] = value
+            self._mod()
         def de1(self):
             del self[self.curlinei]
+            self._mod()
     
     class curlinei:
         if 1:
@@ -112,6 +117,7 @@ class LineAbstraction(object):
         def de1(self):
             self.selectedlinesi = self.selectedlinesi
             self.stc.ReplaceSelection('')
+            self._mod()
     
     class selectedlinesi:
         if 1:
@@ -140,6 +146,7 @@ class LineAbstraction(object):
             start = self._line_range(start)[0]
             end = self._line_range(end)[0]
             self.stc.SetSelection(start, end)
+            self._mod()
     
     class targetlines:
         if 1:
@@ -159,10 +166,12 @@ class LineAbstraction(object):
                 #we don't want to use += here!
                 value = value + ['']
             self.stc.ReplaceTarget(self.stc.format.join([i.rstrip('\r\n') for i in value]))
+            self._mod()
         
         def de1(self):
             self.targetlinesi = self.targetlinesi
             self.stc.ReplaceTarget('')
+            self._mod()
     
     class targetlinesi:
         if 1:
@@ -250,12 +259,14 @@ class LineAbstraction(object):
         self.stc.SetTargetStart(y)
         self.stc.SetTargetEnd(z)
         self.stc.ReplaceTarget(value)
+        self._mod()
     
     def __delitem__(self, index):
         '''
         Deletes a particular line.
         '''
         self[index] = ''
+        self._mod()
     
     def __iter__(self):
         '''

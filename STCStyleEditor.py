@@ -1336,13 +1336,13 @@ if __name__ == '__main__':
         app.MainLoop()
     else:
         dlg = STCStyleEditDlg(None,
-            #'Python', 'python',
+            'Python', 'python',
             #'HTML', 'html',
             #'XML', 'xml',
             #'C++', 'cpp',
             #'Text', 'text',
             #'Properties', 'prop',
-            'Latex', 'tex',
+            ## 'Latex', 'tex',
             config)
         try: dlg.ShowModal()
         finally: dlg.Destroy()

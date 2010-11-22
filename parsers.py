@@ -7,11 +7,12 @@ import compiler
 import traceback
 import symbol
 import token
+import pprint
 from plugins import exparse
 
 todoexp = re.compile('(>?[a-zA-Z0-9 ]+):(.*)', re.DOTALL)
 
-_bad_todo = dict.fromkeys('if elif else def cdef class try except finally for while lambda'.split())
+_bad_todo = dict.fromkeys('if elif else def cdef class try except finally for while lambda with'.split())
 _bad_urls = dict.fromkeys('http ftp mailto news gopher telnet file'.split())
 
 try:
@@ -78,6 +79,45 @@ for i in 'if for while switch case return'.split():
     badstarts.append(i+'\t')
 
 ops = '+-=<>?%!~^&(|/"\''
+
+def _get_tags(out, todo):
+    #tags: ^tag parser
+    out = _flatten2(out)
+    out = [i for i in out if not i[1].startswith('-- ')] #line_no, defn
+    rtags = {'':dict(out)}
+    todo = [i for i in todo if i[0] == 'tags'] #tag, line_no, excl, content
+    tags = []
+    last = None
+    while todo and out:
+        if todo[-1][1] == out[-1][0]:
+            #tag line matches parsed line, maybe it hangs out to the right?
+            _ = todo.pop()
+            tags.append((out[-1][0], _[-1], out[-1][1]))
+        
+        elif out[-1][0] > todo[-1][1]:
+            last = out.pop()
+        
+        elif '^' in todo[-1][3]:
+            _ = todo.pop()
+            tags.append((out[-1][0], _[-1], out[-1][1]))
+        
+        else:
+            #todo is > out, use last if it exists
+            _ = todo.pop()
+            if last:
+                tags.append((last[0], _[-1], last[1]))
+            else:
+                tags.append((_[1], _[-1], "?"))
+    
+    for line, content, defn in tags:
+        for tag in re.split("[^0-9a-z]+", content.lower()):
+            if not tag:
+                continue
+            if tag not in rtags:
+                rtags[tag] = {}
+            rtags[tag][line] = defn
+    
+    return rtags
 
 def _shared_parse(ls, todo, line_no, bad_todo=(), start=1, texp=todoexp, ml=0):
     r = texp.match(ls, start)
@@ -170,7 +210,7 @@ def c_parser(source, line_ending, flat, wxYield):
         if ls[:2] == '//':
             _sp(ls, todo, line_no+1, start=2)
         elif ls[:2] == '/*' and ls[-2:] == '*/':
-            _label(ls.strip('/*'), labels, line_no+1)
+            _label(ls.strip('/* '), labels, line_no+1)
     
     if labels:
         add_labels(out, labels)
@@ -192,6 +232,20 @@ def _flatten(out, seq=None):
             _flatten(j[-1], seq)
     if first:
         seq.append((0x7fffffff, len(seq), out, 0))
+    return seq
+
+def _flatten2(out, seq=None):
+    #used for:
+    #tags: like this one^
+    #tags: ^tag parser
+    first = 0
+    if seq is None:
+        seq = []
+        first = 1
+    for i,j in enumerate(out):
+        seq.append((j[1][1], j[0]))
+        if j[-1]:
+            _flatten2(j[-1], seq)
     return seq
 
 def add_labels(out, labels):
@@ -227,10 +281,11 @@ def slower_parser(source, _1, flat, _2):
     _sp = _shared_parse
     labels = []
     for line_no, line in enumerate(source.split('\n')):
-        ls = line.strip()
-        if ls[:1] == '#':
-            if not _sp(ls, todo, line_no+1, bad_todo, 1 + ls.startswith('##')):
-                _label(ls.strip('#>'), labels, line_no+1)
+        if '#' not in line:
+            continue
+        p = line.find('#')
+        if not _sp(line[p:], todo, line_no+1, bad_todo, 1+(line[p+1:p+2]=='#')):
+            _label(line[p+1:].lstrip('#>'), labels, line_no+1)
                 
     if labels:
         add_labels(out, labels)
@@ -290,9 +345,10 @@ def faster_parser(source, line_ending, flat, wxYield):
             fun('cdef ', line, ls, line_no, stk)
         elif ls[:6] == 'class ':
             fun('class ', line, ls, line_no, stk)
-        elif ls[:1] == '#':
-            if not _sp(ls, todo, line_no, bad_todo, 1 + ls.startswith('##')):
-                _label(ls.strip('#>'), labels, line_no)
+        elif '#' in line:
+            p = line.find('#')
+            if not _sp(line[p:], todo, line_no+1, bad_todo, 1+(line[p+1:p+2]=='#')):
+                _label(line[p+1:].lstrip('#>'), labels, line_no+1)
 
     while len(stk)>1:
         a = stk.pop()
@@ -497,6 +553,5 @@ class Baz(object, int):
         def goo():
             pass
 '''
-    import pprint
     ## pprint.pprint(get_defs(a,1))
-    pprint.pprint(slower_parser(a, '\n', 3, lambda:None)[0])
+    pprint.pprint(slower_parser(a, '\n', 3, lambda:None))

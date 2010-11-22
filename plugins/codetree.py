@@ -1,6 +1,7 @@
 import wx
 import sys
 import os
+import time
 
 icons = 1
 colors = 1
@@ -38,15 +39,24 @@ class TreeCtrl(wx.TreeCtrl):
             self.SetImageList(il)
             self.il = il
         self.SORTTREE = st
+        if st:
+            self.cmpf = lambda d1, d2: cmp(d1,d2)
+        else:
+            self.cmpf = lambda d1, d2: cmp(d1[1],d2[1])
+        
         self.root = self.AddRoot("Unseen Root")
 
     def OnCompareItems(self, item1, item2):
-        if self.SORTTREE:
-            return cmp(self.GetItemData(item1).GetData(),\
-                       self.GetItemData(item2).GetData())
-        else:
-            return cmp(self.GetItemData(item1).GetData()[1],\
-                       self.GetItemData(item2).GetData()[1])
+        return self.cmpf(self.GetItemData(item1).GetData(),
+                         self.GetItemData(item2).GetData())
+    
+    def SortAll(self):
+        stk = self._get_children(self.root)
+        while stk:
+            cur = stk.pop()
+            if self.GetChildrenCount(cur):
+                self.SortChildren(cur)
+                stk.extend(self._get_children(cur))
     
     def _get_children(self, node):
         chi = []
@@ -65,6 +75,22 @@ class TreeCtrl(wx.TreeCtrl):
                 chi.append(ch)
             z -= 1
         return chi
+    
+    def get_tree(self):
+        content = []
+        stk = [(ch, ()) for ch in self._get_children(self.root)]
+        stk.reverse()
+        while stk:
+            cur, h = stk.pop()
+            x = h + (self.GetItemText(cur),)
+            content.append((x, cur))
+            if self.GetChildrenCount(cur):
+                chi = self._get_children(cur)
+                chi.reverse()
+                for ch in chi:
+                    stk.append((ch, x))
+        
+        return content
     
     def _save(self):
         expanded = []
@@ -109,6 +135,57 @@ class TreeCtrl(wx.TreeCtrl):
         if y:
             wx.CallAfter(self.ScrollTo, y)
         
+def new_tree(hier, cmpf):
+    h = hier[:]
+    h.sort(cmpf)
+    h.reverse()
+    stk = [(i, ()) for i in h]
+    
+    content = []
+    while stk:
+        a = stk.pop()
+        try:
+            b, x = a
+            [name, line_no, leading, children] = b
+        except:
+            print len(b)
+            raise
+        x = x + (name,)
+        content.append((x, name, line_no, bool(children)))
+        
+        if children:
+            children = children[:]
+            children.sort(cmpf)
+            children.reverse()
+            for ch in children:
+                stk.append((ch, x))
+    
+    return content
+
+def set_color_and_icon(tree, item, name, short, children):
+    if colors:
+        tree.SetItemTextColour(item, D.get(name[:2], blue))
+    if children:
+        if icons:
+            tree.SetItemImage(item, 0, wx.TreeItemIcon_Normal)
+            tree.SetItemImage(item, 1, wx.TreeItemIcon_Expanded)
+    elif icons:
+        color = 2
+        if colored_icons:
+            green = short.startswith('__') and short.endswith('__')
+            green = green or not short.startswith('_')
+            red = (not green) and short.startswith('__')
+            
+            if green:
+                color = 3
+            elif red:
+                color = 5
+            else:
+                color = 4
+        
+        tree.SetItemImage(item, color, wx.TreeItemIcon_Normal)
+        tree.SetItemImage(item, color, wx.TreeItemIcon_Selected)
+    
 
 class hierCodeTreePanel(wx.Panel):
     def __init__(self, root, parent, st):
@@ -121,6 +198,10 @@ class hierCodeTreePanel(wx.Panel):
         tID = wx.NewId()
 
         self.tree = TreeCtrl(self, st)
+        if st:
+            self.cmpf = lambda d1, d2: cmp(d1[1], d2[1])
+        else:
+            self.cmpf = lambda d1, d2: cmp(d1[1][1], d2[1][1])
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.tree, 1, wx.EXPAND)
@@ -132,51 +213,51 @@ class hierCodeTreePanel(wx.Panel):
     
     def new_hierarchy(self, hier):
         self.Freeze()
-        _restore = self.tree._save()
-        self.tree.DeleteAllItems()
-        if newroot:
-            #on GTK/Linux, tree.DeleteAllItems() kills the unseen root,
-            #not so on Windows.
-            self.tree.root = self.tree.AddRoot("Unseen Root")
-        root = [self.tree.root]
-        stk = [hier[:]]
-        while stk:
-            cur = stk.pop()
-            while cur:
-                name, line_no, leading, children = cur.pop()
-                ## if self.tree.SORTTREE and name[:3] == '-- ' and name[-3:] == ' --':
-                    ## continue
-                item_no = self.tree.AppendItem(root[-1], name)
-                self.tree.SetPyData(item_no, line_no)
-                if colors: self.tree.SetItemTextColour(item_no, D.get(name[:2], blue))
-                if children:
-                    if icons:
-                        self.tree.SetItemImage(item_no, 0, wx.TreeItemIcon_Normal)
-                        self.tree.SetItemImage(item_no, 1, wx.TreeItemIcon_Expanded)
-                    stk.append(cur)
-                    root.append(item_no)
-                    cur = children[:]
-                elif icons:
-                    color = 2
-                    if colored_icons:
-                        n = line_no[2]
-                        green = n.startswith('__') and n.endswith('__')
-                        green = green or not n.startswith('_')
-                        red = (not green) and n.startswith('__')
-                        
-                        if green:
-                            color = 3
-                        elif red:
-                            color = 5
-                        else:
-                            color = 4
-                    
-                    self.tree.SetItemImage(item_no, color, wx.TreeItemIcon_Normal)
-                    self.tree.SetItemImage(item_no, color, wx.TreeItemIcon_Selected)
-            self.tree.SortChildren(root[-1])
-            root.pop()
+        ## t = time.time()
+        stk = [self.tree.root]
+        old = {}
+        for name, ite in self.tree.get_tree():
+            while len(stk) > len(name):
+                _ = stk.pop()
+            if name in old:
+                old[name].append((ite, stk[-1]))
+            else:
+                old[name] = [(ite, stk[-1])]
+            stk.append(ite)
         
-        self.tree._restore(*_restore)
+        done = {():self.tree.root}
+        
+        for name, nam, data, ch in new_tree(hier, self.cmpf):
+            if name in old:
+                ent = old[name]
+                item_no, par = ent.pop(0)
+                if not ent:
+                    del old[name]
+                done[name[:-1]] = par
+                done[name] = item_no
+                self.tree.SetPyData(item_no, data)
+            else:
+                #if we get to this item, its parent *must* be in the tree
+                par = done[name[:-1]]
+                item_no = self.tree.AppendItem(par, nam)
+                done[name] = item_no
+                ## print "added:", name
+                self.tree.SetPyData(item_no, data)
+            set_color_and_icon(self.tree, item_no, name[-1], data[2], ch)
+        
+        old = old.items()
+        old.sort(lambda a,b: -cmp(len(a[0]), len(b[0])))
+        
+        for x in old:
+            name = x[0]
+            for item, parent in x[1]:
+                self.tree.Delete(item)
+                #shouldn't need to update colors, etc, should be done in the previous loop
+                ## if len(name) >= 2 and self.tree.GetChildrenCount(parent) < 1:
+                    ## set_color_and_icon(self.tree, parent, name[-2], self.GetItemData(parent).GetData(), 0)
+        
+        self.tree.SortAll()
+        ## print "tree rebuild:", time.time()-t
         self.Thaw()
 
     def OnLeftDClick(self, event):

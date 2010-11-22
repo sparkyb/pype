@@ -1,3 +1,58 @@
+#-------------------------------- PyPE 2.8.5 ---------------------------------
+(fixed) issue where double-clicking on a result while search was still going
+wouldn't actually go to the line of the result.
+(fixed) macros that use the line-based abstraction will now cause the parse
+timers to restart (just like hitting a keyboard key).
+(added) 'GotoLineS' utility method on stc instances for easy navigation to and
+selection of an entire line.
+(added) and disabled tagging tool.
+(fixed) commented/uncommented line discovery for latex documents.
+(fixed) vim option discovery when opening up latex documents.
+(added) the ability to disable individual tools if desired (disabling a tool
+prevents it from being updated, and may reduce tool refresh times).
+(fixed) calltips.
+(fixed) removed debug printouts for autocomplete.
+(fixed) View -> Go To Line Number, now goes to the proper line (not the one
+after), and now will always show the content of the line.
+(changed) stopped using combined file/text drop targets, drags could cause
+extra copies of text to be pasted at the end of the document.
+(added) ability to have a read-only view of a document in the wide or tall
+tools.  See View -> Split Wide and Split Tall.  Note that you can have two
+different documents displayed in either split.  See View -> Unsplit for hiding
+removing the view to the documents (the split views persist even if you close
+the open documents, but will not update if you close and re-open the closed
+document).
+(changed) moved search code (for the Search tab) use a separate thread in
+order to increase interactivity, and to prevent lockups due to bad regular
+expressions.
+(fixed) checkbox updating for showing or hiding wide or tall tools when using
+the keyboard to toggle them on some platforms.
+(known issue) sometimes when attempting to use keyboard shortcuts, PyPE will
+not recognize the keyboard shortcuts.  Click on an open document to allow the
+keyboard shortcuts to work again.
+(fixed) the 'Ignore .subdirs' option in the 'Search' tab; if you add a path of
+foo/, and there was a foo/bar/.subdir, PyPE will now ignore foo/bar/.subdir .
+PyPE mistakenly only previously ignored foo/.subdir .
+(fixed) Option Document -> Save Position will now properly go to the right
+position when there are document folds present.
+(changed) the way tree controls update their content during refresh.  Should
+prevent unnecessary horizontal scrolling as was the case in PyPE 2.8, and be
+noticably faster.
+(fixed) classes or functions with the same names will no longer all be
+expanded in the browsable source trees when one is expanded.
+(fixed) icon update issues in the browsable source trees when classes,
+functions, or methods lose child nodes.
+(fixed) filter tool to not list #-- stuff -- style labels as having negative
+lengths, instead will have lengths of zero, and won't affect line counts
+otherwise.
+(changed) the included stc-styles.rc.cfg to make // comments the standard font
+size.
+(changed) adjusted the layout of the Find/Replace bar to use less horizontal
+space (really only noticable in the Replace bar).
+(fixed) pasting in a shell when non-editable data is selected will no longer
+change the non-editable data or result in an error dialog.
+
+
 #--------------------------------- PyPE 2.8 ----------------------------------
 (changed) reorganized some of the options menu to make more sense and to fit
 on 800x600 resolution screens.  If you have any hotkeys defined, you may need
