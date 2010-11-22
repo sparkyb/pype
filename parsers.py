@@ -177,11 +177,13 @@ def main():
     if fil == '-':
         print repr(toprint)
     else:
-        print fil
+        #print fil
         os.remove(fil)
         a = open("%s.out"%fil, 'w')
         a.write(repr(toprint))
         a.close()
+        print fil
+        raw_input("press enter to continue")
 
 if __name__ == '__main__':
     main()

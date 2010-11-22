@@ -1,24 +1,6 @@
 #!/usr/bin/python
 
 #-------------- User changable settings are in configuration.py --------------
-"""
-Todo:
-Set up configurations for all of the supported lexers that wxStyledTxtCtrl
-supports, which are:
-wxSTC_LEX_BATCH, wxSTC_LEX_CPP, wxSTC_LEX_ERRORLIST, wxSTC_LEX_HTML,
-wxSTC_LEX_LATEX, wxSTC_LEX_MAKEFILE, wxSTC_LEX_NULL, wxSTC_LEX_PERL,
-wxSTC_LEX_PROPERTIES, wxSTC_LEX_PYTHON, wxSTC_LEX_SQL, wxSTC_LEX_VB,
-wxSTC_LEX_XCODE and wxSTC_LEX_XML.
-
-Currently used:
-wxSTC_LEX_CPP, wxSTC_LEX_HTML, wxSTC_LEX_PYTHON, wxSTC_LEX_XML
-
-Remaining:
-wxSTC_LEX_BATCH, wxSTC_LEX_ERRORLIST, wxSTC_LEX_LATEX, wxSTC_LEX_MAKEFILE,
-wxSTC_LEX_NULL, wxSTC_LEX_PERL, wxSTC_LEX_PROPERTIES, wxSTC_LEX_SQL,
-wxSTC_LEX_VB, wxSTC_LEX_XCODE
-
-"""
 
 #------------------------------ System Imports -------------------------------
 from __future__ import generators
@@ -75,7 +57,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.6.4"
+    VERSION = "1.6.5"
     VREQ = '2.4.2.4'
 
     import string
@@ -104,6 +86,7 @@ if 1:
         XM_S = wxNewId()
         TX_S = wxNewId()
         lexers = dict(zip([PY_S, HT_S, CC_S, XM_S, TX_S], ['python', 'html', 'cpp', 'xml', 'text']))
+        lexers2 = dict(zip([wxSTC_LEX_PYTHON, wxSTC_LEX_HTML, wxSTC_LEX_CPP, wxSTC_LEX_XML, wxSTC_LEX_NULL], [PY_S, HT_S, CC_S, XM_S, TX_S]))
     
         #checkbox ids
         SNIPT = wxNewId()
@@ -136,6 +119,21 @@ if 1:
     BOOKMARKNUMBER = 1
     BOOKMARKSYMBOL = wxSTC_MARK_CIRCLE
     BOOKMARKMASK = 2
+
+    #unicode BOM stuff
+    if 1:
+        BOM = [('+/v8-', 'utf-7'),
+               ('\xef\xbb\xbf', 'utf-8'),
+               ('\xfe\xff', 'utf-16-be'),
+               ('\xff\xfe\xff\xfe', 'utf-16'),
+               ('\xff\xfe', 'utf-16-le'),
+               ('', 'ascii')]
+        ADDBOM = {}
+        ENCODINGS = {}
+        for i,j in BOM:
+            ADDBOM[j] = i
+            ENCODINGS[j] = wxNewId()
+        del i;del j;
 
     #font stuff
     if 1:
@@ -171,8 +169,13 @@ class MainWindow(wxFrame):
         EVT_TIMER(self, ID_TIMER, self.OnRefreshDone)
 
         self.sb = wxStatusBar(self, -1)
-        self.sb.SetFieldsCount(2)
-        self.sb.SetStatusWidths([-1, 75])
+        if VS[-1] == 'u':
+            #to display encoding in unicode supporting platforms
+            self.sb.SetFieldsCount(3)
+            self.sb.SetStatusWidths([-1, 75, 60])
+        else:
+            self.sb.SetFieldsCount(2)
+            self.sb.SetStatusWidths([-1, 75])
         self.SetStatusBar(self.sb)
 
         #support for the optional snippet bar.
@@ -210,12 +213,40 @@ class MainWindow(wxFrame):
         filemenu.AppendSeparator()
         menuAdd(self, filemenu, "E&xit\tAlt+F4",        "Terminate the program", self.OnExit, wxNewId())
 
+#-------------------------------- Style Menu ---------------------------------
+        stylemenu= wxMenu()
+        try:
+            typ = wxITEM_RADIO
+            menuAdd(self, stylemenu, "Python",      "Highlight for Python syntax", self.OnStyleChange, PY_S, typ)
+            self.HAS_RADIO = 1
+        except:
+            typ = wxITEM_NORMAL
+            menuAdd(self, stylemenu, "Python",      "Highlight for Python syntax", self.OnStyleChange, PY_S, typ)
+            self.HAS_RADIO = 0
+
+        menuAdd(self, stylemenu, "HTML",        "Highlight for HTML syntax", self.OnStyleChange, HT_S, typ)
+        menuAdd(self, stylemenu, "XML",         "Highlight for XML syntax", self.OnStyleChange, XM_S, typ)
+        menuAdd(self, stylemenu, "C/C++",       "Highlight for C/C++ syntax", self.OnStyleChange, CC_S, typ)
+        menuAdd(self, stylemenu, "Text",        "No Syntax Highlighting", self.OnStyleChange, TX_S, typ)
+        self.stylemenu = stylemenu
+
+#------------------------------ Encodings Menu -------------------------------
+
+        if VS[-1] == 'u':
+            encmenu= wxMenu()
+            menuAdd(self, encmenu, 'ascii', "Change encoding for the current file to ascii (will use utf-8 if unicode characters found)", self.OnEncChange, ENCODINGS['ascii'], typ)
+            for bom, enc in BOM[:-1]:
+                menuAdd(self, encmenu, enc, "Change encoding for the current file to %s"%enc, self.OnEncChange, ENCODINGS[enc], typ)
+            self.encmenu = encmenu
+
 #--------------------------------- Edit Menu ---------------------------------
 
         #more lines, but easier to understand.
         editmenu= wxMenu()
         menuAdd(self, editmenu, "Undo\tCtrl+Z",         "Undo last modifications", self.OnUndo, wxNewId())
         menuAdd(self, editmenu, "Redo\tCtrl+Y",         "Redo last modifications", self.OnRedo, wxNewId())
+        if VS[-1] == 'u':
+            editmenu.AppendMenu(wxNewId(), "Encodings", encmenu, "Change text encoding")
         editmenu.AppendSeparator()
         menuAdd(self, editmenu, "Select All\tCtrl+A",   "Select all text", self.OnSelectAll, wxNewId())
         menuAdd(self, editmenu, "Cut\tCtrl+X",          "Cut selected text", self.OnCut, wxNewId())
@@ -243,18 +274,12 @@ class MainWindow(wxFrame):
         EVT_COMMAND_FIND_REPLACE_ALL(self, -1, self.OnFind)
         EVT_COMMAND_FIND_CLOSE(self, -1, self.OnFindClose)
 
-#-------------------------------- Style Menu ---------------------------------
-        stylemenu= wxMenu()
-        menuAdd(self, stylemenu, "Python",      "Highlight for Python syntax", self.OnStyleChange, PY_S)
-        menuAdd(self, stylemenu, "HTML",        "Highlight for HTML syntax", self.OnStyleChange, HT_S)
-        menuAdd(self, stylemenu, "XML",         "Highlight for XML syntax", self.OnStyleChange, XM_S)
-        menuAdd(self, stylemenu, "C/C++",       "Highlight for C/C++ syntax", self.OnStyleChange, CC_S)
-        menuAdd(self, stylemenu, "Text",        "No Syntax Highlighting", self.OnStyleChange, TX_S)
-
 #--------------------------------- View Menu ---------------------------------
         viewmenu= wxMenu()
         menuAdd(self, viewmenu, "Zoom In\tCtrl+<plus>", "Make the text in the editing component bigger", self.OnZoom, ZI)
         menuAdd(self, viewmenu, "Zoom Out\tCtrl+<minus>", "Make the text in the editing component smaller", self.OnZoom, wxNewId())
+        viewmenu.AppendSeparator()
+        viewmenu.AppendMenu(wxNewId(), "Syntax Highlighting", stylemenu, "Change text display style")
         viewmenu.AppendSeparator()
         menuAdd(self, viewmenu, "Refresh\tF5", "Refresh the browsable source tree, autocomplete listing, and the tooltips (always accurate, but sometimes slow)", self.OnRefresh, wxNewId())
         menuAdd(self, viewmenu, "Show/hide tree\tCtrl+Shift+G", "Show/hide the hierarchical source tree for the currently open document", self.OnTree, wxNewId())
@@ -287,9 +312,9 @@ class MainWindow(wxFrame):
 
 #------------------------------- Pathmark Menu -------------------------------
         pathmarkmenu = wxMenu()
-        menuAdd(self, pathmarkmenu, "View pathmarks",           "Edit your Pathmarks", self.ViewBookmarks, wxNewId())
-        menuAdd(self, pathmarkmenu, "Edit pathmarks\tCtrl+B",   "Add a path to your bookmarks", self.AddBookmark, wxNewId())
-        menuAdd(self, pathmarkmenu, "Remove pathmark",          "Remove a bookmarked path", self.RemoveBookmark, wxNewId())
+        menuAdd(self, pathmarkmenu, "View pathmarks",           "Edit your Pathmarks", self.ViewPathmarks, wxNewId())
+        menuAdd(self, pathmarkmenu, "Edit pathmarks\tCtrl+B",   "Add a path to your bookmarks", self.AddPathmark, wxNewId())
+        menuAdd(self, pathmarkmenu, "Remove pathmark",          "Remove a bookmarked path", self.RemovePathmark, wxNewId())
         pathmarkmenu.AppendSeparator()
 
         pmk = [BM1,BM2,BM3,BM4,BM5,BM6,BM7,BM8,BM9]
@@ -298,9 +323,9 @@ class MainWindow(wxFrame):
                 menuAdd(self, pathmarkmenu,
                         "Ctrl+%i\t%s"%(i-48, pathmarks[i]),
                         "Change the current working directory to %s"%pathmarks[i],
-                        self.OnBookmark, pmk[i-49])
+                        self.OnPathmark, pmk[i-49])
             else:
-                EVT_MENU(self, pmk[i-49], self.OnBookmark)
+                EVT_MENU(self, pmk[i-49], self.OnPathmark)
 
 #--------------------------------- Help Menu ---------------------------------
         helpmenu= wxMenu()
@@ -313,7 +338,6 @@ class MainWindow(wxFrame):
         # Adding the menus to the MenuBar
         menuBar.Append(filemenu,"&File")
         menuBar.Append(editmenu, "&Edit")
-        menuBar.Append(stylemenu,"S&tyle")
         menuBar.Append(viewmenu,"&View")
         menuBar.Append(tabmenu, "&Tabs")
         if self.config['usesnippets']:
@@ -356,11 +380,11 @@ class MainWindow(wxFrame):
             (91, self.OnDedent),        #dedent the current line or selection of lines (indent) spaces with Ctrl+[
             (44, self.OnLeft),          #go to the tab to the left with Ctrl+, (same key as <)
             (46, self.OnRight)          #go to the tab to the right with Ctrl+. (same key as >)
-            #(66, self.AddBookmark)      #open the 'edit pathmark' dialog
+            #(66, self.AddPathmark)      #open the 'edit pathmark' dialog
         ])
 
 #------------------------------ Pathmark stuff -------------------------------
-        self.ctrlpress.update(dict(zip(pathmarks.keys(), 10*[self.OnBookmark])))
+        self.ctrlpress.update(dict(zip(pathmarks.keys(), 10*[self.OnPathmark])))
 
 #------------------------ Drag and drop file support -------------------------
         self.SetDropTarget(FileDropTarget(self))
@@ -401,8 +425,10 @@ class MainWindow(wxFrame):
                 self.makeAbsOpen(i)
                 d,f = os.path.split(i)
                 try:
-                    self.newTab(d,f, len(fnames)==1)
-                    self.SetStatusText("Opened %s"%i)
+                    a = self.newTab(d,f, len(fnames)==1)
+                    if VS[-1] == 'u': a = "%s as %s"%(i, a)
+                    else:             a = i
+                    self.SetStatusText("Opened %s"%a)
                 except:
                     if error:
                         self.exceptDialog("File open failed")
@@ -514,7 +540,9 @@ class MainWindow(wxFrame):
                 #print repr(eol), repr(win.format), txt.count('\r\n'), txt.count('\n'), txt.count('\r'), txt.count('\r\r')
                 fil.write(txt)
                 fil.close()
-                self.SetStatusText("Correctly saved %s"%ofn)
+                if VS[-1] == 'u': a = "%s as %s"%(ofn, win.enc)
+                else:             a = ofn
+                self.SetStatusText("Correctly saved %s"%a)
                 win.MakeClean()
             except:
                 self.exceptDialog("Save Failed")
@@ -538,7 +566,9 @@ class MainWindow(wxFrame):
             win.filename = fn
             win.dirname = dn
             self.makeOpen(fn, dn)
+            self.fileHistory.AddFileToHistory(self.getAbsolute(fn, dn))
             self.OnSave(e)
+            win.MakeDirty()
             win.MakeClean()
         else:
             raise cancelled
@@ -648,9 +678,16 @@ class MainWindow(wxFrame):
         #print repr(nwin.format)
         if not ((d == '') and (fn == ' ')):
             #print "adding file name to history"
-            self.fileHistory.AddFileToHistory(os.path.join(d, fn))
-        self.control.AddPage(split, nwin.filename, switch)
+            self.fileHistory.AddFileToHistory(self.getAbsolute(nwin.filename, nwin.dirname))
+        BM = self.config.get("lastopenbm", {}).get(self.getAbsolute(nwin.filename, nwin.dirname), [])
+        for bml in BM:
+            nwin.MarkerAdd(bml, BOOKMARKNUMBER)
+        f = nwin.filename
+        if f == ' ':
+            f = '<untitled>'
+        self.control.AddPage(split, f, switch)
         self.OnRefresh(None, nwin)
+        return nwin.enc
 
     def OnReload(self, e):
         num, win = self.getNumWin(e)
@@ -665,10 +702,13 @@ class MainWindow(wxFrame):
             fil = open(self.getAbsolute(win.filename, win.dirname), 'rb')
             txt = fil.read()
             fil.close()
+            win.BeginUndoAction()
             win.SetText(txt, 0)
+            win.EndUndoAction()
+            win.SetSavePoint()
             win.MakeClean()
         except:
-            self.dialog("Could not reload from disk", "Reload failed")
+            self.dialog("Error encountered while trying to reload from disk.", "Reload failed")
 
     def sharedsave(self, win):
         nam = win.filename
@@ -712,6 +752,17 @@ class MainWindow(wxFrame):
             self.closing = 0
             try:    return e.Veto()
             except: return e.Skip()
+        bm = {}
+        for win in self.control:
+            if win.dirname:
+                cur = []
+                for line in xrange(0, win.LineFromPosition(win.GetTextLength())):
+                    if win.MarkerGet(line) & BOOKMARKMASK:
+                        cur.append(line)
+                if cur:
+                    bm[self.getAbsolute(win.filename, win.dirname)] = cur
+        if bm:
+            self.config["lastopenbm"] = bm
         self.config["lastopen"] = sav
         self.saveHistory()
         if sel > -1:
@@ -775,16 +826,47 @@ class MainWindow(wxFrame):
         win.ReplaceSelection(wrap_lines(''.join(lines), valu, win.format))
     def OnWrapL(self,e):
         wnum, win = self.getNumWin(e)
+
+        #tossing the current home/end key configuration, as it will change
+        win.CmdKeyClear(wxSTC_KEY_HOME,0)
+        win.CmdKeyClear(wxSTC_KEY_HOME,wxSTC_SCMOD_SHIFT)
+        win.CmdKeyClear(wxSTC_KEY_HOME,wxSTC_SCMOD_ALT)
+        win.CmdKeyClear(wxSTC_KEY_HOME,wxSTC_SCMOD_ALT|wxSTC_SCMOD_SHIFT)
+        win.CmdKeyClear(wxSTC_KEY_END,0)
+        win.CmdKeyClear(wxSTC_KEY_END,wxSTC_SCMOD_SHIFT)
+        win.CmdKeyClear(wxSTC_KEY_END,wxSTC_SCMOD_ALT)
+        win.CmdKeyClear(wxSTC_KEY_END,wxSTC_SCMOD_ALT|wxSTC_SCMOD_SHIFT)
+
         if win.GetWrapMode() == wxSTC_WRAP_NONE:
             win.SetWrapMode(wxSTC_WRAP_WORD)
             win.SetEdgeColumn(1000)
+            
+            #making home and end work like we expect them to when lines are wrapped
+            win.CmdKeyAssign(wxSTC_KEY_HOME, 0, wxSTC_CMD_HOMEDISPLAY)
+            win.CmdKeyAssign(wxSTC_KEY_HOME, wxSTC_SCMOD_SHIFT, wxSTC_CMD_HOMEDISPLAYEXTEND)
+            win.CmdKeyAssign(wxSTC_KEY_HOME, wxSTC_SCMOD_ALT, wxSTC_CMD_VCHOME)
+            win.CmdKeyAssign(wxSTC_KEY_HOME, wxSTC_SCMOD_ALT|wxSTC_SCMOD_SHIFT, wxSTC_CMD_VCHOMEEXTEND)
+            win.CmdKeyAssign(wxSTC_KEY_END, 0, wxSTC_CMD_LINEENDDISPLAY)
+            win.CmdKeyAssign(wxSTC_KEY_END, wxSTC_SCMOD_SHIFT, wxSTC_CMD_LINEENDDISPLAYEXTEND)
+            win.CmdKeyAssign(wxSTC_KEY_END, wxSTC_SCMOD_ALT, wxSTC_CMD_LINEEND)
+            win.CmdKeyAssign(wxSTC_KEY_END, wxSTC_SCMOD_ALT|wxSTC_SCMOD_SHIFT, wxSTC_CMD_LINEENDEXTEND)
             #self.SetStatusText("WRAP", 1)
         else:
             win.SetWrapMode(wxSTC_WRAP_NONE)
             win.SetEdgeColumn(col_line)
+
+            #making home and end work like we expect them to when lines are not wrapped
+            win.CmdKeyAssign(wxSTC_KEY_HOME, 0, wxSTC_CMD_VCHOME)
+            win.CmdKeyAssign(wxSTC_KEY_HOME, wxSTC_SCMOD_SHIFT, wxSTC_CMD_VCHOMEEXTEND)
+            win.CmdKeyAssign(wxSTC_KEY_HOME, wxSTC_SCMOD_ALT, wxSTC_CMD_HOMEDISPLAY)
+            win.CmdKeyAssign(wxSTC_KEY_HOME, wxSTC_SCMOD_ALT|wxSTC_SCMOD_SHIFT, wxSTC_CMD_HOMEDISPLAYEXTEND)
+            win.CmdKeyAssign(wxSTC_KEY_END, 0, wxSTC_CMD_LINEEND)
+            win.CmdKeyAssign(wxSTC_KEY_END, wxSTC_SCMOD_SHIFT, wxSTC_CMD_LINEENDEXTEND)
+            win.CmdKeyAssign(wxSTC_KEY_END, wxSTC_SCMOD_ALT, wxSTC_CMD_LINEENDDISPLAY)
+            win.CmdKeyAssign(wxSTC_KEY_END, wxSTC_SCMOD_ALT|wxSTC_SCMOD_SHIFT, wxSTC_CMD_LINEENDDISPLAYEXTEND)
+
             #self.SetStatusText("", 1)
     def Dent(self, win, incr):
-        win.MakeDirty()
         x,y = win.GetSelection()
         if x==y:
             lnstart = win.GetCurrentLine()
@@ -937,7 +1019,7 @@ class MainWindow(wxFrame):
         findTxt = evt.GetFindString()
 
         #the next couple lines deal with python strings in find
-        if findTxt and (findTxt[0] in ['"', "'"]):
+        if findTxt and (findTxt[-1] in ['"', "'"]):
             try:    findTxt = eval(findTxt)
             except: pass
 
@@ -954,10 +1036,16 @@ class MainWindow(wxFrame):
         incr = len(replaceTxt)
         #next line moves cursor for replacements
         diff = incr-len(findTxt)
+
+        flags = evt.GetFlags()
+        if VS[-1] == 'u':
+            #searching up causes a crash when searching for unicode strings
+            flags = flags|wxFR_DOWN
+
         if et == wxEVT_COMMAND_FIND_REPLACE_ALL:
             totl = 0
             while 1:
-                win.last = win.FindText(win.last, win.GetTextLength(), findTxt, evt.GetFlags())
+                win.last = win.FindText(win.last, win.GetTextLength(), findTxt, flags)
                 if win.last > -1:
                     totl += 1
                     win.SetSelection(win.last, win.last+len(findTxt))
@@ -972,7 +1060,7 @@ class MainWindow(wxFrame):
                     win.EnsureCaretVisible()
                     return self.dialog("%i replacements made."%totl, "Finished replacing")
         elif et == wxEVT_COMMAND_FIND_REPLACE:
-            win.last = win.FindText(win.last, win.GetTextLength(), findTxt, evt.GetFlags())
+            win.last = win.FindText(win.last, win.GetTextLength(), findTxt, flags)
             if win.last > -1:
                 win.SetSelection(win.last, win.last+len(findTxt))
                 win.ReplaceSelection(replaceTxt)
@@ -980,28 +1068,28 @@ class MainWindow(wxFrame):
                 if win.last < win.gcp:
                     win.gcp += diff
                 win.MakeDirty()
-                a = win.FindText(win.last, win.GetTextLength(), findTxt, evt.GetFlags())
+                a = win.FindText(win.last, win.GetTextLength(), findTxt, flags)
                 win.SetSelection(a, a+len(findTxt))
         elif et == wxEVT_COMMAND_FIND:
-            if wxFR_DOWN&evt.GetFlags():
-                win.last = win.FindText(0, win.GetTextLength(), findTxt, evt.GetFlags())
+            if wxFR_DOWN&flags:
+                win.last = win.FindText(0, win.GetTextLength(), findTxt, flags)
             else:
-                win.last = win.FindText(win.GetTextLength(), 0, findTxt, evt.GetFlags())
+                win.last = win.FindText(win.GetTextLength(), 0, findTxt, flags)
             if win.last > -1:
                 win.SetSelection(win.last, win.last+len(findTxt))
         else:# et == wxEVT_COMMAND_FIND_NEXT:
-            if wxFR_DOWN&evt.GetFlags():
+            if wxFR_DOWN&flags:
                 if (win.last >= win.GetTextLength()) or (win.last == -1):
                     win.last = 0
                 else:
                     win.last += len(findTxt)
-                win.last = win.FindText(win.last, win.GetTextLength(), findTxt, evt.GetFlags())
+                win.last = win.FindText(win.last, win.GetTextLength(), findTxt, flags)
             else:
                 if (win.last >= win.GetTextLength()) or (win.last == -1):
                     win.last = win.GetTextLength()
                 else:
                     win.last -= len(findTxt)
-                win.last = win.FindText(win.last, 0, findTxt, evt.GetFlags())
+                win.last = win.FindText(win.last, 0, findTxt, flags)
             if win.last > -1:
                 win.SetSelection(win.last, win.last+len(findTxt))
         win.EnsureVisible(win.GetCurrentLine())
@@ -1023,6 +1111,15 @@ class MainWindow(wxFrame):
             except:
                 continue
 
+    def OnEncChange(self, e):
+        num, win = self.getNumWin(e)
+        mid = e.GetId()
+        newenc = self.encmenu.GetLabel(mid)
+        oldenc = win.enc
+        if oldenc != newenc:
+            win.enc = newenc
+            self.SetStatusText("encoding changed to %s for %s"%(newenc, win.filename))
+        self.SetStatusText(win.enc, 2)
 #------------------ Format Menu Commands and Style Support -------------------
     def OnStyleChange(self,e):
         wnum, win = self.getNumWin(e)
@@ -1091,8 +1188,15 @@ class MainWindow(wxFrame):
                 done = 1
         if done:
             if ' ' in fil:
-                fil = '"%s"'%fil
+                if sys.platform == 'win32':
+                    fil = '"%s"'%fil
+                    os.spawnv(os.P_DETACH, spawnargs[0], spawnargs+['--parse', fil])
+                else:
+                    fil = fil.replace(' ', '\\ ')
+                    os.spawnvp(os.P_NOWAIT, spawnargs[0], spawnargs+['--parse', fil])
 
+            
+            '''
             if sys.platform=='win32':
                 os.system("start %s --parse %s"%(runme, fil))
             else:
@@ -1103,7 +1207,7 @@ class MainWindow(wxFrame):
                     a = '"%s"'%a
                 if ' ' in b:
                     b = '"%s"'%b
-                os.spawnvp(os.P_NOWAIT, a, [a, b, '--parse', fil])
+                os.spawnvp(os.P_NOWAIT, a, [a, b, '--parse', fil])'''
             self.poller.Start(100)
 
     def OnRefresh(self, e, win=None):
@@ -1274,7 +1378,7 @@ class MainWindow(wxFrame):
             self.control.GetPage(num).SetSashPosition(orig+delta)
 
 #------------------------- Bookmarked Path Commands --------------------------
-    def OnBookmark(self, e, st=type('')):
+    def OnPathmark(self, e, st=type('')):
         if 'lastpath' in self.config:
             del self.config['lastpath']
         try:
@@ -1286,7 +1390,7 @@ class MainWindow(wxFrame):
             os.chdir(pth)
             self.SetStatusText("Changed path to %s"%pth)
 
-    def ViewBookmarks(self, e, titl="Pathmarks", styl=wxOK, sel=0, st=type('')):
+    def ViewPathmarks(self, e, titl="Pathmarks", styl=wxOK, sel=0, st=type('')):
         kys = pathmarks.keys()
         kys.sort()
         out = []
@@ -1305,8 +1409,8 @@ class MainWindow(wxFrame):
         dlg.Destroy()
         return retr
         
-    def AddBookmark(self, e):
-        pth = self.ViewBookmarks(e, "Select a pathmark to update", wxOK|wxCANCEL)
+    def AddPathmark(self, e):
+        pth = self.ViewPathmarks(e, "Select a pathmark to update", wxOK|wxCANCEL)
         while pth != None:
             posn = int(pth[0])-1
             opth = pathmarks[posn+1+48]
@@ -1320,7 +1424,7 @@ class MainWindow(wxFrame):
                 self.addPos(pmn, path)
             else:
                 self.SetStatusText("Pathmark modification aborted")
-            pth = self.ViewBookmarks(e, "Select a pathmark to update", wxOK|wxCANCEL, posn)
+            pth = self.ViewPathmarks(e, "Select a pathmark to update", wxOK|wxCANCEL, posn)
         self.SetStatusText("Finished updating pathmarks")
 
     def itemPos(self, pmn):
@@ -1344,15 +1448,15 @@ class MainWindow(wxFrame):
         pathmarks[pmn] = path
         self.SetStatusText("Set bookmark %i to %s"%(pmn-48, path))
 
-    def RemoveBookmark(self, e):
-        pth = self.ViewBookmarks(e, "Delete pathmark (cancel to finish)", wxOK|wxCANCEL)
+    def RemovePathmark(self, e):
+        pth = self.ViewPathmarks(e, "Delete pathmark (cancel to finish)", wxOK|wxCANCEL)
         while pth != None:
             self.dpm = 1
             posn = int(pth[0])-1
             pmn = posn+1+48
             if pathmarks[pmn] != 0:
                 self.remPos(pmn)
-            pth = self.ViewBookmarks(e, "Delete pathmark (cancel to finish)", wxOK|wxCANCEL, posn)
+            pth = self.ViewPathmarks(e, "Delete pathmark (cancel to finish)", wxOK|wxCANCEL, posn)
 
 #---------------------------- Help Menu Commands -----------------------------
     def OnAbout(self, e):
@@ -1441,14 +1545,15 @@ class MainWindow(wxFrame):
                     linenum = win.GetCurrentLine()
                     pos = win.GetCurrentPos()
                     col = win.GetColumn(pos)
-                    line = win.GetLine(linenum)[:col]
-                    linestart = pos-col
-
+                    linestart = win.PositionFromLine(linenum)
+                    line = win.GetLine(linenum)[:pos-linestart]
+                    
                     #get info about the current line's indentation
                     ind = win.GetLineIndentation(linenum)
+                    
                     colon = ord(':')
                     if col <= ind:
-                        win.ReplaceSelection(win.format+col*' ')
+                        win.ReplaceSelection(win.format+(col*' ').replace(spaces_per_tab*' ', '\t'))
                     elif pos:
                         xtra = 0
                         if (line.find(':')>-1):
@@ -1551,7 +1656,10 @@ class MainWindow(wxFrame):
                         if xtra:
                             #print ind
                             ind += indent
-                        win.ReplaceSelection(win.format+ind*' ')
+                        a = ind*' '
+                        if use_tabs:
+                            a = a.replace(spaces_per_tab*' ', '\t')
+                        win.ReplaceSelection(win.format+a)
                     else:
                         win.ReplaceSelection(win.format)
                     #chrs = ''
@@ -1638,11 +1746,8 @@ class PythonSTC(wxStyledTextCtrl):
         #I agree, what is this value?
         #self.SetFoldFlags(16)  ###  WHAT IS THIS VALUE?  WHAT ARE THE OTHER FLAGS?  DOES IT MATTER?
         
-# Collapseable source code rocks.  It would have been great when writing this. 
         if collapse:
             self.SetProperty("fold", "1")
-            #I don't know what this next line is...but I am afraid to remove it
-            self.SetProperty("tab.timmy.whinge.level", "1")
             self.SetMarginType(2, wxSTC_MARGIN_SYMBOL)
             self.SetMarginMask(2, wxSTC_MASK_FOLDERS)
             self.SetMarginSensitive(2, True)
@@ -1682,9 +1787,14 @@ class PythonSTC(wxStyledTextCtrl):
         self.StyleSetSpec(wxSTC_STYLE_BRACEBAD,    "fore:#E0FFE0,face:%(mono)s,back:#FF0000"% faces)
 
         #various settings
+        if use_tabs:
+            self.SetProperty("tab.timmy.whinge.level", "0")
+        else:
+            self.SetProperty("tab.timmy.whinge.level", "1")
         self.SetSelBackground(1, '#B0B0FF')
         self.SetIndent(indent)
         self.SetUseTabs(use_tabs)
+        self.SetTabWidth(spaces_per_tab)
 
         #again, some state variables
         self.filename = ''
@@ -1703,6 +1813,9 @@ class PythonSTC(wxStyledTextCtrl):
         EVT_STC_SAVEPOINTREACHED(self, ID, self.MakeClean)
         EVT_STC_SAVEPOINTLEFT(self, ID, self.MakeDirty)
         self.SetModEventMask(wxSTC_MOD_INSERTTEXT|wxSTC_MOD_DELETETEXT|wxSTC_PERFORMED_USER|wxSTC_PERFORMED_UNDO|wxSTC_PERFORMED_REDO)
+
+        if REM_SWAP:
+            self.CmdKeyClear(ord('T'), wxSTC_SCMOD_CTRL)
         
     def pos(self, e):
         #print "position changed event"
@@ -1735,22 +1848,56 @@ class PythonSTC(wxStyledTextCtrl):
 #-------------------- fix for SetText for the 'dirty bit' --------------------
     def SetText(self, txt, emptyundo=1):
         self.SetEOLMode(fmt_mode[self.format])
+        self.enc = 'ascii'
+        if VS[-1] == 'u':
+            for bom, enc in BOM:
+                if txt[:len(bom)] == bom:
+                    self.enc = enc
+                    txt = txt[len(bom):]
+                    #print "chose", enc
+                    break
+            if self.enc != 'ascii':
+                try:    txt = txt.decode(self.enc)
+                except:
+                    #print "failed text decoding"
+                    self.root.dialog("There has been a unicode decoding error."
+                                     "The cause of this error is unknown to PyPE."
+                                     "To prevent loss or corruption of data, it"
+                                     "is suggested that you close the document,"
+                                     "do not save.  Then try to open the document"
+                                     "with the application you originally created"
+                                     "it with.  If PyPE was the original creator,"
+                                     "and only editor of the document, please"
+                                     "contact the author and submit a bug report.",
+                                     "Unicode decoding error.")
+                    self.enc = ascii
         wxStyledTextCtrl.SetText(self, txt)
         self.opened = 1
-        self.SetSavePoint()
-        #self.parent.parent.OnRefresh(None, self)
-        #self.hierarchy, self.kw = fast_parser(txt, self.format)
-        #self.kw.sort()
-        #self.kw = ' '.join(self.kw)
-        #self.tree.new_hierarchy(self.hierarchy)
         if emptyundo:
             self.EmptyUndoBuffer()
+            self.SetSavePoint()
+
+    def GetText(self):
+        if VS[-1] == 'u':
+            if self.enc == 'ascii':
+                try:
+                    return wxStyledTextCtrl.GetText(self).encode(self.enc)
+                except:
+                    #Previously non-unicode ascii file has had unicode characters
+                    #inserted.  Must encode into some sort of unicode format.
+                    self.enc = 'utf-8'
+                    self.root.SetStatusText(self.enc, 2)
+            return ADDBOM[self.enc] + wxStyledTextCtrl.GetText(self).encode(self.enc)
+        return wxStyledTextCtrl.GetText(self)
 
 #----- Takes care of the little '*' modified next to the open file name ------
     def MakeDirty(self, e=None):
         if (not self.dirty) and self.opened:
             self.dirty = 1
-            self.notebook.SetPageText(self.notebook.GetSelection(), '* '+self.filename)
+            f = self.filename
+            if f == ' ':
+                f = '<untitled>'
+            self.notebook.SetPageText(self.notebook.GetSelection(), '* '+f)
             self.notebook.Refresh(False)
             self.do(self.nada)
         if e:
@@ -1759,7 +1906,10 @@ class PythonSTC(wxStyledTextCtrl):
     def MakeClean(self, e=None):
         if self.dirty:
             self.dirty = 0
-            self.notebook.SetPageText(self.notebook.GetSelection(), self.filename)
+            f = self.filename
+            if f == ' ':
+                f = '<untitled>'
+            self.notebook.SetPageText(self.notebook.GetSelection(), f)
             self.notebook.Refresh(False)
             self.SetSavePoint()
             self.do(self.nada, 0)
@@ -1988,11 +2138,17 @@ class MyNB(wxNotebook):
             win = self.GetPage(new).GetWindow1()
             if win.dirname:
                 os.chdir(win.dirname)
+            if VS[-1] == 'u':
+                self.root.SetStatusText(win.enc, 2)
+                if self.root.HAS_RADIO:
+                    self.root.stylemenu.Check(lexers2[win.GetLexer()], 1)
+                    self.root.encmenu.Check(ENCODINGS[win.enc], 1)
             #if win.GetWrapMode() == wxSTC_WRAP_NONE:
             #    self.parent.SetStatusText("", 1)
             #else:
             #    self.parent.SetStatusText("WRAP",1)
-        event.Skip()
+        if event:
+            event.Skip()
 
 #----------------- This deals with the tab swapping support. -----------------
     def swapPages(self, p1, p2, moveleft):
@@ -2163,7 +2319,8 @@ class RunShell(wxMenu):
     def runScript(self, evt):
         num, win = self.root.getNumWin(evt)
         use = self.makeuse(win.dirname, win.filename)
-        print use
+        #print use
+        #os.spawnv(os.P_DETACH, spawnargs[0], spawnargs + ['--exec', win.dirname, win.filename])
         os.system("%s --exec %s %s"%(runme, use['path'], use['full']))
 
     def viewShellCommands(self, event, titl="Shell Commands", styl=wxOK, sel=0):
@@ -2296,7 +2453,7 @@ class RunShell(wxMenu):
             use2 = self.makeuse(path, command)
             path = use2['path']
             command = use2['full']
-            print "executing command"
+            #os.spawnv(os.P_NOWAIT, spawnargs[0], spawnargs + ['--exec', path or '*', command])
             if sys.platform=='win32':
                 os.system("start %s --exec %s %s"%(runme, path or '*', command)%use)
             else:
@@ -2468,6 +2625,14 @@ def main():
         dlg.ShowModal()
         dlg.Destroy()
         return
+    #imports for unicode support in the binary windows distribution
+    if VS[-1] == 'u':
+        import encodings.ascii
+        import encodings.utf_7
+        import encodings.utf_8
+        import encodings.utf_16
+        import encodings.utf_16_be
+        import encodings.utf_16_le
     opn=0
     if len(sys.argv)>1 and (sys.argv[1] == '--last'):
         opn=1

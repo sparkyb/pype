@@ -1,3 +1,82 @@
+(PyPE 1.6.5)
+(changed) untitled documents are now labeled as such, rather than not having a
+name at all on the tab.
+(fixed) a bug where saving a new document, without any changes, would cause
+the tab to not be updated.
+(fixed) a bug where saving a new document would not add the file to the list
+of recently open documents.
+(fixed) when reloading a document from disk, PyPE used to allow one to undo to
+a point mid-STC.SetText where the document was empty.  This has been fixed.
+(made better) for those platforms that support radio items in the menu (wxMSW
+and wxGTK according to the docs), the syntax highlighting and encodings
+submenus will display a mark next to the current document's syntax
+highlighting and encoding.
+(fixed) previously when opening a document in windows, an msdos console would
+make a momentary appearance, then dissappear.  This has been fixed with the
+use of os.spawnv().  Woo.  Thanks Luc Perrin (leblin@sourceforge) for pointing
+out the popping of the msdos prompt, I had gotten used to it, and didn't
+realize it bothered people.
+(two more bugs pointed out by Villy Dachev (labrett@sourceforge)):
+(fixed) even if tabs were turned on, if one were to create a new line (through
+the use of enter) while the cursor was in the indentation portion of a line,
+spaces would be inserted, rather than tabs.  Now tabs are inserted.
+(fixed) if tabs were turned on, the search for whether or not a new line (when
+hitting enter) should be indented more, would stretch to a previous line.
+This has been fixed, and the search is only ever on the current line.
+
+
+(PyPE 1.6.5-test)
+(NOTES REGARDING UNICODE SUPPORT) I got some advice from a user who made their
+PyPE support utf-8 encodings, did some modification to PyPE, and have actually
+implemented the required pieces to give PyPE unicode support.  PyPE now
+supports the encodings; ascii, utf-7, utf-8, utf-16, utf-16-be, and utf-16-le,
+when using a version of wxPython that includes unicode support.  If you don't
+get the 'encodings' submenu in the 'edit' menu, then your version of wxPython
+does not support unicode.  In wxPython version 2.4.2.4u, there exists a bug in
+reverse searching through unicode files, so I've forced it to only search
+forwards.  It should be fixed when the STC gets updated with the latest
+scintilla (probably in the next version of wxPython).  There also exists
+multiple display bugs with multibyte unicode characters, one of them is listed
+here: http://sourceforge.net/tracker/index.php?func=detail&aid=828217&group_id=9863&atid=109863
+I'm sorry about the visual bugs, but there is nothing I can do about it.
+Other than that, unicode seems to work pretty well.  Bug reports from unicode
+users would be great.
+
+(changed) the standard behavior of home and end when word-wrap is enabled.  I
+didn't like that hitting 'home' would send you to the beginning of the entire
+line, rather than the displayed line, so a little spelunking into the STC docs
+resulted in an addition to the OnWrapL code.
+(removed) previously there had been a STC-default keybinding of CTRL-T to swap
+the current line and the one above it.  I've accidentally hit that one a few
+times (I'm a user of mozilla tabs), so I made the default to remove it.  Again
+in configuration.py, just set REM_SWAP to 0 to enable it.
+(added) when quitting PyPE with documents open, intra-document bookmarks are
+also saved (check the 'view' menu for bookmark stuff) and are re-set if those
+documents are loaded during the next execution of PyPE (with '--last' command
+line option, using file->Open Last, or even opening any file that was open
+during program exit using any method).
+(added) due to some tips from Villy Dachev (labrett@sourceforge), pointing out
+some unicode stuff...it turns out that unicode was very easy to add.  I just
+needed to check for the BOM characters at the beginning of a unicode encoded
+file and decode the file, then re-encode it when saving to a file.  There is
+graceful unicode conversion for standard ascii files when unicode text is
+inserted into them.  That is, they are automatically saved as utf-8.
+(added) encodings sumbenu to 'edit' menu.  This menu will allow you to change
+the encoding of the current file to another.  Changing from utf-16 to utf-8
+(for languages that support it) will reduce the storage requirements by about
+1/2.
+(added) a statusbar field to display the text encoding of the current file.
+(removed) information about lexers in pype.py
+(moved) 'style' menu into a 'syntax highlighting' submenu of 'view'.
+(found) nifty bug.  Hitting ctrl+<period> will let you view the tab to the
+right of the current tab.  Hitting Ctrl+del on a US keymap, or Ctrl+<numpad .>
+when numlock is off will also switch tabs.  It is nifty.
+(fixed) when tabs are enabled, creating a newline should insert tabs.
+(added) a variable called spaces_per_tab in configuration.py, which, when tabs
+are enabled, replace that many spaces with a tab when creating a new line,
+during indentation, etc., and will display tabs as that many spaces wide.
+
+
 (PyPE 1.6.4)
 (NOTES REGARDING UNICODE SUPPORT) I have little (or really no) experience when
 it comes to unicode support in Python.  I had mistakenly assumed that creating
@@ -158,7 +237,8 @@ contain slices.
 (changed) hitting F5 will now cause the slow parser to do its magic, and if it
 fails (due to a syntax error), the fast parser will kick in.  If you always
 want the fast parser to work, just leave a syntax error in your source until
-just before you run it.  When opening multiple files, 
+just before you run it.  When opening multiple files, they will be parsed in
+series with the slow parser.
 (cleaned up) some imports, variable declarations, etc.
 (tried to change but failed) I had attempted to make all parsing occur in the
 background with an additional thread so that the GUI wouldn't seize up.

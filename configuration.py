@@ -6,11 +6,6 @@ import sys
 from wxPython.stc import wxSTC_EOL_CRLF, wxSTC_EOL_LF, wxSTC_EOL_CR
 from parsers import *
 
-#--------- If I'm wrong on any of the line endings, please tell me. ----------
-#nevermind, they don't matter anymore...
-#crlf = ["nt", "dos", "ce", "os2"]
-#lf = ["posix", "riscos", "java"]
-#cr = ["mac"]
 fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
               "\n":wxSTC_EOL_LF,
               "\r":wxSTC_EOL_CR}
@@ -31,9 +26,29 @@ runme = "%s %s"%(a,b)
 if se[-8:] == 'pype.exe':
     runme = a
 
-del a;del b;del se
+spawnargs = [sys.executable]
+if sys.executable[-8:] != 'pype.exe':
+    spawnargs.append(sys.argv[0])
 
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
+
+def command_parser(command):
+    args = []
+    beg = 0
+    cur = 0
+    while cur < len(command):
+        if command[cur:cur+2] == '\\ ':
+            cur = cur + 2
+        elif command[cur] == ' ':
+            args.append(command[beg:cur])
+            cur += 1
+            beg = cur
+        else:
+            cur += 1
+    if beg != cur:
+        args.append(command[beg:cur])
+    return args
+
 
 #light vert line just before this column number
 #that is after this many characters
@@ -50,12 +65,23 @@ collapse_style = 0
 #but are a bitch when it comes to formatting.
 indent = 4
 use_tabs = 0
+#if use_tabs enabled, the number of spaces per tab
+spaces_per_tab = 8
 
 #if the following is set to 1, then drag and drop TEXT support will not work
 #in the editor control, but will enable drag and drop FILE support in the
 #editor control.  Enabled by default.  Why?  Because I drag files, I cut and
 #paste text.
 dnd_file = 1
+
+#CTRL-T swaps two lines.  Setting the below to 1 disables this hotkey.
+REM_SWAP = 1
+
+#the default STC behavior resulted in hitting 'home' would send you to the
+#beginning of the entire line, rather than the displayed line
+#setting the below to 0 will give the default STC behavior (like emacs).
+#setting the below to 1 will give the behavior that most people are used to.
+SWAP_HE_BEHAVIOR = 1
 
 #for open/save dialogs
 wildcard = "All python files (*.py *.pyw)|*.py;*.pyw;*.PY;*.PYW|"\
