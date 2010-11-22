@@ -1,3 +1,10 @@
+(PyPE 1.6.2)
+(fixed) apparently the textwrap module in Python 2.3 doesn't work the way I
+wanted it to.  As a result, text wrapping with Python 2.3 and the Windows
+binary didn't work in PyPE 1.6.1.  I've removed the code responsible, and it
+should work identically between Python 2.2 and Python 2.3.
+
+
 (PyPE 1.6.1)
 (fixed) small overflow error when creating unique temporary file for parsing.
 Unnoticed due to testing with python 2.3 which automatically casts overflowed

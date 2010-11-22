@@ -61,7 +61,7 @@ from configuration import *
 #---------------------------- Event Declarations -----------------------------
 if 1:
     #under an if so that I can collapse the declarations
-    VERSION = "1.6.1"
+    VERSION = "1.6.2"
     VREQ = '2.4.1.2'
 
     import string
@@ -115,19 +115,10 @@ if 1:
             lines.append(cur)
         return '\n'.join([' '.join(i) for i in lines])
 
-    try:
-        import textwrap
-        def wrap_lines(text, width, lend):
-            paragraphs = get_paragraphs(text, lend)
-            paragraphs = map(textwrap.wrap, paragraphs)
-            paragraphs = [i.replace('\n', lend) for i in paragraphs]
-            return lend.join(paragraphs)
-
-    except:
-        def wrap_lines(text, width, lend):
-            paragraphs = get_paragraphs(text, lend)
-            retr = lend.join([wrap_paragraph(i, width) for i in paragraphs])
-            return retr
+    def wrap_lines(text, width, lend):
+        paragraphs = get_paragraphs(text, lend)
+        retr = lend.join([wrap_paragraph(i, width) for i in paragraphs])
+        return retr
 
     ID_TIMER = wxNewId()
     
