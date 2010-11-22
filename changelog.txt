@@ -1,3 +1,9 @@
+#-------------------------------- PyPE 2.3.2 ---------------------------------
+(fixed) bug where PyPE would fail to load if there existed a correctly-formed
+dictionary.txt file to be used as a main dictionary.  I forgot a 'break'
+statement in my attempt to reduce the indentation levels with a 'while' loop.
+
+
 #-------------------------------- PyPE 2.3.1 ---------------------------------
 (fixed) Find previous NameError.
 (fixed) Find/Replace for non-\n line endings.

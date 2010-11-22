@@ -226,6 +226,7 @@ class SpellCheck(scrolled.ScrolledPanel):
                         self.root.SetStatusText("You must use a unicode-enabled PyPE/wxPython for the given dictionary")
                         break
             dictionary.update(x)
+            break
                     
         af = os.path.join(rp, 'alphabet.txt')
         while os.path.exists(af):
