@@ -1,3 +1,37 @@
+#-------------------------------- PyPE 2.6.3 ---------------------------------
+(changed) only per-document state information that is different from the
+default for the current file's type will actually be stored when the
+document's state is saved.  This should reduce the size of PyPE's saved
+configuration information, as well as allow for new user-defined default
+options to be propagated to previously opened documents easier.
+(added) documentation describing how to change the default settings for a
+language.
+(added) automatic manifest creation and insertion for windows binary releases,
+to display with user-defined Windows XP themes on XP where enabled.  Feature
+thanks to Ianare Sevi.
+(added) the ability to choose an indicator and color for the output produced
+by the Python or command shells.
+(fixed) running PyPE via pype.pyw on any platform.
+(added) close document button to the (optional) toolbar, it is immediately
+after the "save as" button.
+(added) option to choose image buttons or text buttons in the macro tab.  This
+fixes an unintended change in PyPE 2.6.2 that caused the macro buttons to be
+text only.
+(added) optional 'recent documents' list to the documents tab, which includes
+the 128 most recently closed documents.
+(added) alternate user profile discovery on Windows.
+(fixed) you can no longer select more than one file in the open documents
+listing.
+(fixed) 'activating' multiple documents in the recently open documents list
+will now open all of them up.
+(added) clicking the 'Remove' button in the recently open documents list will
+remove all selected documents from the list.
+(changed) PyPE won't load the user-supplied dictionary.txt until it is needed,
+and will unload it after 10 minutes of non-use.  This may reduce memory usage
+for users with large dictionaries, and may make PyPE more responsive to spell
+check commands after PyPE has been idle for a long period.
+
+
 #-------------------------------- PyPE 2.6.2 ---------------------------------
 (added) automatic conversion for line endings during paste.
 (fixed) continuous exceptions being produced when using shells.

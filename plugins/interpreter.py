@@ -40,6 +40,9 @@ from wx import stc
 from wx.py.editwindow import FACES
 from wx.py.shell import NAVKEYS, Shell
 
+if __name__ != '__main__':
+    import __main__
+
 import shell
 import lineabstraction
 
@@ -117,6 +120,10 @@ UnicodeEncodeError: '%s' codec cannot encode characters from line %i column \
 
 pypestc = None
 
+MAXLINES = 10000
+COLS = 100
+MAXDATA = MAXLINES*COLS
+
 class MyShell(stc.StyledTextCtrl):
     if 1:
         dirty = 0
@@ -173,6 +180,8 @@ class MyShell(stc.StyledTextCtrl):
         self.MakeClean = self.MakeDirty
         self.noteMode = 0
         ## wx.stc.StyledTextCtrl.SetText(self, "def foo():\n...     pass")
+        self.trimt = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._trim, self.trimt)
     
     def _config(self):
         self.setStyles(FACES)
@@ -349,16 +358,60 @@ class MyShell(stc.StyledTextCtrl):
     def write(self, data):
         if not data:
             return
+        
+        lines = self.lines
+        
         if print_transfer==1: print '<--', len(data), repr(data)
-        pos, anc = self.GetSelection()
+        s,e = self.GetSelection()
         lp = self.promptPosEnd
         x = self.GetTextLength() #to handle unicode and line endings
-        self.SetSelection(lp, lp)
-        self.AddText(data)
-        ld = self.GetTextLength()-x #to handle unicode and line endings
         
+        self.SetTargetStart(lp)
+        self.SetTargetEnd(lp)
+        self.ReplaceTarget(data)
+        
+        ld = self.GetTextLength()-x #to handle unicode and line endings
         self.promptPosEnd += ld
-        self.SetSelection(pos+ld, anc+ld)
+        
+        ## x=0
+        
+        if __name__ != '__main__':
+            indic = __main__.SHELL_NUM_TO_INDIC[__main__.SHELL_OUTPUT]
+            if indic != None:
+                style = self.GetEndStyled()
+                
+                self.StartStyling(lp, stc.STC_INDIC2_MASK)
+                self.SetStyling(ld, stc.STC_INDIC2_MASK)
+                self.IndicatorSetStyle(2, indic)
+                self.IndicatorSetForeground(2, __main__.SHELL_COLOR)
+                
+                self.StartStyling(style, stc.STC_INDIC2_MASK^0xff)
+        self.SetSelection(s+ld, e+ld)
+        ## self.trimt.Start(15, wx.TIMER_ONE_SHOT)
+        ## if len(lines) > 500:
+            ## self._trim(None)
+    
+    def _trim(self, e):
+        pass
+        ## lines = self.lines
+        ## gtl = self.GetTextLength()
+        ## if len(lines) > MAXLINES or gtl > MAXDATA:
+            ## x = self.GetTextLength()
+            ## for i in xrange(MAXLINES, len(lines)):
+                ## lines[0] = ''
+            ## x -= self.GetTextLength()
+            ## self.promptPosEnd -= x
+            
+            ## ogtl = gtl = self.GetTextLength()
+            ## while gtl > MAXDATA:
+                ## l = lines[0]
+                ## gtl -= len(l)
+                ## if not l.endswith('\r\n'):
+                    ## gtl -= 1
+                ## lines[0] = ''
+            
+            ## ogtl -= self.GetTextLength()
+            ## self.promptPosEnd -= x
     
     def processLine(self):
         thepos = self.GetCurrentPos()

@@ -34,12 +34,11 @@ def lcsseq(x, y):
     zg = z.get
     for i, xi in _enum(x):
         for j, yj in _enum(y):
-            k = zg((i-1,j), 0)
-            l = zg((i,j-1), 0)
-            if l > k:
-                k = l
             if xi == yj:
-                l = zg((i-1,j-1), 0)+1
+                k = zg((i-1,j-1), 0)+1
+            else:
+                k = zg((i-1,j), 0)
+                l = zg((i,j-1), 0)
                 if l > k:
                     k = l
             z[i,j] = k

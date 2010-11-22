@@ -103,3 +103,6 @@ Move PythonSTC definition out of pype.py
 If I can get more than one indicator working, or perhaps disable syntax
 highlighting, getting a remote pair/group programming setup similar to
 SubErthaEdit would be quite neat.
+
+* Optional indicators for stdout/stderr from Python and Command shells.
+* Display Macro buttons as text or bitmaps.

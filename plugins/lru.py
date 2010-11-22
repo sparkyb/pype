@@ -1,10 +1,12 @@
 
+class Node:
+    def __init__(self, prev, me):
+        self.prev = prev
+        self.me = me
+        self.next = None
+
+
 class lastused: #Implementation of a length-limited O(1) LRU cache
-    class Node:
-        def __init__(self, prev, me):
-            self.prev = prev
-            self.me = me
-            self.next = None
     def __init__(self, count, lst=[]):
         self.count = max(count, 2)
         self.d = {}
@@ -19,7 +21,7 @@ class lastused: #Implementation of a length-limited O(1) LRU cache
     def __setitem__(self, obj, val):
         if obj in self.d:
             del self[obj]
-        nobj = self.Node(self.last, (obj, val))
+        nobj = Node(self.last, (obj, val))
         if self.first is None:
             self.first = nobj
         if self.last:

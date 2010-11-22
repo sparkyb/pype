@@ -155,7 +155,8 @@ class MyNB(wx.Notebook):
             wx.CallAfter(self._seen)
         finally:
             self.calling = 0
-    
+
+#
     def updateChecks(self, win):
         #Clear for non-documents
         for i in __main__.ASSOC:
@@ -168,6 +169,9 @@ class MyNB(wx.Notebook):
             self.root.menubar.Check(i[0], 0)
         for i in __main__.DOCUMENT_LIST_OPTION_TO_ID.itervalues():
             self.root.menubar.Check(i, 0)
+        if hasattr(self.root.docpanel, 'recentlyclosed'):
+            for i in __main__.DOCUMENT_LIST_OPTION_TO_ID2.itervalues():
+                self.root.menubar.Check(i, 0)
         for i in __main__.MACRO_CLICK_OPTIONS.iterkeys():
             self.root.menubar.Check(i, 0)
         
@@ -177,6 +181,8 @@ class MyNB(wx.Notebook):
         self.root.menubar.Check(__main__.CARET_OPTION_TO_ID[__main__.caret_option][0], 1)
         self.root.menubar.Check(__main__.TITLE_OPTION_TO_ID[__main__.title_option][0], 1)
         self.root.menubar.Check(__main__.DOCUMENT_LIST_OPTION_TO_ID[__main__.document_options], 1)
+        if hasattr(self.root.docpanel, 'recentlyclosed'):
+            self.root.menubar.Check(__main__.DOCUMENT_LIST_OPTION_TO_ID2[__main__.document_options2], 1)
         self.root.menubar.Check(__main__.MACRO_CLICK_TO_ID[__main__.macro_doubleclick], 1)
 
         if not win:
@@ -274,9 +280,32 @@ class MyNB(wx.Notebook):
         self.root.dragger._Refresh()
         self.root.dragger._SelectItem(sel)
 
-class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
+class setupmix:
+    def setupcolumns(self):
+        for i in xrange(self.GetColumnCount()-1, -1, -1):
+            self.DeleteColumn(i)
+        
+        if isinstance(self, MyLC):
+            do = __main__.document_options
+        else:
+            do = __main__.document_options2
+        if do&1:
+            self.InsertColumn(self.GetColumnCount(), "Filename")
+        if (do&2) or do == 0:
+            self.InsertColumn(self.GetColumnCount(), "Whole Path")
+        if do == 0:
+            self.InsertColumn(self.GetColumnCount(), "Filename")
+            
+        #0 -> path, filename
+        #1 -> filename
+        #2 -> path
+        #3 -> filename, path
+        self.resizeColumn(32)
+    
+
+class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
     def __init__(self, parent, root):
-        wx.ListCtrl.__init__(self, parent, style=wx.LC_REPORT|wx.BORDER_NONE|wx.LC_VIRTUAL)
+        wx.ListCtrl.__init__(self, parent, style=wx.LC_REPORT|wx.LC_VIRTUAL|wx.LC_SINGLE_SEL)#|wx.BORDER_NONE
         listmix.ListCtrlAutoWidthMixin.__init__(self)
         ## self.setResizeColumn(1)
         self.root = root
@@ -291,24 +320,6 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
         self.Bind(wx.EVT_LIST_BEGIN_DRAG, self.OnBeginDrag)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelectionChanged)
         self.data = []
-    
-    def setupcolumns(self):
-        for i in xrange(self.GetColumnCount()-1, -1, -1):
-            self.DeleteColumn(i)
-        
-        do = __main__.document_options
-        if do&1:
-            self.InsertColumn(self.GetColumnCount(), "Filename")
-        if (do&2) or do == 0:
-            self.InsertColumn(self.GetColumnCount(), "Whole Path")
-        if do == 0:
-            self.InsertColumn(self.GetColumnCount(), "Filename")
-            
-        #0 -> path, filename
-        #1 -> filename
-        #2 -> path
-        #3 -> filename, path
-        self.resizeColumn(32)
     
     def OnGetItemText(self, index, col):
         if index >= self.root.control.GetPageCount():
@@ -365,177 +376,121 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
             self.Select(x, 0)
             x = self.GetNextSelected(x)
         self.Select(index)
-        
 
-
-class _MyLC(wx.gizmos.TreeListCtrl):
-    class FileDropTarget(wx.FileDropTarget):
-        def __init__(self, parent, root):
-            wx.FileDropTarget.__init__(self)
-            self.parent = parent
-            self.root = root
-        def OnDropFiles(self, x, y, filenames):
-            if len(filenames) != 1:
-                #append documents
-                for filename in filenames:
-                    dn, fn = os.path.split(filename)
-                    filename = self.root.getAbsolute(fn, dn)
-                    unt = (filename[:10] == '<untitled ' and filename[-1:] == '>')
-                    if unt or self.root.isAbsOpen(filename):
-                        #relocate to the end
-                        i = self.root.getPositionAbsolute(filename, unt)
-                        selected = self.root.control.GetSelection()
-                        if i != -1:
-                            p = self.root.control.GetPage(i)
-                            t = self.root.control.GetPageText(i)
-                            self.root.control.RemovePage(i)
-                            self.root.control.AddPage(p, t, selected==i)
-                    else:
-                        dn, fn = os.path.split(self.root.getAlmostAbsolute(fn, dn))
-                        self.root.newTab(dn, fn)
-                return
-
-            try:
-                selindex = [i[0] for i in self.parent.getAllRectangles()].index(self.parent.selected)
-            except:
-                selindex = -1
-
-
-            l = self.parent.getAllRectangles()
-            i = -1
-
-            for p, (item, rect) in enumerate(l):
-                if l is not None:
-                    if y >= rect.y and y < rect.y+rect.height:
-                        i = p
-
-            filename = filenames[0]
-            dn, fn = os.path.split(filename)
-            unt = (filename[:10] == '<untitled ' and filename[-1:] == '>')
-            if not unt:
-                filename = self.root.getAlmostAbsolute(fn, dn)
-                dn, fn = os.path.split(filename)
-            new = 0
-            if not unt and not self.root.isOpen(fn, dn):
-                new = 1
-                cp = self.root.control.GetPageCount()
-                self.root.newTab(dn, fn, switch=1)
-                return
-            else:
-                cp = self.root.getPositionAbsolute(self.root.getAbsolute(fn, dn), unt)
-            
-            i -= 1
-            if i == -2:
-                i = len(l)
-            if i != cp:
-                #remove from original location, insert at destination
-                p = self.root.control.GetPage(cp)
-                t = self.root.control.GetPageText(cp)
-                try:
-                    self.root.starting = 1
-                    self.root.control.RemovePage(cp)
-                    if i >= self.root.control.GetPageCount():
-                        self.root.control.AddPage(p, t)
-                    else:
-                        self.root.control.InsertPage(i, p, t)
-                    if cp == selindex:
-                        self.root.control.SetSelection(min(i, self.root.control.GetPageCount()-1))
-                finally:
-                    self.root.starting = 0
-
+class RecentClosed(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
     def __init__(self, parent, root):
-        tID = wx.NewId()
-        wx.gizmos.TreeListCtrl.__init__(self, parent, tID,
-            style=wx.TR_HIDE_ROOT|wx.TR_NO_LINES|wx.TR_NO_BUTTONS)
+        wx.ListCtrl.__init__(self, parent, style=wx.LC_REPORT|wx.LC_VIRTUAL)#|wx.BORDER_NONE
+        listmix.ListCtrlAutoWidthMixin.__init__(self)
         
-        self.AddColumn("Filename")
-        self.AddColumn("Whole Path")
-        self.SetMainColumn(0)
+        self.setupcolumns()
+        self.root = root
+        
+        self.items = []
+        
+        self.SetDropTarget(__main__.FileDropTarget(root))
+        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
+        wx.CallAfter(self.refresh)
+    
+    def GetSelectedList(self):
+        lst = []
+        x = self.GetFirstSelected()
+        while x != -1:
+            lst.append(x)
+            x = self.GetNextSelected(x)
+        lst = [-i-1 for i in lst]
+        return lst
+    
+    def OnActivate(self, evt):
+        lst = self.GetSelectedList()
+        for i in lst:
+            self.Select(-(i+1), 0)
+        if len(lst):
+            self.Select(-(lst[0]+1), 1)
+
+        self.root.OnDrop([self.items[i] for i in lst])
+    
+    def OnGetItemText(self, index, col):
+        if index >= len(self.items):
+            return ''
+        
+        do = __main__.document_options2
+        if do == 0:
+            col = not col
+        elif do == 2:
+            col = 1
+        
+        index = -index-1
+        
+        if col == 0:
+            return os.path.split(self.items[index])[1]
+        return self.items[index]
+    
+    def refresh(self):
+        self.items = self.root.lastused.keys()
+        self.SetItemCount(len(self.items))
+        self.Refresh()
+
+class DocumentPanel(wx.Panel):
+    def __init__(self, parent, root):
+        wx.Panel.__init__(self, parent, -1)
         
         self.root = root
-        self.rootnode = self.AddRoot("Unseen Root")
-        self.SetDropTarget(self.FileDropTarget(self, root))
-        if __main__.USE_DOC_ICONS:
-            self.AssignImageList(__main__.IMGLIST1)
-
-        ## EVT_TREE_ITEM_ACTIVATED(self, tID, self.OnTreeItemActivated)
-        self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.OnTreeBeginDrag)
-        self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeSelectionChanged)
-
-    def getAllRectangles(self):
-        return [(item, self.GetBoundingRect(item)) for item in self._GetChildren()]
-
-    def OnTreeBeginDrag(self, event):
-        item = event.GetItem()
-        lst = self.getAllRectangles()
-        posn = -1
-        for i, (itemi, toss) in enumerate(lst):
-            if item == itemi:
-                posn = i
-                break
-
-        if posn == -1:
-            ## print "BAH!"
-            event.Skip()
-            return
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.documentlist = MyLC(self, root)
+        sizer.Add(self.documentlist, 1, wx.EXPAND|wx.ALL, 2)
         
-        a = self.root.control.GetPage(posn).GetWindow1()
-        data = os.path.join(a.dirname, a.filename).encode('ascii')
-        if data == ' ':
-            data = '<untitled %i>'%a.NEWDOCUMENT
-        d = wx.FileDataObject()
-        d.AddFile(data)
-        ## print d.GetFilenames()
-        a = wxDropSource(self)
-        a.SetData(d)
-        a.DoDragDrop(wx.Drag_AllowMove|wx.Drag_CopyOnly)
-
-    def OnTreeSelectionChanged(self, event):
-
-        self.selected = item = event.GetItem()
-        items = [i[0] for i in self.getAllRectangles()]
-        try:
-            indx = items.index(item)
-            self.root.control.SetSelection(indx)
-        except:
-            pass
-
-    def _RemoveItem(self, index):
-        chlist = self.getAllRectangles()
-        self.Delete(chlist[index][0])
-
-    def _AddItem(self, label):
-        which = __main__.GDI(label)
-        self.AppendItem(self.rootnode, label, which)
-
-    def _InsertItem(self, index, label):
-        if index == self.GetChildrenCount(self.rootnode, False):
-            self._AddItem(label)
-        else:
-            which = __main__.GDI(label)
-            self.InsertItemBefore(self.rootnode, index, label, which)
-
-    def _SelectItem(self, index):
-        chlist = self.getAllRectangles()
-        if index < len(chlist):
-            self.SelectItem(chlist[index][0])
+        if __main__.show_recent:
+            
+            s2 = wx.BoxSizer(wx.HORIZONTAL)
+            
+            s2.Add(wx.StaticText(self, -1, "Recently Open:"), 0,
+                    wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 6)
+            
+            btn = wx.Button(self, -1, "Remove")
+            btn.SetToolTipString("Remove the selected recent document from the list")
+            self.Bind(wx.EVT_BUTTON, self.OnButton)
+            
+            s2.Add(wx.StaticText(self, -1, " "), 1, wx.EXPAND)
+            
+            s2.Add(btn)
+            
+            sizer.Add(s2, 0, wx.ALL|wx.EXPAND, 4)
+            
+            self.recentlyclosed = RecentClosed(self, root)
+            sizer.Add(self.recentlyclosed, 1, wx.EXPAND|wx.ALL, 2)
         
-    def _RenameItem(self, index, label):
-        self.SetItemText(self.getAllRectangles()[index][0], label)
+        self.SetSizer(sizer)
     
-    def _GetChildren(self):
-        count = self.GetChildrenCount(self.rootnode)
-        lst = []
-        while len(lst) < count:
-            if len(lst) == 0:
-                (item, cookie) = self.GetFirstChild(self.rootnode)
-            else:
-                (item, cookie) = self.GetNextChild(self.rootnode, cookie)
-            lst.append(item)
-        return lst
+    def OnButton(self, evt):
+        rc = self.recentlyclosed
+        lst = rc.GetSelectedList()
+        for i in lst:
+            rc.Select(-(i+1), 0)
+        if len(lst):
+            rc.Select(-(lst[0]+1), 1)
         
-    def _Refresh(self):
-        for item, page in zip(self._GetChildren(), self.root.control):
-            if page.dirname:
-                self.SetItemText(item, os.path.join(page.dirname, page.filename), 1)
+        for i in lst:
+            try:
+                del self.root.lastused[rc.items[i]]
+            except KeyError:
+                pass
+            except IndexError:
+                pass
+        self._refresh()
+    
+    def _refresh(self):
+        if hasattr(self, 'recentlyclosed'):
+            self.recentlyclosed.refresh()
+        self.documentlist._Refresh()
+        
+    def _setcolumn(self):
+        if hasattr(self, 'recentlyclosed'):
+            self.recentlyclosed.setupcolumns()
+        self.documentlist.setupcolumns()
 
+def _MyLC(parent, root):
+    dp = DocumentPanel(parent, root)
+    dragger = dp.documentlist
+    return dp, dragger
+
+#

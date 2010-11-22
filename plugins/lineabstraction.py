@@ -17,6 +17,8 @@ class LineAbstraction(object):
         A 0-indexed line abstraction that supports manipulation of the
         provided document.
         '''
+        __slots__ = ('stc curline curlinei curlinep selectedlines '
+                     'selectedlinesi targetlines targetlinesi ').split()
     
     def __init__(self, stc):
         self.stc = stc
@@ -126,6 +128,55 @@ class LineAbstraction(object):
             start = self._line_range(start)[0]
             end = self._line_range(end)[0]
             self.stc.SetSelection(start, end)
+    
+    class targetlines:
+        if 1:
+            '''
+            Manipulates the currently targeted lines.
+            Setting requires a sequence of lines, CR and LF endings are
+            pre-rstripped from the input lines, inserted one between each line
+            during setting.
+            '''
+        __metaclass__ = Property
+        def get(self):
+            return [self[i] for i in xrange(*self.targetlinesi)]
+        
+        def set(self, value):
+            self.targetlinesi = self.targetlinesi
+            self.stc.ReplaceTarget(self.stc.format.join([i.rstrip('\r\n') for i in value] + ['']))
+        
+        def de1(self):
+            self.targetlinesi = self.targetlinesi
+            self.stc.ReplaceTarget('')
+    
+    class targetlinesi:
+        if 1:
+            '''
+            Manipulates the indices of the currently targeted lines.
+            '''
+        __metaclass__ = Property
+        def get(self):
+            x,y = self.stc.GetTargetStart(), self.stc.GetTargetEnd()
+            x,y = min(x,y), max(x,y)
+            start = self._line_range(self.stc.LineFromPosition(x))[0]
+            #we use y-1 because otherwise
+            #for i in xrange(10):
+            #    lines.selectedlinesi = lines.selectedlinesi
+            #will continually select more and more lines
+            end = self._line_range(self.stc.LineFromPosition(y-1))[1]
+            return self.stc.LineFromPosition(start), self.stc.LineFromPosition(max(end-1, start))+1
+        
+        def set(self, range):
+            try:
+                start, end = range
+            except:
+                raise ValueError, "selected line range must be a sequence of integers of length 2"
+            if end < start:
+                start, end = end, start
+            start = self._line_range(start)[0]
+            end = self._line_range(end)[0]
+            self.stc.SetTargetStart(start)
+            self.stc.SetTargetEnd(end)
     
     def __len__(self):
         return self.stc.GetLineCount()

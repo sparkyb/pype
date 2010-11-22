@@ -333,6 +333,7 @@ if 1:
     SMARTPASTE = wxNewId()
     SAVE_CURSOR = wxNewId()
     HIGHLIGHT_LINE = wxNewId()
+    IMAGE_BUTTONS = wxNewId()
     S_WHITE = wxNewId()
     DND_ID = wxNewId()
     DB_ID = wxNewId()
@@ -348,6 +349,7 @@ if 1:
     NO_FINDBAR_HISTORY = wxNewId()
     CLEAR_FINDBAR_HISTORY = wxNewId()
     ZI = wxNewId()
+    SHOW_RECENT = wxNewId()
     
     TRIGGER = wxNewId()
     
@@ -418,6 +420,16 @@ if 1:
     
     DOCUMENT_LIST_OPTION_TO_ID = dict([(j[0], i) for i,j in DOCUMENT_LIST_OPTIONS.items()])
     
+    DOCUMENT_LIST_OPTIONS2 = {
+        wxNewId() : (1, "Filename"),
+        wxNewId() : (3, "Filename, Path"),
+        wxNewId() : (2, "Path"),
+        wxNewId() : (0, "Path, Filename")
+    }
+    
+    DOCUMENT_LIST_OPTION_TO_ID2 = dict([(j[0], i) for i,j in DOCUMENT_LIST_OPTIONS2.items()])
+    
+    
     #for determining what to do when double-clicking on a macro.
     MACRO_CLICK_OPTIONS = {
         wxNewId() : (0, "do nothing"),
@@ -426,6 +438,19 @@ if 1:
     }
     
     MACRO_CLICK_TO_ID = dict([(j[0], i) for i,j in MACRO_CLICK_OPTIONS.iteritems()])
+    
+    #for determining what kind of indicator to show in shell output.
+    SHELL_OUTPUT_OPTIONS = {
+        wxNewId(): (0, "no indicator", wxSTC_INDIC_HIDDEN),
+        wxNewId(): (1, "plain underline", wxSTC_INDIC_PLAIN),
+        wxNewId(): (2, "squiggle underline", wxSTC_INDIC_SQUIGGLE),
+        wxNewId(): (3, "TT underline", wxSTC_INDIC_TT),
+        wxNewId(): (4, "box outline", wxSTC_INDIC_BOX)
+    }
+    
+    SHELL_NUM_TO_ID = dict([(j,i) for i,(j,k,l) in SHELL_OUTPUT_OPTIONS.iteritems()])
+    SHELL_NUM_TO_INDIC = dict([(j,l) for i,(j,k,l) in SHELL_OUTPUT_OPTIONS.iteritems()])
+    
     
     #bookmark support
     BOOKMARKNUMBER = 1
@@ -673,7 +698,7 @@ class MainWindow(wxFrame):
             self.BOTTOMNB = wxNotebook(bottom, -1)
             self.RIGHTNB = wxNotebook(right, -1)
             
-            self.dragger = documents.MyLC(self.RIGHTNB, self)
+            self.docpanel, self.dragger = documents._MyLC(self.RIGHTNB, self)
             
             if DEBUG:
                 self.crust = crust.Crust(self.RIGHTNB, rootObject=app,
@@ -708,7 +733,7 @@ class MainWindow(wxFrame):
                 self.BOTTOMNB.AddPage(textrepr.TextRepr(self.BOTTOMNB, self), "repr(text)")
             self.BOTTOMNB.AddPage(help.MyHtmlWindow(self.BOTTOMNB), "Help")
     
-            self.RIGHTNB.AddPage(self.dragger, 'Documents')
+            self.RIGHTNB.AddPage(self.docpanel, 'Documents')
             self.pathmarks = browser.FilesystemBrowser(self.RIGHTNB, self, pathmarksn)
             self.RIGHTNB.AddPage(self.pathmarks, "Browse...")
     
@@ -740,7 +765,7 @@ class MainWindow(wxFrame):
             filemenu.AppendSeparator()
             menuAdd(self, filemenu, "Add Module Search Path", "Add a path to search during subsequent 'Open Module' executions", self.AddSearchPath, wxNewId())
             menuAdd(self, filemenu, "&Reload",              "Reload the current document from disk", self.OnReload, wxID_REVERT)
-            menuAdd(self, filemenu, "&Close\tCtrl+W",       "Close the file in this tab", self.OnClose, wxNewId())
+            menuAdd(self, filemenu, "&Close\tCtrl+W",       "Close the file in this tab", self.OnClose, wxID_CLOSE)
             workspace.WorkspaceMenu(filemenu, self, workspaces, workspace_order)
             menuAdd(self, filemenu, "Restart",              "Restart PyPE", self.OnRestart, wxNewId())
             menuAdd(self, filemenu, "E&xit\tAlt+F4",        "Terminate the program", self.OnExit, wxNewId())
@@ -914,7 +939,9 @@ class MainWindow(wxFrame):
             menuAdd(self, optionsmenu, "One PyPE", "When checked, will listen on port 9999 for filenames to open", self.OnSingleToggle, SINGLE_ID, wxITEM_CHECK)
             if UNICODE:
                 menuAdd(self, optionsmenu, "Always Write BOM", "If checked, will write BOM when coding: directive is found, otherwise not", self.OnBOMToggle, USEBOM_ID, wxITEM_CHECK)
-
+            
+            optionsmenu.AppendSeparator()
+            
             toolbarOptionsMenu = wxMenu()
             menuAddM(optionsmenu, toolbarOptionsMenu, "Toolbar", "When checked, will show a toolbar (requires restart)")
             x = TB_RMAPPING.values()
@@ -929,12 +956,24 @@ class MainWindow(wxFrame):
                 desc = DOCUMENT_LIST_OPTIONS[iid][1]
                 menuAdd(self, doptmenu, desc, "Make the Documents list look like: %s"%desc, self.OnChangeDocumentsOptions, iid, typ)
             
+            menuAdd(self, optionsmenu, "Show Recent", "When checked, will provide a list of recently open documents in the Documents tab (requires restart)", self.OnShowRecentDocs, SHOW_RECENT, wxITEM_CHECK)
+            
+            if show_recent:
+                doptmenu2 = wxMenu()
+                menuAddM(optionsmenu, doptmenu2, "Recent Documents Options", "Change the filename/path layout in the Recent Documents list")
+                for value in (1,3,2,0):
+                    iid = DOCUMENT_LIST_OPTION_TO_ID2[value]
+                    desc = DOCUMENT_LIST_OPTIONS2[iid][1]
+                    menuAdd(self, doptmenu2, desc, "Make the Recent Documents list look like: %s"%desc, self.OnChangeDocumentsOptions2, iid, typ)
+            
             moptmenu = wxMenu()
             menuAddM(optionsmenu, moptmenu, "Macro Options", "Change the behavior of macros during double-click")
             for value in xrange(3):
                 iid = MACRO_CLICK_TO_ID[value]
                 desc = MACRO_CLICK_OPTIONS[iid][1]
                 menuAdd(self, moptmenu, desc, "When double clicking on a macro: %s"%desc, self.OnChangeMacroOptions, iid, typ)
+            
+            menuAdd(self, optionsmenu, "Images for macro buttons", "When checked, the macro buttons will have images (requires restart)", self.OnMacroButtonImage, IMAGE_BUTTONS, typ)
             
             optionsmenu.AppendSeparator()
             caretmenu = wxMenu()
@@ -953,6 +992,14 @@ class MainWindow(wxFrame):
             for i in (1,2,3):
                 menuAdd(self, caretmenu2, "%i pixels"%i, "Set your caret to be %i pixels wide."%i, self.OnCaretWidth, CARET_W_WIDTH_TO_O[i], typ)
             
+            shellout = wxMenu()
+            menuAddM(optionsmenu, shellout, "Shell Output", "Set optional indicators for shell output")
+            for i in xrange(5):
+                idn = SHELL_NUM_TO_ID[i]
+                desc = SHELL_OUTPUT_OPTIONS[idn][1]
+                menuAdd(self, shellout, desc, "Any output recieved from shells will be indicated by: %s"%desc, self.OnShellStyle, idn, typ)
+            
+            menuAdd(self, optionsmenu, "Set Shell Output Color", "The color of the output indicator chosen above", self.OnShellColor, wxNewId())
             menuAdd(self, optionsmenu, "Set Line Color", "The color of the current line when 'Highlight Current Line' is enabled", self.OnLineColor, wxNewId())
             
             optionsmenu.AppendSeparator()
@@ -1001,6 +1048,8 @@ class MainWindow(wxFrame):
             self.menubar.Check(SINGLE_ID, single_pype_instance)
             if UNICODE:
                 self.menubar.Check(USEBOM_ID, always_write_bom)
+            self.menubar.Check(SHELL_NUM_TO_ID[SHELL_OUTPUT], 1)
+            self.menubar.Check(IMAGE_BUTTONS, macro_images)
             self.menubar.Check(TD_ID, TODOBOTTOM)
             self.menubar.Check(USETABS, use_tabs)
             self.menubar.Check(INDENTGUIDE, indent_guide)
@@ -1011,6 +1060,9 @@ class MainWindow(wxFrame):
             self.menubar.Check(CARET_W_WIDTH_TO_O[CARET_WIDTH], 1)
             self.menubar.FindItemById(CLEAR_FINDBAR_HISTORY).Enable(not no_findbar_history)
             self.menubar.Check(DOCUMENT_LIST_OPTION_TO_ID[document_options], 1)
+            if hasattr(self.docpanel, 'recentlyclosed'):
+                self.menubar.Check(DOCUMENT_LIST_OPTION_TO_ID2[document_options2], 1)
+            self.menubar.Check(SHOW_RECENT, show_recent)
 
 #------------------------ Drag and drop file support -------------------------
         self.SetDropTarget(FileDropTarget(self))
@@ -1090,12 +1142,18 @@ class MainWindow(wxFrame):
         icon = getBmp(wxART_FILE_OPEN, wxART_TOOLBAR)
         tb.AddSimpleTool(wxID_OPEN, icon, "Open",
             "Open an existing document")
+        
         icon = getBmp(wxART_FILE_SAVE, wxART_TOOLBAR)
         tb.AddSimpleTool(wxID_SAVE, icon, "Save", "Save current document")
         
         icon = getBmp(wxART_FILE_SAVE_AS, wxART_TOOLBAR)
         tb.AddSimpleTool(wxID_SAVEAS, icon, "Save as...", "Save current document as...")
-
+        
+        tb.AddSeparator()
+        
+        icon = getBmp(wxART_FOLDER, wxART_TOOLBAR)
+        tb.AddSimpleTool(wxID_CLOSE, icon, "Close", "Close the current document")
+        
         tb.AddSeparator()
 
         icon = getBmp(wxART_CUT, wxART_TOOLBAR)
@@ -1435,8 +1493,13 @@ class MainWindow(wxFrame):
                             ('ONE_TAB_', 1),
                             ('always_write_bom', 1),
                             ('document_options', 1),
+                            ('document_options2', 1),
                             ('macro_doubleclick', 0),
                             ('COLOUR', '#d0d0d0'),
+                            ('SHELL_OUTPUT', 0),
+                            ('SHELL_COLOR', '#d0d0d0'),
+                            ('macro_images', 1),
+                            ('show_recent', 1)
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -1516,8 +1579,13 @@ class MainWindow(wxFrame):
         self.config['ONE_TAB_'] = ONE_TAB_
         self.config['always_write_bom'] = always_write_bom
         self.config['document_options'] = document_options
+        self.config['document_options2'] = document_options2
         self.config['macro_doubleclick'] = macro_doubleclick
         self.config['COLOUR'] = COLOUR
+        self.config['SHELL_OUTPUT'] = SHELL_OUTPUT
+        self.config['SHELL_COLOR'] = SHELL_COLOR
+        self.config['macro_images'] = macro_images
+        self.config['show_recent'] = show_recent
         try:
             if UNICODE:
                 path = os.sep.join([self.configPath, 'history.u.txt'])
@@ -1839,6 +1907,7 @@ class MainWindow(wxFrame):
         if switch:
             nwin.SetFocus()
         ## self.OnDocumentChange(nwin)
+        self.docpanel._refresh()
         return nwin.enc
 
     def OnReload(self, e, win=None):
@@ -1901,7 +1970,18 @@ class MainWindow(wxFrame):
                 del f
             saved = self.sharedsave(win)
         elif self.isOpen(win.filename, win.dirname):
-            self.curdocstates[fn] = win.GetSaveState()
+            #only save difference between the document state and the default
+            #state for this document...
+            ftype = extns.get(win.filename.split('.')[-1].lower(), 'python')
+            dflt = document_defaults.get(ftype, DOCUMENT_DEFAULTS)
+            
+            x = win.GetSaveState()
+            for i in x.keys():
+                if i in dflt and x[i] == dflt[i]:
+                    del x[i]
+                    if DEBUG: print "shared default", i
+            
+            self.curdocstates[fn] = x
 
         if self.isOpen(win.filename, win.dirname):
             self.lastused[fn] = self.curdocstates.pop(fn, {})
@@ -1913,6 +1993,7 @@ class MainWindow(wxFrame):
             win.kill()
         self.control.DeletePage(wnum)
         self.updateWindowTitle()
+        self.docpanel._refresh()
 
     def OnRestart(self, e):
         self.OnExit(e)
@@ -2500,6 +2581,27 @@ class MainWindow(wxFrame):
         num, win = self.getNumWin(e)
         win.SetCaretWidth(CARET_WIDTH)
     
+    def OnShellStyle(self, e):
+        global SHELL_OUTPUT
+        for i in SHELL_OUTPUT_OPTIONS:
+            self.menubar.Check(i, 0)
+        self.menubar.Check(e.GetId(), 1)
+        
+        SHELL_OUTPUT = SHELL_OUTPUT_OPTIONS[e.GetId()][0]
+    
+    def OnShellColor(self, e):
+        global SHELL_COLOR
+        data = wx.ColourData()
+        data.SetChooseFull(True)
+        data.SetColour(SHELL_COLOR)
+        dlg = wx.ColourDialog(self, data)
+        changed = dlg.ShowModal() == wx.ID_OK
+        
+        if changed:
+            c = dlg.GetColourData().GetColour()
+            SHELL_COLOR = '#%02x%02x%02x'%(c.Red(), c.Green(), c.Blue())
+        dlg.Destroy()
+    
     def OnLineColor(self, e):
         global COLOUR
         data = wx.ColourData()
@@ -2570,15 +2672,31 @@ class MainWindow(wxFrame):
         global document_options
         i = e.GetId()
         document_options = DOCUMENT_LIST_OPTIONS[i][0]
-        self.dragger.setupcolumns()
-        self.dragger._Refresh()
+        self.docpanel._setcolumn()
+        self.docpanel._refresh()
         wxCallAfter(self.control.updateChecks, None)
+        
+    def OnChangeDocumentsOptions2(self, e):
+        global document_options2
+        i = e.GetId()
+        document_options2 = DOCUMENT_LIST_OPTIONS2[i][0]
+        self.docpanel._setcolumn()
+        self.docpanel._refresh()
+        wxCallAfter(self.control.updateChecks, None)
+    
+    def OnShowRecentDocs(self, e):
+        global show_recent
+        show_recent = not show_recent
     
     def OnChangeMacroOptions(self, e):
         global macro_doubleclick
         i = e.GetId()
         macro_doubleclick = MACRO_CLICK_OPTIONS[i][0]
         wxCallAfter(self.control.updateChecks, None)
+    
+    def OnMacroButtonImage(self, e):
+        global macro_images
+        macro_images = not macro_images
     
     def OnSavePreferences(self, e):
         self.saveHistory()
@@ -3727,6 +3845,44 @@ class PythonSTC(wxStyledTextCtrl):
         self.ReplaceSelection(self.format.join(paragraphs))
 
     def Dent(self, e, incr):
+        inde = incr*self.GetIndent()
+        tabw = self.GetTabWidth()
+        absi = abs(inde)
+        utab = self.GetUseTabs()
+        
+        col = self.GetColumn(self.GetCurrentPos())
+        lines = self.lines
+        
+        newlines = []
+        for line in lines.selectedlines:
+            right = line.lstrip()
+            chari = len(line)-len(right)
+            curi = line.count('\t', 0, chari)
+            curi = max((curi*tabw + chari-curi) + inde, 0)
+            curi -= incr*((absi+incr*(curi%absi))%absi)
+            if utab:
+                newlines.append((curi//tabw)*'\t' + (curi%tabw)*' ' + right)
+            else:
+                newlines.append(curi*' ' + right)
+        
+        
+        sl, el = lines.selectedlinesi
+        
+        if el-1 > sl:
+            lines.selectedlines = newlines
+            lines.selectedlinesi = sl,el
+        else:
+            curp = lines.curlinep
+            lines.targetlinesi = lines.selectedlinesi
+            lines.targetlines = newlines
+            if curp <= chari:
+                #handles case where cursor was in the indent
+                lines.curlinep = curi
+            else:
+                lines.curlinep = curp + curi - chari
+        
+        return
+        
         incr *= self.GetIndent()
         x,y = self.GetSelection()
         if x==y:

@@ -193,10 +193,21 @@ class SpellCheck(scrolled.ScrolledPanel):
         self.SetSizer(ws)
         self.SetAutoLayout(1)
         self.SetupScrolling()
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.unload_d)
+        ## wx.CallAfter(self.load_d)
     
-        wx.CallAfter(self.load_d)
+    def unload_d(self, e):
+        global dictionary
+        if dictionary:
+            dictionary = {}
         
     def load_d(self):
+        if dictionary:
+            #set the unload for 10 minutes from now
+            self.timer.Start(600000, wx.TIMER_ONE_SHOT)
+            return
+        
         rp = self.root.getglobal('runpath')
         df = os.path.join(rp, 'dictionary.txt')
         while os.path.exists(df):
@@ -258,15 +269,19 @@ class SpellCheck(scrolled.ScrolledPanel):
             global alphabet
             alphabet = tuple(x)
             break
+        #set the unload for 10 minutes from now
+        self.timer.Start(600000, wx.TIMER_ONE_SHOT)
     
     def OnCheckAll(self, evt):
         for i in xrange(self.badsp.GetCount()):
             self.badsp.Check(i)
     
     def OnSpellCheckSel(self, evt):
+        self.load_d()
         self.OnSpellCheck(evt, 1)
     
     def OnSpellCheck(self, evt, sel=0):
+        self.load_d()
         num, win = self.root.getNumWin(evt)
         t = time.time()
         
@@ -350,6 +365,7 @@ class SpellCheck(scrolled.ScrolledPanel):
         return fb
     
     def OnClick(self, evt):
+        self.load_d()
         if not self.verify_and_select():
             return
         

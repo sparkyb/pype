@@ -10,6 +10,7 @@ import os
 import sys
 #from wxPython.wx import *
 from wxPython.stc import wxSTC_EOL_CRLF, wxSTC_EOL_LF, wxSTC_EOL_CR
+import zlib
 from parsers import *
 
 startup_path = os.getcwd()
@@ -66,8 +67,9 @@ stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 #for open/save dialogs
 wildcard = "All python files (*.py *.pyw)|*.py;*.pyw|"\
            "Pyrex files (*.pyi *.pyx)|*.pyi;*.pyx|"\
-           "C/C++ files (*.c* *.h)|*.c*;*.h|"\
            "HTML/XML files (*.htm* *.shtm* *.xml)|*.htm*;*.shtm*;*.xml|"\
+           "C/C++ files (*.c* *.h)|*.c*;*.h|"\
+           "Text files (*.txt)|*.txt|"\
            "Latex files (*.tex *.bib)|*.tex;*.bib|"\
            "All Files (*.*)|*.*"
 
@@ -109,8 +111,12 @@ except:
             #windows NT,2k,XP,etc. fallback
             homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
         except:
-            #What os are people using?
-            homedir = os.path.join(default_homedir, ".pype")
+            try:
+                #windows NT,2k,XP,etc. fallback #2
+                homedir = os.path.join(os.environ['HOMEDRIVE'], os.environ['HOMEPATH'], ".pype")
+            except:
+                #What os are people using?
+                homedir = os.path.join(default_homedir, ".pype")
 try:
     # create the config directory if it
     # doesn't already exist
@@ -150,7 +156,6 @@ def validate(value, orig):
     return a
 
 def getData():
-    import zlib
     a = zlib.decompress(
 'x\xda\x01\xf4\x04\x0b\xfb\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00 \
 \x00\x00\x00 \x08\x06\x00\x00\x00szz\xf4\x00\x00\x00\x04sBIT\x08\x08\x08\x08\
@@ -201,5 +206,4 @@ Y\xee\xcd\xcf\xa9\xc1\xe88\x9b\xa5y\xb7O\xd5Xe!?\t\xdf4\x8d\xec\xd9#Z\\\xf0\
 \x9c\x13\xd2\xf6\x8fynp\x0e\x80\xea^ji\x8dr\xaf\x8bK\xc7\xf3@\xf3]\xa1\x17R\
 \x07\xcfse\xebz \xf1\xde\x96\x9a\x85\xbc\x0ci\xcf\x02\xbcB\x9aK\xcf\xab\xba\
 \xb2\xff\x07\n$<\xcc\x9c\x11r\xaf\x00\x00\x00\x00IEND\xaeB`\x82_YY\xda' )
-    del zlib
     return a

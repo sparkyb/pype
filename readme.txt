@@ -273,6 +273,32 @@ For example, ``cls`` in the following example has 1 line, but ``fcn`` has 5::
         pass
 
 
+How do I update the default settings for a particular document type?
+====================================================================
+1. Close all open documents of the particular type whose default settings you
+   want to update.
+
+2. Create or open a document of the specific document type that you want to
+   change the settings of.
+
+3. Adjust all of the settings in the "Document" menu to those settings that
+   you want to be the default when you open up that particular kind of
+   document.
+
+4. Use "Options -> Save Settings" and choose the particular language whose
+   settings you would like to save.
+
+5. If in the future, a particular document of that type does not have the
+   proper settings, use "Options -> Load Settings" to load the defaults for
+   that specific language.
+
+In PyPE 2.6.3 and later, whenever a document shares the default settings for
+its file type and is closed, those settings aren't explicitly saved, under the
+assumption that you would prefer to have it use the default settings directly.
+If you are going to change the default settings for all documents of a
+specific type, follow the above 5 steps.
+
+
 Dictionaries and alphabets for the Spell checker
 ================================================
 You can create/delete custom dictionaries via the +/- buttons right next to

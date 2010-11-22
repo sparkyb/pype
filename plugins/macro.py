@@ -120,12 +120,15 @@ def Button2(parent, id, which, help, extra):
     z.SetToolTipString(help)
     return z
 
-bmButton = Button2
-
 class macroPanel(wx.Panel):
     def __init__(self, parent, root):
         wx.Panel.__init__(self, parent)
         self.root = root
+        
+        if __main__.macro_images:
+            bmButton = Button1
+        else:
+            bmButton = Button2
         
         self.rec1 = bmButton(self, -1, wx.ART_CDROM, "Start Recording", "Record")
         self.rec2 = bmButton(self, -1, wx.ART_ERROR, "Stop Recording", "Stop!"); self.rec2.Hide()
