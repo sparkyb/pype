@@ -64,10 +64,10 @@ extns = {'py' : 'python',
         'txt' : 'text'}
 
 #--------------- load pathmarks, snippets, and shell commands ----------------
-paths = {}
-display2code={}
-displayorder=[]
-shellcommands = []
+#paths = {}
+#display2code={}
+#displayorder=[]
+#shellcommands = []
 
 # cmt-001 08/06/2003 - Create a pype configuration directory to store info
 default_homedir = os.path.dirname(os.path.abspath(__file__))

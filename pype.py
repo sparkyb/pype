@@ -42,7 +42,7 @@ from configuration import *
 
 if 1:
     #if so I can collapse the declarations
-    VERSION = "1.4.2"
+    VERSION = "1.5"
     VREQ = '2.4.1.2'
 
     import string
@@ -163,12 +163,25 @@ class MainWindow(wxFrame):
     def __init__(self,parent,id,title,fnames):
         wxFrame.__init__(self,parent,id, title, size = ( 800, 600 ),
                          style=wxDEFAULT_FRAME_STYLE|wxNO_FULL_REPAINT_ON_RESIZE)
+
+        #recent menu relocated to load configuration early on.
+        recentmenu = wxMenu()
+#--------------------------- cmt-001 - 08/06/2003 ----------------------------
+#----------------- Adds opened file history to the File menu -----------------
+        self.fileHistory = wxFileHistory()
+        self.fileHistory.UseMenu(recentmenu)
+        self.configPath = homedir
+        self.loadHistory()
+        EVT_MENU_RANGE(self, wxID_FILE1, wxID_FILE9, self.OnFileHistory)
+#------------------------- end cmt-001 - 08/06/2003 --------------------------
+
+
         self.CreateStatusBar() # A Statusbar in the bottom of the window
 
         self.split = wxSplitterWindow(self, -1)
         
         self.control = MyNB(self, -1, self.split)
-        self.snippet = CodeSnippet(self, -1, self.split)
+        self.snippet = CodeSnippet(self, -1, self.split, self.config['display2code'], self.config['displayorder'])
         
         self.split.SetMinimumPaneSize(1)
         self.split.SplitVertically(self.snippet, self.control, 1)
@@ -208,16 +221,6 @@ class MainWindow(wxFrame):
                   self.OnExit]
         lkp = dict(zip([ID_NEW,ID_OPEN,ID_OPENMODULE,ID_SAVE,ID_SAVEAS,ID_SAVEALL,ID_RELOAD,ID_CLOSE,ID_EXIT], zip(name, help, functs)))
         self.updateMenu(filemenu, [ID_NEW,ID_OPEN,ID_OPENMODULE,0,ID_SAVE,ID_SAVEAS,ID_SAVEALL,0,ID_RELOAD,ID_CLOSE,0,ID_EXIT], lkp)
-        recentmenu = wxMenu()
-
-#--------------------------- cmt-001 - 08/06/2003 ----------------------------
-#----------------- Adds opened file history to the File menu -----------------
-        self.fileHistory = wxFileHistory()
-        self.fileHistory.UseMenu(recentmenu)
-        self.configPath = homedir
-        self.loadHistory()
-        EVT_MENU_RANGE(self, wxID_FILE1, wxID_FILE9, self.OnFileHistory)
-#------------------------- end cmt-001 - 08/06/2003 --------------------------
         filemenu.InsertMenu(3, wxNewId(), "Open Recent", recentmenu)
 
 #--------------------------------- Edit Menu ---------------------------------
@@ -501,9 +504,9 @@ class MainWindow(wxFrame):
                 self.config[nam] = dflt
             globals()[nam] = self.config[nam]
         pathmarks.update(paths)
-        self.snippet.display2code = self.config['display2code']
-        self.snippet.displayorder = self.config['displayorder']
-        self.snippet.lb_refresh()
+        #self.snippet.display2code = self.config['display2code']
+        #self.snippet.displayorder = self.config['displayorder']
+        #self.snippet.lb_refresh()
         
     def saveHistory(self):
         history = []
@@ -624,11 +627,8 @@ class MainWindow(wxFrame):
     def OnOpen(self,e):
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
 # Set the working directory to the last directory used or current working directory if it doesn't exist 
-        if 'lastpath' in self.config:
-            wd = self.config['lastpath']
-            del self.config['lastpath']
-        else:
-            wd = os.getcwd()
+        wd = self.config.get('lastpath', os.getcwd())
+
 #--------------------------- end cmt-001 - 08/06/2003 ----------------------------
 
         dlg = wxFileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wxOPEN| wxMULTIPLE)  #- cmt-001 - 08/06/2003  changed os.getcwd to wd
@@ -662,7 +662,7 @@ class MainWindow(wxFrame):
             elif fdsc[1]:
                 pth[1:1] = [fdsc[1]]
             else:
-                raise Cancelled
+                raise cancelled
         #If we are outside the loop, this means that the current 'module'
         #that we are on is a folder-module.  We can easily load the __init__.py
         #from this folder.  Rock.
@@ -682,6 +682,8 @@ class MainWindow(wxFrame):
                 return self.dialog("module %s not found"%mod, "not found")
 
     def newTab(self, d, fn, switch=0):
+        if 'lastpath' in self.config:
+            del self.config['lastpath']
         split = wxSplitterWindow(self.control, -1)
         split.parent = self
         nwin = PythonSTC(self.control, -1, split)
@@ -786,6 +788,14 @@ class MainWindow(wxFrame):
         if x==y:
             lnstart = win.GetCurrentLine()
             lnend = lnstart
+            if incr < 0:
+                a = win.GetLineIndentation(lnstart)%(abs(incr))
+                if a:
+                    incr = -a
+            pos = win.GetCurrentPos()
+            col = win.GetColumn(pos)
+            linestart = pos-col
+            a = max(linestart+col+incr, linestart)
         else:
             lnstart = win.LineFromPosition(x)
             lnend = win.LineFromPosition(y-1)
@@ -794,6 +804,8 @@ class MainWindow(wxFrame):
             count = win.GetLineIndentation(ln)
             #print "indenting line", ln, count
             win.SetLineIndentation(ln, max(count+incr,0))
+        if x==y:
+            win.SetSelection(a, a)
         win.EndUndoAction()
     def OnIndent(self, e):
         wnum, win = self.getNumWin(e)
@@ -1074,6 +1086,8 @@ class MainWindow(wxFrame):
         globals()['showautocomp'] = self.config['showautocomp']
 #------------------------- Bookmarked Path Commands --------------------------
     def OnBookmark(self, e, st=type('')):
+        if 'lastpath' in self.config:
+            del self.config['lastpath']
         try:
             key = e.GetKeyCode()
             pth = pathmarks.get(key)
@@ -1187,6 +1201,7 @@ class MainWindow(wxFrame):
         pagecount = self.control.GetPageCount()
         if wnum > -1:
             win = self.control.GetPage(wnum).GetWindow1()
+            #print win.GetStyleAt(win.GetCurrentPos()-1), win.GetStyleAt(win.GetCurrentPos()), win.GetStyleAt(win.GetCurrentPos()+1)
             #if win.CallTipActive():
             #    win.CallTipCancel()
         if event.ShiftDown() and event.ControlDown():
@@ -1194,8 +1209,6 @@ class MainWindow(wxFrame):
                 self.snippet.OnSnippetP(event)
             elif key == ord('.'):
                 self.snippet.OnSnippetN(event)
-            else:
-                event.Skip()
         if event.ControlDown() and event.AltDown():
             #commands for both control and alt pressed
 
@@ -1206,8 +1219,7 @@ class MainWindow(wxFrame):
             elif key == ord('.'):
                 self.MoveRight(event)
             else:
-                event.Skip()
-
+                return event.Skip()
         elif event.ControlDown():
             #commands for just control pressed
             if key in self.ctrlpress:
@@ -1234,72 +1246,167 @@ class MainWindow(wxFrame):
                     win.MakeDirty()
                 self.SetStatusText("")
             except: pass
-
-            #when 'enter' is pressed, indentation needs to happen.
-            #
-            #will indent the current line to be equivalent to the line above
-            #unless a ':' is at the end of the previous, then will indent
-            #configuration.indent more.
-            if (key==13):
-                if pagecount:
+            if pagecount:
+                if (key==13):
+                    #when 'enter' is pressed, indentation needs to happen.
+                    #
+                    #will indent the current line to be equivalent to the line above
+                    #unless a ':' is at the end of the previous, then will indent
+                    #configuration.indent more.
                     if win.AutoCompActive():
                         return win.AutoCompComplete()
                     #get information about the current cursor position
-                    ln = win.GetCurrentLine()
+                    linenum = win.GetCurrentLine()
+                    line = win.GetLine(linenum)
                     pos = win.GetCurrentPos()
                     col = win.GetColumn(pos)
-                    
+                    linestart = pos-col
+
                     #get info about the current line's indentation
-                    ind = win.GetLineIndentation(ln)
+                    ind = win.GetLineIndentation(linenum)
                     
                     if col <= ind:
                         win.ReplaceSelection(win.format+col*' ')
                     elif pos:
-                        if (win.GetCharAt(pos-1) == 58):
+                        xtra = 0
+                        if (line.find(':')>-1):
+                            for i in xrange(linestart, min(pos+1, win.GetTextLength()-1)):
+                                styl = win.GetStyleAt(i)
+                                if not xtra:
+                                    if (styl==10) and (win.GetCharAt(i) == ord(':')):
+                                        xtra = 1
+                                elif (styl == 1):
+                                    #it is a comment, ignore the character
+                                    pass
+                                elif (styl == 0) and (win.GetCharAt(i) in [ord(i) for i in ' \t\r\n']):
+                                    #is not a comment, but is the space before a comment
+                                    #or the end of a line, ignore the character
+                                    pass
+                                else:
+                                    #this is not a comment or some innocuous other character
+                                    #this is a docstring or otherwise, no additional indent
+                                    xtra = 0
+                                    break
+                            if xtra:
+                                #This deals with ending single and multi-line definitions properly.
+                                while linenum >= 0:
+                                    line = win.GetLine(linenum)
+                                    found = -1
+                                    for i in ['def', 'class', 'if', 'while', 'for']:
+                                        #'elif' is found while searching for 'if'
+                                        a = line.find(i)
+                                        if (a > -1):
+                                            if (found > -1):
+                                                if (a < found):
+                                                    found = a
+                                            else:
+                                                found = a
+                                    if (found > -1) and\
+                                       (win.GetStyleAt(win.GetLineEndPosition(linenum)-len(line)+found)==0) and\
+                                       (win.GetLineIndentation(linenum) == found):
+                                           ind = win.GetLineIndentation(linenum)
+                                           break
+                                    linenum -= 1
+                        #if we were to do indentation for ()[]{}, it would be here
+                        if not xtra:
+                            #yep, right here.
+                            fnd = 0
+                            for i in "(){}[]":
+                                if (line.find(i) > -1):
+                                    fnd = 1
+                                    break
+                            if fnd:
+                                seq = []
+                                #print "finding stuff"
+                                for i in "(){}[]":
+                                    a = line.find(i)
+                                    start = 0
+                                    while a > -1:
+                                        start += a+1
+                                        if win.GetStyleAt(start+linestart-1)==10:
+                                            seq.append((start, i))
+                                        a = line[start:].find(i)
+                                seq.sort()
+                                cl = {')':'(', ']': '[', '}': '{',
+                                      '(':'',  '[': '',  '{': ''}
+                                stk = []
+                                #print "making tree"
+                                for po, ch in seq:
+                                    #print ch,
+                                    if not cl[ch]:
+                                        #standard opening
+                                        stk.append((po, ch))
+                                    elif stk:
+                                        if cl[ch] == stk[-1][1]:
+                                            #proper closing of something
+                                            stk.pop()
+                                        else:
+                                            #probably a syntax error
+                                            #does it matter what is done?
+                                            stk = []
+                                            break
+                                    else:
+            #Probably closing something on another line, should probably find
+            #the indent level of the opening, but that looks to be a hard
+            #problem, and multiple lines would need to be checked for the
+            #location of the closing item.
+            #This would require an incremental line-by-line stepping back.
+            #Almost like what was done for ['def', 'class', 'if', 'while', 'for']
+            #and ':'.  However, there is no guarantee that there is a proper
+            #start, and we could end up parsing the entire file...a few times
+            #over.  Incremental backwards things end up doing worst case
+            #O(n^2) line parsings.
+            #Fuck that.
+            #People can use the improved single-line dedent with crtl+[.
+                                        stk = []
+                                        break
+                                if stk:
+                                    #print "stack remaining", stk
+                                    ind = stk[-1][0]
+                        if xtra:
                             ind += indent
                         win.ReplaceSelection(win.format+ind*' ')
                     else:
                         win.ReplaceSelection(win.format)
-                    chrs = ''
-                    for i in xrange(3):
-                        chrs += chr(win.GetCharAt(pos+i))
+                    #chrs = ''
+                    #for i in xrange(3):
+                    #    chrs += chr(win.GetCharAt(pos+i))
                     #print repr(win.format), repr(chrs)
                     #win.SetLineIndentation(ln, ind)
                 else:
-                    return event.skip()
-            elif pagecount:
-                if win.CallTipActive():
-                    good = {}
-                    for i in STRINGPRINTABLE:
-                        good[ord(i)] = None
-                    if (key in good) or (key in (WXK_SHIFT, WXK_CONTROL)):
-                        if key in (48, 57) and event.ShiftDown():
-                            win.CallTipCancel()
-                        #else it is something in the arguments that is OK.
-                    else:
-                        win.CallTipCancel()
-                if (not win.CallTipActive()) and event.ShiftDown() and (key == ord('9')):
-                    win.CallTipSetBackground(wxColour(255, 255, 232))
-                    cur, colpos, word = self.getLeftFunct(win)
-                    tips = win.tooltips.get(word, [])
-                    tip = '\n'.join(tips)
-                    if tip:
-                        win.CallTipShow(win.GetCurrentPos(),tip)
-                elif showautocomp and (not win.AutoCompActive()) and (ord('A') <= key) and (key <= ord('Z')):
-                    #if win.CallTipActive():
-                    #    win.CallTipCancel()
-                    cur, colpos, word = self.getLeftFunct(win)
-                    indx = win.kw.find(word)
-                    if (not word) or ((indx > -1) and ((win.kw[indx-1] == ' ') or (indx==0))):
-                        win.AutoCompSetIgnoreCase(False)
-                        win.AutoCompShow(colpos-cur, win.kw)
-                event.Skip()
+                    event.Skip()
+                    if not (win.GetStyleAt(win.GetCurrentPos())):
+                        #3, 13, 6, 7
+                        if win.CallTipActive():
+                            good = {}
+                            for i in STRINGPRINTABLE:
+                                good[ord(i)] = None
+                            if (key in good) or (key in (WXK_SHIFT, WXK_CONTROL)):
+                                if key in (48, 57) and event.ShiftDown():
+                                    win.CallTipCancel()
+                                #else it is something in the arguments that is OK.
+                            else:
+                                win.CallTipCancel()
+                        if (not win.CallTipActive()) and event.ShiftDown() and (key == ord('9')):
+                            win.CallTipSetBackground(wxColour(255, 255, 232))
+                            cur, colpos, word = self.getLeftFunct(win)
+                            tip = '\n'.join(win.tooltips.get(word, []))
+                            if tip:
+                                win.CallTipShow(win.GetCurrentPos(),tip)
+                        elif showautocomp and bool(win.kw) and (not win.AutoCompActive()) and (ord('A') <= key) and (key <= ord('Z')):
+                            #if win.CallTipActive():
+                            #    win.CallTipCancel()
+                            cur, colpos, word = self.getLeftFunct(win)
+                            indx = win.kw.find(word)
+                            if (not word) or ((indx > -1) and ((win.kw[indx-1] == ' ') or (indx==0))):
+                                win.AutoCompSetIgnoreCase(False)
+                                win.AutoCompShow(colpos-cur, win.kw)
             else:
                 return event.Skip()
 
     def getLeftFunct(self, win):
         t = ' .,;:([)]}\'"\\<>%^&+-=*/|`'
-        bad = dict(zip(t, range(len(t))))
+        bad = dict(zip(t, [0]*len(t)))
         line = win.GetLine(win.GetCurrentLine())
         colpos = win.GetColumn(win.GetCurrentPos())
         cur = colpos-1
@@ -1682,7 +1789,7 @@ class TextDropTarget(wxTextDropTarget):
         return False
 
 class CodeSnippet(wxPanel):
-    def __init__(self, parent, id, pparent):
+    def __init__(self, parent, id, pparent, display2code, displayorder):
         wxPanel.__init__(self, pparent, id)
         self.parent = parent
 
@@ -1814,7 +1921,6 @@ class RunShell(wxMenu):
         for i in shellcommands:
             apply(self.appendShellCommand, i)
         
-        self.menu
         self.dirty = 0
 
         self.cnt = 6
@@ -1994,7 +2100,7 @@ class RunShell(wxMenu):
 class HeirCodeTreePanel(wxPanel):
     class TreeCtrl(wxTreeCtrl):
         def __init__(self, parent, prnt, tid):
-            wxTreeCtrl.__init__(self, prnt, tid, style=wxTR_DEFAULT_STYLE|wxTR_HIDE_ROOT|wxTR_HAS_BUTTONS)
+            wxTreeCtrl.__init__(self, prnt, tid, style=wxTR_DEFAULT_STYLE|wxTR_HAS_BUTTONS|wxTR_HIDE_ROOT)
             self.parent = parent
             
             isz = (16,16)
@@ -2009,6 +2115,28 @@ class HeirCodeTreePanel(wxPanel):
 
         def OnCompareItems(self, item1, item2):
             return cmp(self.GetItemData(item1).GetData(), self.GetItemData(item2).GetData())
+        
+        def GetRootItem(self):
+            return self.root
+
+        def getchlist(self, parent):
+            #when using ItemHasChildren(parent)
+            #an assert exception saying "can't retrieve virtual root item"
+            #kept coming up.
+            #for some reason GetChildrenCount(parent, 0) doesn't.
+            numchildren = self.GetChildrenCount(parent, 0) 
+            lst = {}
+            if numchildren>0:
+                ch, cookie = self.GetFirstChild(parent, wxNewId())
+                lst[self.GetItemText(ch)] = [ch]
+                for i in xrange(numchildren-1):
+                    ch, cookie = self.GetNextChild(parent, cookie)
+                    txt = self.GetItemText(ch)
+                    if txt in lst:
+                        lst[txt].append(ch)
+                    else:
+                        lst[txt] = [ch]
+            return lst
 
     def __init__(self, parent, prnt):
         # Use the WANTS_CHARS style so the panel doesn't eat the Return key.
@@ -2020,30 +2148,46 @@ class HeirCodeTreePanel(wxPanel):
         tID = wxNewId()
 
         self.tree = self.TreeCtrl(parent, self, tID)
+        self.root = self.tree.AddRoot("Unseen Root")
+        self.tree.root = self.root
 
         #self.tree.Expand(self.root)
         EVT_LEFT_DCLICK(self, self.OnLeftDClick)
         EVT_TREE_ITEM_ACTIVATED (self, tID, self.OnActivate)
 
     def new_heirarchy(self, heir):
-        self.tree.DeleteAllItems()
-        root = [self.tree.AddRoot("Unseen Root")]
-        stk = [heir]
+        #self.tree.DeleteAllItems()
+        root = [self.root]
+        stk = [(self.tree.getchlist(self.root), heir)]
         while stk:
-            cur = stk.pop()
+            chlist, cur = stk.pop()
             while cur:
                 name, line_no, leading, children = cur.pop()
-                item_no = self.tree.AppendItem(root[-1], name)
-                self.tree.SetPyData(item_no, line_no)
-                if children:
-                    self.tree.SetItemImage(item_no, 0, wxTreeItemIcon_Normal)
-                    self.tree.SetItemImage(item_no, 1, wxTreeItemIcon_Expanded)
-                    stk.append(cur)
-                    root.append(item_no)
-                    cur = children
+                if name in chlist:
+                    item_no = chlist[name].pop()
+                    if not chlist[name]:
+                        del chlist[name]
+                    self.tree.SetPyData(item_no, line_no)
+                    icons = 0
                 else:
+                    item_no = self.tree.AppendItem(root[-1], name)
+                    self.tree.SetPyData(item_no, line_no)
+                    icons = 1
+                if children:
+                    if icons:
+                        self.tree.SetItemImage(item_no, 0, wxTreeItemIcon_Normal)
+                        self.tree.SetItemImage(item_no, 1, wxTreeItemIcon_Expanded)
+                    stk.append((chlist, cur))
+                    root.append(item_no)
+                    chlist = self.tree.getchlist(item_no)
+                    cur = children
+                elif icons:
                     self.tree.SetItemImage(item_no, 2, wxTreeItemIcon_Normal)
                     self.tree.SetItemImage(item_no, 2, wxTreeItemIcon_Selected)
+            for j in chlist.itervalues():
+                for i in j:
+                    self.tree.DeleteChildren(i)
+                    self.tree.Delete(i)
             self.tree.SortChildren(root[-1])
             root.pop()
 

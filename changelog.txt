@@ -1,3 +1,39 @@
+(PyPE 1.5)
+(fixed) a little problem when finding line endings in some ambiguous files.
+Ambiguous files being files lacking any sort of line endings.
+(fixed) autocompletion popping up during typing in strings and comments.  Now
+it doesn't.  It would before.  A single line change.
+(removed) keywords from the autocomplete stuff.  Why?  Because having to hit
+return twice for the keywords [raise, return, pass] was annoying as hell.
+(removed) duplicate "import keyword" statement in parsers.slow_parser
+(fixed) autoindentation after a definition works better.  Not quite as good as
+idle yet, but getting there.
+(fixed) remember when you would hit 'F5' with the browsable source tree
+expanded and it would remove all your expansions?  This was due to clearing
+and reconstructing the tree.  Due to a user asking, "could you stop this",
+I've altered PyPE to remove this bulk clear and reconstruction.  It now
+updates the data as necessary, only removing or adding nodes as needed.  It is
+nifty.
+(fixed) with the introduction of the 'remember the last path that was open'
+when starting up PyPE again functionality, it introduced a bug.  If one
+attempted to use a pathmark or use the recently opened documents menu, it
+wouldn't clear the last open path.  This has now been remedied.  Any time you
+open a document using the recent menu, or use a pathmark, it will now change
+it properly (instead of forcing you to hit 'cancel' in the open dialog, then
+try to open again).  In other words, it works like you expect it to now.
+(stymied) Autoindent like idle does is going to be hard.  This is because idle
+actually does a large amount of parsing.  I have a feeling this is why it is
+sometimes sluggish.  I could be wrong.
+(good enough) I think the current autoindent code works just fine for most
+things.  It certainly isn't as complete as idle, but I think it would be out
+of line for the entire document to be parsed at every newline insertion.
+Unless the need bites me, I'm not going to insert dedent code for [raise,
+return, pass]
+(fixed) Dedenting on a single line will now keep your cursor in the original
+relative position to the remaining of the line.  It will also remove partial
+indentations before removing a full indentation.
+
+
 (PyPE 1.4.2)
 (fixed) some stupid bugs with loading and saving of history/pathmarks/shell
 commands into history.txt.  Sorry about that.  The 1.4 series of PyPE has

@@ -3,12 +3,14 @@ import time
 import compiler
 from compiler.ast import Function, Class
 import keyword
+import os
+eol = os.linesep
 
-def new_kwl():
-    kwl = {}
-    for i in keyword.kwlist:
-        kwl[i] = []
-    return kwl
+#def new_kwl():
+#    kwl = {}
+#    for i in keyword.kwlist:
+#        kwl[i] = []
+#    return kwl
 
 def detectLineEndings(text):
     crlf_ = text.count('\r\n')
@@ -59,15 +61,14 @@ def recur_compiled(obj, heir, lines):
     return out, docstring
 
 def slow_parser(source, line_ending, flat=0):
-    import keyword
-    docstring = new_kwl()
+    #docstring = new_kwl()
 
     lines = source.split(line_ending)
     mod = compiler.parse(source)
-    heir, ds = recur_compiled(mod, [], lines)
-    for nam, dsl in ds.iteritems():
-        if nam in docstring: docstring[nam].extend(dsl)
-        else: docstring[nam] = dsl
+    heir, docstring = recur_compiled(mod, [], lines)
+    #for nam, dsl in ds.iteritems():
+    #    if nam in docstring: docstring[nam].extend(dsl)
+    #    else: docstring[nam] = dsl
     new_ds = {}
     for i,j in docstring.iteritems():
         #pulling out all the unused ones
@@ -88,7 +89,7 @@ def leading(line):
 
 def fast_parser(source, line_ending, flat=0):
     lines = source.replace('\t', 8*' ').split(line_ending)
-    docstring = new_kwl()
+    docstring = {} #new_kwl()
     
     out = []
     stk = []
