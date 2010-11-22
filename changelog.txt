@@ -1,4 +1,12 @@
-﻿
+﻿#-------------------------------- PyPE 2.9.1 ---------------------------------
+(changed) I have relicensed wxWindows and LGPL v2 code as GPL v2, as is
+allowed in both licenses.  I have removed the relevant wxwindows.txt and
+lgpl.txt files from the distribution.
+(changed) the source release no longer contains the MS VC 9.0 redistributable.
+(not changed) everything else
+
+
+
 #--------------------------------- PyPE 2.9 ----------------------------------
 (fixed) another bug related to realtime parsing.
 (fixed) typo in stc-styles.rc.cfg that is shipped with PyPE that can cause
@@ -113,6 +121,8 @@ documents tab.
 of the documents tab.
 (added) drag and drop along the notebook tab list.
 (fixed) accidental document list borkage.
+(updated) license information in files.
+
 
 
 #-------------------------------- PyPE 2.8.8 ---------------------------------

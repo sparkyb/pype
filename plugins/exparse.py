@@ -11,8 +11,9 @@ returned in order also.
 July 25, 2006
 Adapted from Synopsis package:
 http://synopsis.fresco.org/viewsvn/Synopsis/trunk/Synopsis/Parsers/Python/exparse.py?rev=187&view=markup
-...which is LGPL v2 licensed:
+...which  was originally LGPL v2 licensed:
 http://synopsis.fresco.org/viewsvn/Synopsis/trunk/COPYING?rev=974&view=markup
+...which I have relicensed as GPL v2, as is allowed by the LGPL v2.
 """
 
 import compiler

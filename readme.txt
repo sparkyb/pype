@@ -29,17 +29,17 @@ It is also included with this archive as `gpl.txt <gpl.txt>`_.
 
 The portions of STCStyleEditor.py included in StyleSetter.py, which is used to
 support styles, was released under the wxWindows license and is copyright (c)
-2001 - 2002 Riaan Booysen.  The wxWindows license and the LGPL license it
-references are included with this software as `wxwindows.txt <wxwindows.txt>`_
-and `lgpl.txt <lgpl.txt>`_.
+2001 - 2002 Riaan Booysen.
+
+Any software that was originally licensed as wxWindows or LGPL v2 I have
+relicensed as GPL v2 as is allowed under both the wxWindows and LGPL licenses.
 
 The included stc-styles.rc.cfg was modified from the original version in order
 to not cause exceptions during style changes, as well as adding other language
 style definitions, and was originally distributed with wxPython version
 2.4.1.2 for Python 2.2 .
 
-If you do not also receive a copy of `gpl.txt <gpl.txt>`_,
-`wxwindows.txt <wxwindows.txt>`_, and `lgpl.txt <lgpl.txt>`_ with your version
+If you do not also receive a copy of `gpl.txt <gpl.txt>`_, with your version
 of this software, please inform me of the violation at either web page at the
 top of this document.
 
