@@ -716,6 +716,7 @@ class FindInFiles(wx.Panel):
             self.root.control.SetSelection(a)
         else:
             self.root.OnDrop([file], 1)
+        wx.Yield()
         a = self.root.control.GetSelection()
         if a > -1:
             line -= 1
@@ -739,8 +740,13 @@ class FindInFiles(wx.Panel):
                 if stc.format == '\r\n':
                     #handle line ending fixing
                     end += grp.group().count('\n')
-            stc.SetSelection(start, end)
             stc.SetFocus()
+            line = stc.LineFromPosition((start+end)//2)
+            stc.GotoLine(line)
+            stc.SetSelection(start, end)
+            stc.EnsureVisible(line)
+            stc.EnsureCaretVisible()
+                        
 
     def OnDirButtonClick(self, e):
         dlg = wx.DirDialog(self, "Choose a directory", style=wx.DD_DEFAULT_STYLE)

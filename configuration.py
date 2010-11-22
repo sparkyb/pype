@@ -96,26 +96,29 @@ default_homedir = os.path.dirname(os.path.abspath(__file__))
 if hasattr(sys, 'frozen'):
     default_homedir = os.path.split(default_homedir)[0]
 
-try:
-    #all user-based OSes
-    thd = os.path.expanduser("~")
-    if thd == "~": raise
-    homedir = os.path.join(thd, ".pype")
-except:
+if hasattr(_pype, '_standalone'):
+    homedir = os.path.join(default_homedir, ".pype")
+else:
     try:
-        #*nix fallback
-        homedir = os.path.join(os.environ['HOME'], ".pype")
+        #all user-based OSes
+        thd = os.path.expanduser("~")
+        if thd == "~": raise
+        homedir = os.path.join(thd, ".pype")
     except:
         try:
-            #windows NT,2k,XP,etc. fallback
-            homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
+            #*nix fallback
+            homedir = os.path.join(os.environ['HOME'], ".pype")
         except:
             try:
-                #windows NT,2k,XP,etc. fallback #2
-                homedir = os.path.join(os.environ['HOMEDRIVE'], os.environ['HOMEPATH'], ".pype")
+                #windows NT,2k,XP,etc. fallback
+                homedir = os.path.join(os.environ['USERPROFILE'], ".pype")
             except:
-                #What os are people using?
-                homedir = os.path.join(default_homedir, ".pype")
+                try:
+                    #windows NT,2k,XP,etc. fallback #2
+                    homedir = os.path.join(os.environ['HOMEDRIVE'], os.environ['HOMEPATH'], ".pype")
+                except:
+                    #What os are people using?
+                    homedir = os.path.join(default_homedir, ".pype")
 try:
     # create the config directory if it
     # doesn't already exist
@@ -137,8 +140,7 @@ try:
     if not os.path.exists(homedir):
         os.mkdir(homedir)
 except:
-    #print "unable to create config directory", homedir
-    homedir = default_homedir
+    raise Exception("Unable to create config directory: %r"%(homedir))
 
 for fil in os.listdir(homedir):
     if fil.find('.tmp.') > -1:

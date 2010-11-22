@@ -8,7 +8,19 @@ from findinfiles import FoundTable
 class vTodo(FoundTable):
     def OnGetItemText(self, item, col):
         return "%s" % (self.data[item][col],)
-
+    
+    def SortItems(self, *args, **kwargs):
+        # Override listctrl mixin
+        col=self._col
+        ascending = self._colSortFlag[col]
+        
+        if ascending:
+            fcn = lambda a,b:cmp(a[col], b[col])
+        else:
+            fcn = lambda a,b:-cmp(a[col], b[col])
+        
+        self.data.sort(fcn)
+        self.Refresh()
 
 columns = (
     (0, "Category", 100, 0),

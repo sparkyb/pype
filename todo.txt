@@ -123,4 +123,35 @@ Fix Shells for Mac
 * Transition completely to wx namespace
 * Add "Ignore Dotted Directories" to Search tab.
 * Fix "wrap try/except/finally"
+* --standalone command line option for flash drive distributions.
 
+2.7/2.8:
+* Add support for reading the following Vim options from the beginning/end of
+* files that do not currently have a 'history':
+    * cursorline, cul, nocursorline, nocul (Highlight Current Line)
+    * expandtab, et, noexpandtab, noet (Use Tabs)
+    * shiftwidth, sw (Set Indent Width)
+    * softtabstop, sts (Set Indent Width) (shiftwidth preferred)
+    * tabstop, ts (Set Tab Width)
+Add "Vim smartcase" and support for the Vim option:
+    smartcase, scs, nosmartcase, noscs
+    This forces "match case" when capital letters are inserted into findbar
+    searches.
+Add support in the future for:
+    ignorecase, ic, noignorecase, noic (Match Case)
+        delayed because it requires faking a findbar state
+
+* Fix memory leak in long term linux use
+* Switch to single timer instance for all subshells
+* Check keybindings on linux macro hotkeys
+    * Known issue: Ctrl + F* hotkeys don't work in Kubuntu
+    * They work fine in Xubuntu
+* Check "run document" macro on linux
+    * Replaced "run document" macro with "File -> Run Current File" menu item.
+Try to reproduce/fix cut/copy issue on linux
+    Cannot replicate in Kubuntu
+    Cannot replicate in Xubuntu
+    Cannot replicate in Windows
+    Could be wxPython version issue, awaiting response from user
+
+Add "split document" ability, perhaps to the bottom/top toolbar.

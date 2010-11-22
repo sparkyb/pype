@@ -15,6 +15,8 @@ class OnCloseBar: #embedded callback to destroy the findbar on removal
 word = dict.fromkeys(map(ord, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'))
 non_word = dict.fromkeys([chr(i) for i in xrange(256) if i not in word])
 
+MEM_LEAK_TEST = 0
+
 class ReplaceBar(wx.Panel):
     def __init__(self, parent, root):
         #init the object
@@ -30,6 +32,10 @@ class ReplaceBar(wx.Panel):
         self.buttons = []
         self.replacing = 0
         self.wholeword = 0
+        
+        self.replace_t = wx.Timer(self, wx.NewId())
+        self.Bind(wx.EVT_TIMER, self._replace_again1)
+        self._replace_args = None
         
         prefs = self.readPreferences()
         self.setup()
@@ -412,7 +418,7 @@ class ReplaceBar(wx.Panel):
         ostart, oend = win.GetSelection()
         
         #ris = self.replinsel.GetValue()
-        win.BeginUndoAction()
+        if not MEM_LEAK_TEST: win.BeginUndoAction()
         if ris:
             win.SetSelection(ostart, ostart)
         else:
@@ -462,16 +468,31 @@ class ReplaceBar(wx.Panel):
         else:
             cont = 0
         
+        if MEM_LEAK_TEST:
+            win.EmptyUndoBuffer()
+        
         if cont:
-            wx.FutureCall(1, self.ReentrantReplace, (ostart, oend, ris, win))
+            if MEM_LEAK_TEST:
+                wx.FutureCall(1, self.ReentrantReplace, (ostart, oend, ris, win))
+            else:
+                self._replace_again2((ostart, oend, ris, win))
         else:
             self.replacing = 0
             self.sel(ostart, oend, '', win)
             if self.root.control.GetPageCount() and \
                self.root.control.GetCurrentPage() == self.parent:
                 win.SetFocus()
-            win.EndUndoAction()
-
+            if not MEM_LEAK_TEST:
+                win.EndUndoAction()
+    
+    def _replace_again1(self, evt):
+        self._replace_args, args = None, self._replace_args
+        self.ReentrantReplace(args)
+    
+    def _replace_again2(self, args):
+        self._replace_args = args
+        self.replace_t.Start(1, wx.TIMER_ONE_SHOT)
+    
     def OnReplaceAll(self, evt):
         if self.replacing:
             return

@@ -33,7 +33,9 @@ import new
 import os
 import stat
 from codeop import compile_command
+import parser
 import atexit
+import heapq
 try:
     import _winreg
 except:
@@ -41,6 +43,7 @@ except:
 
 
 import wx
+import time
 import traceback
 from wx import stc
 from wx.py.editwindow import FACES
@@ -241,7 +244,7 @@ CopyWithPromptsPrefixed _clip OnHistorySearch'''.split()
 
 pypecopy = '''
 GetSaveState jump GetText SetText Undo Redo changeStyle pos_ch OnUpdateUI
-do'''.split()
+do indicate_text gotcharacter _gotcharacter'''.split()
 pypeprefix = '''SetSaveState'''.split()
 
 python_cmd = '''%s -u -c "import sys;sys.stderr=sys.__stderr__=\
@@ -271,6 +274,37 @@ if 'win' not in sys.platform:
     #non-windows platforms should have a working signal implementation
     killsteps.append('SIGINT')
 
+
+fc = []
+
+def FutureCall(delay, fcn, *args, **kwargs):
+    heapq.heappush(fc, (time.time()+delay/1000.0, fcn, args, kwargs))
+
+instances = []
+
+def poll_all(arg=None):
+    j = 0
+    while j < len(instances):
+        i = instances[j]
+        try:
+            i.root
+        except:
+            del instances[j]
+        else:
+            j += 1
+            try:
+                i.OnPoll()
+            except:
+                traceback.print_exc()
+    
+    tt = time.time()
+    while fc and fc[0][0] < tt:
+        _, fcn, args, kwargs = heapq.heappop(fc)
+        try:
+            fcn(*args, **kwargs)
+        except:
+            traceback.print_exc()
+
 class MyShell(stc.StyledTextCtrl):
     if 1:
         dirty = 0
@@ -292,6 +326,10 @@ class MyShell(stc.StyledTextCtrl):
         self.root = root
         self.parent = parent
         self.filter = filter==1
+        if filter:
+            self.lexer = 'python'
+        else:
+            self.lexer = 'text'
         self._config()
         self.promptPosEnd = 0
         for i in unimplemented:
@@ -299,7 +337,6 @@ class MyShell(stc.StyledTextCtrl):
         self.restartable = filter != 3
         self.restart = not self.restartable
         self.more = False
-        self.Restart(None)
         for name in cpy:
             setattr(self, name, new.instancemethod(getattr(Shell, name).im_func, self, self.__class__))
         
@@ -323,13 +360,26 @@ class MyShell(stc.StyledTextCtrl):
         self.queue = []
         self.expect = ''
         self.waiting_for = 0
-        wx.FutureCall(pushlines_t, self.pushlines)
-        wx.FutureCall(poll_t, self.OnPoll)
         self.MakeClean = self.MakeDirty
         self.noteMode = 0
         ## wx.stc.StyledTextCtrl.SetText(self, "def foo():\n...     pass")
         if sys.platform not in workingplatforms and self.filter == 0 and self.restartable:
             self.write(osxshellmessage)
+        self.has_bad = 0
+        self.recording = 0
+        self.lastparse = 50
+        self.lastparse2 = 100
+        self.m1 = None
+        self.m2 = None
+        
+        self.Restart(None)
+        instances.append(self)
+                
+        ## wx.FutureCall(pushlines_t, self.pushlines)
+        ## wx.FutureCall(poll_t, self.OnPoll)
+    
+    def _gotcharacter2(self, e=None):
+        pass
     
     def _config(self):
         self.setStyles(FACES)
@@ -464,7 +514,8 @@ class MyShell(stc.StyledTextCtrl):
     def OnPoll(self, evt=None):
         if hasattr(self, 'remote'):
             self.real_poll('')
-        wx.FutureCall(poll_t, self.OnPoll)
+        self.pushlines()
+        ## wx.FutureCall(poll_t, self.OnPoll)
     def push(self, command, remember=1):
         if remember:
             c = command
@@ -530,16 +581,7 @@ class MyShell(stc.StyledTextCtrl):
         self.promptPosEnd += ld
         
         if __name__ != '__main__':
-            indic = __main__.SHELL_NUM_TO_INDIC[__main__.SHELL_OUTPUT]
-            if indic != None:
-                style = self.GetEndStyled()
-                
-                self.StartStyling(lp, stc.STC_INDIC2_MASK)
-                self.SetStyling(ld, stc.STC_INDIC2_MASK)
-                self.IndicatorSetStyle(2, indic)
-                self.IndicatorSetForeground(2, __main__.SHELL_COLOR)
-                
-                self.StartStyling(style, stc.STC_INDIC2_MASK^0xff)
+            self.indicate_text(lp, ld, 1)
         
         x = 0
         
@@ -572,7 +614,7 @@ class MyShell(stc.StyledTextCtrl):
         
         self.promptPosEnd -= x
         self.SetSelection(s+ld-x, e+ld-x)
-    
+        
     def processLine(self):
         thepos = self.GetCurrentPos()
         startpos = self.promptPosEnd
@@ -697,10 +739,10 @@ class MyShell(stc.StyledTextCtrl):
             self.restart = 1
             if self.restartable:
                 ## print "restartable!"
-                wx.FutureCall(100, self._Restart, evt)
+                FutureCall(100, self._Restart, evt)
             else:
                 ## print "not restartable"
-                wx.FutureCall(100, self._close, evt)
+                FutureCall(100, self._close, evt)
         else:
             ## print "tried to close!"
             self._close(evt)
@@ -760,6 +802,7 @@ class MyShell(stc.StyledTextCtrl):
         # Prevent modification of previously submitted
         # commands/responses.
         if not self.CanEdit():
+            print "can't edit!"
             return
         key = GetKeyCode(event)
         # Return (Enter) needs to be ignored in this handler.
@@ -768,6 +811,8 @@ class MyShell(stc.StyledTextCtrl):
         else:
             # Allow the normal event handling to take place.
             event.Skip()
+            if self.filter and __name__ != '__main__':
+                self.gotcharacter
     
     def _kill_me(self):
         self.clearCommand()
@@ -808,17 +853,19 @@ class MyShell(stc.StyledTextCtrl):
             wx.PostEvent(self, a)
         else:
             event.Skip()
+        if self.filter and __name__ != '__main__':
+            self.gotcharacter
 
-    def getcmd(self):
-        thepos = self.GetCurrentPos()
+    def getcmd(self, ue=1):
         startpos = self.promptPosEnd
         endpos = self.GetTextLength()
         
         ps2 = str(sys.ps2)
-
-        self.SetCurrentPos(endpos)
-        self.promptPosEnd = endpos
-        self.more = 0
+        
+        if ue:
+            self.SetCurrentPos(endpos)
+            self.promptPosEnd = endpos
+            self.more = 0
         command = self.GetTextRange(startpos, endpos)
         return '\n'.join(command.split(os.linesep + ps2))
 
@@ -859,7 +906,7 @@ class MyShell(stc.StyledTextCtrl):
             self.AddText(x.rstrip('\r\n'))
             if x[-1:] == '\n':
                 self.processLine()
-        wx.FutureCall(pushlines_t, self.pushlines)
+        ## wx.FutureCall(pushlines_t, self.pushlines)
     def MakeDirty(self, e=None):
         f = self.filename
         if f == ' ':
@@ -892,6 +939,8 @@ class MyShellFrame(wx.Frame):
         self.GetStatusBar().SetStatusWidths([-1, 95])
         # Override the shell so that status messages go to the status bar.
         self.shell.setStatusText = self.SetStatusText
+    def _activity(self):
+        pass
 
 def main():
     app = wx.App(0)

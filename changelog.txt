@@ -1,10 +1,82 @@
+#--------------------------------- PyPE 2.8 ----------------------------------
+(changed) reorganized some of the options menu to make more sense and to fit
+on 800x600 resolution screens.  If you have any hotkeys defined, you may need
+to define them again.
+(fixed) situation where some timer-based events would occur more often than
+they should due to a bug in wxPython 2.6 wx.Timer instances.
+(added) tracking of how long the user has used PyPE (not just the program
+being open, but of it actually being interacted with).  You can discover how
+long you have used PyPE in Help -> About.
+(fixed) macro recording where recording a macro that included a paste without
+smartpaste enabled would include two paste actions in the resulting macro.
+(added) --standalone command line option to allow for saving PyPE's persistent
+state information in the same path as PyPE, allowing for the "portable"
+distribution of PyPE to be carried around on a flash drive, for example.
+(fixed) autocomplete inside class bodies and outside methods.
+(fixed) autocomplete and calltips when using tabs.
+(fixed) problem where PyPE would not remember how wide or tall the tools were
+if they were hidden when PyPE closed.
+(fixed) when swapping the position of the tools and editor (Editor on Top, and
+Editor on Left toggling), PyPE will now preserve editor and tool size.
+(fixed) opening a document in OSX could sometimes cause an exception even if
+the file was opened properly.
+(added) "Save Copy As" functionality to the File menu.
+(added) tabs to spaces and spaces to tabs conversion to the Transforms menu.
+(added) the reading and using of the Vim options cul, nocul, et, noet, sw,
+sts, ts, and their aliases (including 'inv' prefix or '!' suffix for toggles
+and both '=' and ':' assignment operators for values) for files that are first
+opened.
+(changed) made the 'subsequence' search for the Filter tool much faster.
+(added) support for displaying labels created with
+"Transforms -> Insert Comment" in the "Name", "Line", and "Filter" tools.
+This works similarly to such entries in SPE (see help for more information).
+(added) relevant label documentation.
+(changed) PyPE now remembers which entries were expanded, folded, selected,
+and the first visible item (if it persists) after the Name or Line tools have
+been refreshed (via Document -> Refresh).
+(changed) added support for mixed-case encoding directives.
+(changed) renamed 'Options -> Shell' to 'Options -> Shell Output'.
+(fixed) issue with macros and shells.
+(added) optional "real time" syntax check with error highlight and tool
+refresh.  See "Options -> Realtime Options" and the help for more information.
+(fixed) todo sorting.
+(fixed) unnecessary debug printout when all documents have been closed.
+(fixed) all shells are now polled with a single wx.Timer instance.  In
+previous versions of PyPE, interpreters used wx.FutureCall instances to poll
+themselves, which may have caused a memory leak on some platforms.
+(fixed) the replace bar's "Replace All" button used to use wx.FutureCall to
+handle re-calling itself so that PyPE could remain responsive while replacing
+was going on.  wx.FutureCall use has been replaced by one timer instance per
+find/replace bar.  This may fix a memory leak on platforms that used the
+replace all button for a large number of replacements.
+(fixed) the Search tab will now expand folded code as necessary to make any
+double-clicked-on result fully visible.
+(fixed) run document macro (on linux) by removing it and replacing it with a
+'File -> Run Current File' menu item.  Only supports files with extensions of
+.py, .pyw, .htm, .html, .shtm and .shtml .
+(fixed) run selected text macro (on linux) by removing it and replacing it
+with a 'File -> Run Selected Code' menu item.
+(added) support for viewing line ending characters.
+(fixed) 'view whitespace' preference now saved.
+(fixed) bug with reordering documents in a (small distribution) prerelease.
+(changed) made spell checker "smarter" to know that when you have a region of
+text selected, you want to check the spelling of that region, but if you don't
+have anything selected, you want to check the spelling of the whole document.
+(fixed) default cursor position if you have used the Options -> Save Settings
+when Document -> Save Position was enabled.
+(fixed) the log panel now has scrollbars and scrolls to the end as it receives
+information to log.
+(fixed) bug where the first document opened during startup would have its
+syntax checked regardless of whether it was a Python file or not.
+
+
 #-------------------------------- PyPE 2.7.2 ---------------------------------
 (changed) files with at least 20,000 lines or at least 4 megs will no longer
 have their bookmark or fold states saved on close.  This significantly reduces
 the time to close (and sometimes open) large files.
 (fixed) code that uses MainWindow.exceptDialog() will now properly create a
 dialog.
-(fixed) wxPython 2.7 incompatability in the Browsable directory tree in
+(fixed) wxPython 2.7 incompatibility in the Browsable directory tree in
 wxPython 2.7 - 2.7.1.2 .
 (removed) some unnecessary debug printouts.
 (changed) the 'Search' tab to better handle narrower layouts.
@@ -65,7 +137,7 @@ pathmarks again!  I don't know when this was broken.
 (fixed) searching with the Search tab will now stop while searching within a
 file if you hit "Stop Search".  Previously it would finish a file before
 actually stopping.
-(fixed) explicit or implicit muliline searches with the Search tab will now
+(fixed) explicit or implicit multiline searches with the Search tab will now
 have the GUI refresh while searching a file.  Previously it would hang PyPE
 when processing each file.
 (fixed) unecessary "would you like to save?" dialog when closing down a newly
@@ -105,7 +177,7 @@ version of wxPython.
 (fixed) PyPE and Command Shells not producing prompts and/or not working on
 Mac and Linux.  Thank you to Ernesto Costa for the bug report.
 (fixed) PyPE will no longer indiscriminately add additional lines to your
-files when manupulating the last line (now will only add an additional line if
+files when manipulating the last line (now will only add an additional line if
 your last line ends with a line ending character.
 (fixed) 'Run selected text in Python Shell' macro.
 (added) new macro sample for "Run current file", currently supports .py files.
@@ -121,7 +193,7 @@ and html, because requiring it for them would be silly.
 (fixed) %L handling for triggers.
 (fixed) Options->One Tab now properly displays the current editor state.
 (fixed) Smart Paste when there is a selection.  Will now properly indent the
-first line; previously the first line would get incorrect indendation.
+first line; previously the first line would get incorrect indentation.
 (fixed) a condition where macros in Python 2.3 wouldn't die after 5 seconds
 under some situations (the macro named "Timeout Failure in Python 2.3" is now
 named "Timeout Non-Failure #3 in Python 2.3").
@@ -1729,7 +1801,7 @@ other such things.  I like updates.
 (fixed) undoing and redoing of changing tabs is now done by the entire block
 that was tabbed/untabbed, not by the individual line as before.
 (discovered) how to use the shift and control clicking of the scope-based
-collapseable blocks.  Updated the help to explain how they work.
+collapsable blocks.  Updated the help to explain how they work.
 (contemplated) adding drag and drop support.  After spending some time mucking
 around it, I have decided it can wait until the next minor release.
 (contemplated) adding code snippet support.  It's where you have a listing of

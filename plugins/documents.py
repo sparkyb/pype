@@ -64,13 +64,15 @@ class FileDropTarget(wx.FileDropTarget):
         if OB1:
             i -= 1
         if i == -1-OB1:
-            i = len(l)
+            i = self.root.control.GetPageCount()
         if i != cp:
             #remove from original location, insert at destination
             ## print "getting information for page", cp
             p = self.root.control.GetPage(cp)
             t = self.root.control.GetPageText(cp)
             try:
+                self.root.control.other_focus = 1
+                self.root.dragger.justdragged = time.time()
                 self.root.starting = 1
                 ## print "removing page", cp
                 self.root.control.RemovePage(cp)
@@ -82,7 +84,10 @@ class FileDropTarget(wx.FileDropTarget):
                     self.root.control.InsertPage(i, p, t)
                 if cp == selindex:
                     ## print "selecting page"
-                    self.root.control.SetSelection(min(i, self.root.control.GetPageCount()-1))
+                    page = min(i, self.root.control.GetPageCount()-1)
+                    self.root.control.SetSelection(page)
+                    self.root.control.GetPage(page).GetWindow1().SetFocus()
+                    self.root.dragger._SelectItem(page)
             finally:
                 self.root.starting = 0
 
@@ -102,6 +107,7 @@ class MyNB(wx.Notebook):
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
         self.SetDropTarget(__main__.FileDropTarget(self.root))
         self.calling = 0
+        self.other_focus = 0
 
     def __iter__(self):
         count = self.GetPageCount()
@@ -152,11 +158,15 @@ class MyNB(wx.Notebook):
             self.root.timer.Start(10, wx.TIMER_ONE_SHOT)
             if event:
                 event.Skip()
-            wx.CallAfter(win.SetFocus)
+            if self.other_focus:
+                wx.CallAfter(win.SetFocus)
+                self.other_focus = 0
+            else:
+                self.root.dragger.justdragged = time.time()
             wx.CallAfter(self._seen)
+            ## print "pagechanged", new, old
         finally:
             self.calling = 0
-
 #
     def updateChecks(self, win):
         #Clear for non-documents
@@ -175,6 +185,11 @@ class MyNB(wx.Notebook):
                 self.root.menubar.Check(i, 0)
         for i in __main__.MACRO_CLICK_OPTIONS.iterkeys():
             self.root.menubar.Check(i, 0)
+        for i in __main__.SYNTAX_CHECK_DELAY_ID_TO_NUM:
+            self.root.menubar.Check(i, 0)
+        for i in __main__.REFRESH_DELAY_ID_TO_NUM:
+            self.root.menubar.Check(i, 0)
+        
         
         #Check for non-documents
         self.root.menubar.Check(__main__.lexers3[__main__.DEFAULTLEXER], 1)
@@ -185,7 +200,9 @@ class MyNB(wx.Notebook):
         if hasattr(self.root.docpanel, 'recentlyclosed'):
             self.root.menubar.Check(__main__.DOCUMENT_LIST_OPTION_TO_ID2[__main__.document_options2], 1)
         self.root.menubar.Check(__main__.MACRO_CLICK_TO_ID[__main__.macro_doubleclick], 1)
-
+        self.root.menubar.Check(__main__.SYNTAX_CHECK_DELAY_NUM_TO_ID[__main__.HOW_OFTEN1], 1)
+        self.root.menubar.Check(__main__.REFRESH_DELAY_NUM_TO_ID[__main__.HOW_OFTEN2], 1)
+        
         if not win:
             return
         
@@ -222,6 +239,7 @@ class MyNB(wx.Notebook):
         self.root.menubar.Check(__main__.SLOPPY, win.sloppy)
         self.root.menubar.Check(__main__.SMARTPASTE, win.smartpaste)
         self.root.menubar.Check(__main__.S_WHITE, win.GetViewWhiteSpace())
+        self.root.menubar.Check(__main__.S_LEND, win.GetViewEOL())
         ## self.root.menubar.Check(SORTBY, win.tree.tree.SORTTREE)
         self.root.menubar.Check(__main__.SAVE_CURSOR, win.save_cursor)
         self.root.menubar.Check(__main__.HIGHLIGHT_LINE, win.GetCaretLineVisible())
@@ -330,6 +348,7 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
         self.Bind(wx.EVT_LIST_BEGIN_DRAG, self.OnBeginDrag)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelectionChanged)
         self.data = []
+        self.justdragged = 0
     
     def OnGetItemText(self, index, col):
         if index >= self.root.control.GetPageCount():
@@ -351,9 +370,14 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
         return __main__.GDI(self.root.control.GetPage(item).GetWindow1().getshort())
     
     def OnSelectionChanged(self, event):
-        self.root.control.SetSelection(event.GetIndex())
-        self.root.control.GetPage(event.GetIndex()).GetWindow1().SetFocus()
-    
+        index=event.GetIndex()
+        if not self.justdragged or time.time()-self.justdragged > .25:
+            self.root.control.SetSelection(index)
+            wx.CallAfter(self.root.control.GetPage(index).GetWindow1().SetFocus)
+            
+        self.justdragged = 0
+        ## print "selchanged", index
+        
     def OnBeginDrag(self, event):
         posn = event.GetIndex()
         if posn == -1:
@@ -365,13 +389,17 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
         if not data:
             data = a.getshort()
         
-        data = data.encode('ascii')
+        ## data = data.encode('ascii')
         d = wx.FileDataObject()
         d.AddFile(data)
         ## print d.GetFilenames()
         a = wx.DropSource(self)
         a.SetData(d)
-        a.DoDragDrop(wx.Drag_AllowMove|wx.Drag_CopyOnly)
+        if a.DoDragDrop(wx.Drag_AllowMove|wx.Drag_CopyOnly):
+            #we use a time so that users can (almost immediately) click on
+            #another document to switch.
+            self.justdragged = time.time()
+            self.root.control.other_focus = 1
     
     def _special_method(self, *args):
         self.SetItemCount(self.root.control.GetPageCount())
@@ -385,7 +413,7 @@ class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
         while x != -1:
             self.Select(x, 0)
             x = self.GetNextSelected(x)
-        self.Select(index)
+        wx.CallAfter(self.Select, index)
 
 class RecentClosed(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
     def __init__(self, parent, root):

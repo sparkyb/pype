@@ -5,8 +5,7 @@
 # 2. run the following command:
 #      python setup.py py2exe
 
-# to make a source tarball or zip (depending on your platform) from source:
-#   python setup.py sdist
+# to make a source tarball or zip from source, compress it by hand
 
 # The build process for bdist_wininst produces an improper installer.
 # It seems possible, if not likely, that bdist_rpm suffers the same problems.
@@ -27,15 +26,16 @@ available features.
 
 import sys
 
-if [i for i in sys.argv if 'wininst' in i or 'rpm' in i or 'bdist' in i]:
+badcommands = 'wininst rpm dist install'.split()
+
+if [i for j in badcommands for i in sys.argv if j in i]:
     print '''
-You seem to be attempting a bdist_wininst or bdist_rpm distribution creation.
-According to my experience, running the results of PyPE + bdist_wininst will
-muck up your Python installation (destroying readme.txt, etc.).  It seems
-possible, if not likely, that the bdist_rpm variant suffers from the same kind
-of problems.  You are likely better off using the 'python setup.py sdist'
-version, and packaging it up with some platform-specific tool.
-'''
+You seem to be attempting some sort of non-py2exe distribution creation or
+install attempt, according to the argument(s): %r
+
+Unzip the version of PyPE you are currently using into some path that you
+would like to run PyPE from, then run it from there.
+'''%([i for j in badcommands for i in sys.argv if j in i],)
     sys.exit(1)
 
 import __version__
@@ -133,18 +133,20 @@ PyPE = Target(
     script = "pype.py",
 )
 
+data_files=[('', glob.glob('*.txt')+\
+            ['stc-styles.rc.cfg', 'readme.html', 'PKG-INFO', 'MANIFEST.in']),
+            ('icons', glob.glob(os.path.join('icons', '*.*'))),
+            #('macros', glob.glob(os.path.join('macros', '*.py'))),
+            (samples, glob_(samples, ('*.txt', '*.py')))]
+
+import wx
+if wx.VERSION >= (2, 7):
+    data_files[0][1].append('gdiplus.dll')
+
 setup(
-    
     windows=[PyPE],
-    
-    data_files=[('', glob.glob('*.txt')+\
-                ['stc-styles.rc.cfg', 'readme.html', 'PKG-INFO', 'MANIFEST.in']),
-                ('icons', glob.glob(os.path.join('icons', '*.*'))),
-                #('macros', glob.glob(os.path.join('macros', '*.py'))),
-                (samples, glob_(samples, ('*.txt', '*.py')))],
-    
+    data_files=data_files,
     options={"py2exe": {"packages": ["encodings"],
                         "compressed": 1}},
-
     **info
 )

@@ -48,10 +48,11 @@ class logger(wx.TextCtrl):
         self.lg = 1
         self.lt = None
         sys.stdout = sys.stderr = self
-        l.buffer.seek(0)
-        wx.TextCtrl.AppendText(self, l.buffer.read())
         self.data = Queue.Queue()
+        l.buffer.seek(0)
+        self.data.put(l.buffer.read())
         l = self
+        wx.CallAfter(self.handle_writes)
     
     def write(self, data):
         ## print >>sys.__stdout__, repr(data), self.softspace
@@ -83,7 +84,18 @@ class logger(wx.TextCtrl):
     
     def handle_writes(self):
         while self.data.qsize():
-            wx.TextCtrl.AppendText(self, self.data.get())
-    
+            self.SetInsertionPointEnd()
+            self.WriteText(self.data.get())
+        lc = linecount = self.GetNumberOfLines()
+        lp = lastpos = self.GetLastPosition()
+        for i in xrange(min(2, linecount)):
+            linecount -= 1
+            lastpos -= self.GetLineLength(linecount)
+        self.Refresh()
+        self.Update()
+        wx.CallAfter(self.ShowPosition,
+                          lastpos + (lp != lastpos and
+                          bool(self.GetLineLength(linecount))))
+        
     def AppendText(self, txt):
         self.write(txt)

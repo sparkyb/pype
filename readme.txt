@@ -53,12 +53,12 @@ Either a machine running Python and wxPython, or a Windows machine that can
 run the binaries should be sufficient.  Initial revisions of PyPE were
 developed on a PII-400 with 384 megs of ram, but it should work on any machine
 that can run the most recent wxPython revisions.  Some portions may be slow
-(Document->Wrap Long Lines especially, which is a known issue with the
-scintilla text editor control), but it should still be usable.
+(when using Document->Wrap Long Lines especially, which is a known issue with
+the scintilla text editor control), but it should still be usable.
 
-PyPE 2.x has only been tested on Python 2.3 and wxPython 2.6.3.0.  It should
-work on later versions of Python and wxPython.  If you are having issues, file
-a bug report on http://sourceforge.net/projects/pype .
+PyPE 2.x has been tested on Python 2.3 and wxPython 2.6.3.0.  It should work
+on later versions of Python and wxPython.  If you are having issues, file a
+bug report on http://sourceforge.net/projects/pype .
 
 ------------
 Installation
@@ -66,26 +66,40 @@ Installation
 
 If you have Python 2.3 or later as well as wxPython 2.6.3 or later, you can
 extract PyPE-X.Y.Z-src.zip anywhere and run it by double-clicking on pype.py
-or pype.pyw .  If you want to be all official, you can use
-'python setup.py install', but that is generally unnecessary.
+or pype.pyw .  Note that the 2.6.3.3 ansi build of wxPython has issues with
+pasting, so use some other ansi build, or even the 2.6.3.3 unicode build.
 
 If you don't have Python 2.3 wxPython 2.6.3 or later, and are running Windows,
 you should (hopefully) be able to run the Windows binaries.  They are provided
 for your convenience (so you don't have to install Python and wxPython).
 
+At the current time, the Windows binaries are constructed with Python 2.3 and
+wxPython 2.6.3.0 .  I have considered moving to Python 2.5 or even 2.4 with
+wxPython 2.7, but switching to Python 2.4 with wxPython 2.6.x adds 700k to the
+binary distribution, and going with Python 2.5 and wxPython 2.7 (there are
+currently no wxPython 2.6.3.* releases for Python 2.5) adds 2.2 megs to the
+binary distribution, some of which is the Python 2.4-2.5 size difference, much
+of it being the necessity to include the gdi plus dll for non-XP/Vista
+platforms, and even the MSVC 7.1 runtime.  While many users have copies of
+both of these runtimes *somewhere* on their system, PyPE cannot rely on them
+being accessable (on my machine only the MSVC 7.1 runtime is in a system path,
+while the gdi plus dll is in about a dozen places).
+
 If it so happens that the Windows binaries don't work for you, and you have an
 installation of Python and wxPython that fits the requirements, why don't you
 run the source version?  The only difference is a pass through py2exe, and a
 minor loading time speed increase.  Just because the Windows binaries exist,
-doesn't mean that you /have/ to run them.
+doesn't mean that you /have/ to run them.  If you have a Python and wxPython
+installation, you should have the necessary dlls to make PyPE run (Python is
+shipped with the 7.1 runtime, and wxPython 2.7+ ships with the gdi plus dll).
 
 Why doesn't the Windows install work?
 =====================================
 Depending on your platform, it may or may not work.  It works for me on
-Windows 2k, XP and 98.  Most problems people have is that they mistakenly
-extract library.zip, which they shouldn't do.  It could also be due to the
-lack of some DLL, in which case an error message should inform you of what DLL
-you are missing.
+Windows 2k and XP.  Most problems people have is that they mistakenly extract
+library.zip, which they shouldn't do (and in recent PyPE binary releases
+may not be able to do).  It could also be due to the lack of some DLL, in
+which case an error message should inform you of which DLL you are missing.
 
 
 Why doesn't PyPE work on Linux?
@@ -98,17 +112,19 @@ PyPE 2.5+ has been tested on Ubuntu 6.06 with...
 
 * python-wxgtk2.6_2.6.1.2ubuntu2_i386.deb
 
-The only anomalies observed so far is seemingly a bug with some
-wx.ScrolledPanel uses, specifically the 'Search' tab along the bottom not
-displaying all of the options for searching within files.  Making the bottom
-set of tools larger, then using a hotkey to show/hide the tools whenever
-necessary is a workable (if not ugly and inconvenient) workaround.
+And 
 
-PyPE 2.5+ has also been tested on Kubuntu 6.06 after the installation of the
-Synaptic packaage manager, which may or may not have introduced other Gtk
-libraries that may or may not affect its performance.  On Kubuntu, there are
-a large number of errors and/or warnings during PyPE startup, but I have not
-been able to crash PyPE yet, so I presume it is stable.
+* libwxgtk2.7-0_2.7.1.3-0_i386.deb
+
+* python-wxgtk2.7_2.7.1.3-0_i386.deb
+
+The only anomalies observed so far is seemingly a bug with some
+wx.ScrolledPanel uses (which have been replaced in more recent releases), and
+when using a pure Kubuntu install (installed via the Kubuntu install, and not
+Ubuntu + Kubuntu core via synaptic), there may be errors and/or warnings
+during PyPE startup.  I have not been able to crash PyPE yet, so I presume it
+is stable.  I have recently switched to using Ubuntu + Kubuntu core + Xubuntu
+core, and I haven't noticed any of aforementioned errors.
 
 There have previously been reports of PyPE segfaulting in certain Linux
 distributions when opening a file.  This seems to be caused by icons in the
@@ -127,14 +143,16 @@ Why isn't the most recent PyPE available as deb or RPM?
 =======================================================
 Short answer: it's a pain in the ass.
 
-Longer answer: I'm not the maintainer for the PyPE package, but have recently
-discovered that PyPE has a new debian maintainer.  Whether or not the new
-debian maintainer keeps PyPE up-to-date is up to him.  Personal attempts to
-create .debs have resulted in utter failure, which I can either blame on a
-personal failure to comprehend the documentation, or a failure in the
-documentation to impart the necessary information.  Either way, you are going
-to have to wait for the debian/ubuntu/whatever repositories to update.  You
-can always get the most recent PyPE from http://sourceforge.net/projects/pype
+Longer answer: I'm not the maintainer for the PyPE package in any of the
+Ubuntu repositories, but have recently discovered that PyPE has a newer
+maintainer.  Whether or not the new maintainer keeps PyPE up-to-date is up to
+him.  Personal attempts to create .debs have resulted in utter failure, which
+I can either blame on a personal failure to comprehend the documentation, or a
+failure in the documentation to impart the necessary information.  Either way,
+you are going to have to wait for the debian/ubuntu/whatever repositories to
+update, or you can get the most recent PyPE from
+http://sourceforge.net/projects/pype and extract it wherever you desire.  I'm
+a fan of ~/apps/PyPE, but choose what you will.
 
 I'm not going to package any RPMs for PyPE, primarily because I'm not going to
 install the RPM build/install stuff into Ubuntu.  Recent attempts to get
@@ -146,10 +164,10 @@ to rpm packages.
 
 Why doesn't PyPE work on OSX?
 =============================
-I have had no reports of PyPE working or not working on any version of OSX.  I
-don't have a Mac, and I'm not too keen on running a hacked version of OSX on
-X86 hardware, so unless someone is willing to donate or test, I'll continue to
-have no idea of whether it runs or not.
+Aside from "PyPE works on OSX" (or "almost works") from 2 users, I don't know
+what may be causing PyPE to not work in OSX.  If you send bug reports with
+tracebacks, etc., we can probably figure out what is going on and how we can
+fix it.
 
 
 --------------------
@@ -186,15 +204,23 @@ Courier New.
 
 --nothread
 ==========
-This command line option will disable the threaded parser, which may cause
+This command line option will disable the threaded parser, which has caused
 problems on some platforms.  This will reduce the accuracy of the tools in
-the "Tools" menu, due to the faster and not necessarily correct parser.
+the "Tools" menu, due to the faster and not necessarily correct parser being
+used in its place.
 
 --macros
 ========
 PyPE 2.6 has what I would consider to be a fully-functioning macro system.
 The Python 2.5 ``--macros`` command line option is now ignored because macros
 are enabled by default in 2.6+.
+
+--standalone
+============
+Providing this command line option will use the path in which the PyPE source
+or binary is for where PyPE's state is saved (document history, menu
+configuration, etc.).  This will allow for 'embedded' applications.
+
 
 -------------------------------
 PyPE features and functionality
@@ -204,38 +230,39 @@ What to expect when coming from other editors/IDEs
 ==================================================
 While PyPE has quite a few of the features that one would expect from an IDE,
 I do not consider PyPE to be an IDE; I consider PyPE to be an editor.  The
-semantic difference between the two in my mind is a bit wishy-washy, but one
-feature that sets an editor apart from an IDE (in my opinion) is the existance
-of a run menu item or button with debugger.  Every IDE that is worth talking
-about has both of these features, but PyPE doesn't.  The reasons why are
-somewhat personal, so I'll not bore you, but suffice it to say:
+semantic difference between the two in my mind is a bit wishy-washy, so I'll
+not bore you with the details.  In any case:
 
 1. Hitting F5 will not run your Python, nor compile the latex, nor compile the
-   C/C++, nor open a browser for the HTML.  There is a macro in the sample
-   macros that implements a stub of such functionality, but it is up to you
-   (the user) to put in what you really want.
+   C/C++, nor open a browser for the HTML.  It will (by default) refresh the
+   browsable source trees and other tools.  You can change hotkeys, and in
+   particular, the (new in PyPE 2.8) 'File -> Run Current File' menu item.
+   For .py and .pyw files, 'Run Current File' will use the Python specified in
+   the lower part of 'Options -> Shell Options' to run your Python source,
+   capturing the output and allowing interaction.  For .htm, .html, .shtm and
+   .shtml, PyPE will try to use your system defined default web browser to
+   open the file.  For .tex files, PyPE will attempt to run pdflatex on them.
 
 2. If PyPE seems complicated when you are first starting out, hide all of the
-   optional features; Options -> Show Bottom Toolbar, Show Right Toolbar, and
-   Options -> Toolbar -> Hide .  Start editing.  If it isn't doing what you
-   want/expect it to, check the 'Document' menu for per-document settings or
-   the 'Options' menu for other editor-wide options.  Want to change hotkeys?
-   Use Options -> Change Menus and Hotkeys .
-
+   optional features; 'Options -> Layout Options -> Show Wide Tools', 'Show
+   Tall Tools', and '(toolbar) Hide'.  Start editing.  If it isn't doing what
+   you want/expect it to, check the 'Document' menu for per-document settings
+   or the 'Options' menu for other editor-wide options.  Want to change
+   hotkeys?  Use 'Options -> Change Menus and Hotkeys' .
 
 3. PyPE is not going to gain a debugger any time soon, if ever.  I agree with
    many of you that debuggers can be useful, but aside from attempting to
    steal Idle's or some other project's remote debugger and making it work in
    PyPE, 1) I wouldn't know where to begin, 2) it may kill bookmark
    indicators, 3) I find that print statements are sufficient for me, 4) I
-   have not had the desire to make it happen.
+   have not had sufficient desire to make it happen.
 
 4. PyPE is not like every other editor you have ever used.  It may share some
    features, but it is likely just a bit different.  Before you freak out and
    email me with, "PyPE sux, go find something else to do with your time
    newb! lols" spend some time looking for the feature in the menus, the
    various tabs, etc.  You may find that your desired feature is available.
-   Also note that if the key bindings are not to your liking, you can change
+   Again note that if the key bindings are not to your liking, you can change
    them with 'Options -> Change Menus and Hotkeys' for all the menus.  Macros
    are handled a bit differently, which you will find out by hitting the
    'hotkey' button in the Macros tab.
@@ -243,7 +270,7 @@ somewhat personal, so I'll not bore you, but suffice it to say:
 5. PyPE has macros.  These macros can record what you do with the keyboard and
    some menu actions, then play them back.  You can also use them to
    programmatically edit the document you are working on, including the
-   handling of 'code snippets'.  Look at the macro help below, and the samples
+   handling of 'code snippets'.  Look at the macro help below and the samples
    included with PyPE (including the failure conditions).
 
 
@@ -261,7 +288,7 @@ attempt to decode your file using the following encodings in order:
 
 3. Ascii (only allows for values from 0...127)
 
-4. Latin-1 (allows for values 0...255)
+4. Latin-1/iso-8859-1 (allows for values 0...255)
 
 If options 1-3 above fail, then 4 will succeed, but may not necessarily
 display the correct content, and may cause corruption if you were to save the
@@ -283,7 +310,7 @@ If you are using the Unicode version of PyPE, when saving a file, PyPE will
 attempt to encode your file using the following encodings in order:
 
 1. Any encoding specified by the Document -> Encodings menu option (note that
-   a specification of 'other' will be ignored, and will assume the existance
+   a specification of 'other' will be ignored, and will assume the existence
    of a "coding" directive.
 
 2. Encodings specified by "coding directives" in the first two lines of
@@ -298,9 +325,10 @@ attempt to encode your file using the following encodings in order:
 If options 1-4 above fail, 5 will succeed.  If the first encoding option does
 not succeed: say, for instance, that you have specified "other" as the
 Document -> Encodings option, then used the iso-8859-9 coding declaration for
-Turkish, but included some Arabic letters in a comment somewhere, PyPE will
-inform you that your intended encoding (iso-8859-9) does not match the first
-encoding to succeed (UTF-8), and ask you if it is ok to continue.
+Turkish, but included some Arabic letters in a comment somewhere (possibly an
+unlikely occurrence, I don't know, but this is an example), PyPE will inform
+you that your intended encoding (iso-8859-9) does not match the first encoding
+to succeed (UTF-8), and ask you if it is ok to continue.
 
 In 2.6.3 and earlier, PyPE would try 1, 2, 3, then 5.
 
@@ -310,17 +338,57 @@ What is a "coding directive"?
 If in the first two lines of your source file (all initial blank lines being
 ignored), the following regular expression matches something::
     
-    coding[=:](?:["'\s]*)([-\w.]+)
+    [cC][oO][dD][iI][nN][gG][=:](?:["'\s]*)([-\w.]+)
 
 ... then you have a properly specified "coding directive".  This regular
 expression was intended to match things like::
 
     # -*- coding: ENCODING_NAME -*-
+    # -*- cOdInG: ENCODING_NAME -*-
     # vim:fileencoding=ENCODING_NAME
     <?xml version='1.0' encoding='ENCODING_NAME' ?>
 
 ... in [X]Emacs or Vim style encoding declarations for Python source, or
 XML-style declarations in XML or HTML source.
+
+
+Vim options
+===========
+When opening up a file that you have never opened before, or whose history you
+have cleared by closing and removing it from the "Recently Open" list in the
+Documents tab, PyPE will scan the first and last 20 lines of the file for
+comments (see the Todo stuff below for what constitutes a comment), then check
+for :set commands.  If :set commands are found, only cul, nocul, et, noet, sw,
+sts, ts, and their aliases (including 'inv' prefix or '!' suffix for toggles,
+and both '=' and ':' assignment operators for values) are used to set the
+preferences in the Document menu.
+
+If there exists both sw and sts options, sw will be preferred.
+
+
+Using Options -> Realtime Options for syntax checking and tool updates
+======================================================================
+Syntax checking is always enabled for Python shells, and will highlight the
+first line with an error as you type (it is actually checks shortly after you
+stop typing), using the same indicator as defined in Options -> Shell Options.
+
+Syntax checking for Python source files is only enabled if you have chosen a
+delay in the Options -> Realtime Options submenu.  If your file is fewer than
+200,000 bytes long, it will take max(SYNTAX_CHECK_TIME, 1)*CHOICE_IN_SECONDS,
+and wait that long after you have stopped using your keyboard, etc., to check
+the syntax, indicating the first error, if any, using the same indicator as
+defined in Options -> Shell Options.
+
+Automatic source tree rebuilding for the Name and Line tools, entries for the
+Filter tool, Todo listing, autocomple entries, and calltips is only enabled if
+you have chosen a delay for update tools in the Options -> Realtime Options
+submenu.  Otherwise you need to use Document -> Refresh (or the equivalent key
+binding).  Similar to syntax checking above, it will take max(REFRESH_TIME, 1)
+*CHOICE_IN_SECONDS, and wait that long after you have stopped using your
+keyboard, etc., to do the automatic Document -> Refresh call.
+
+Note that PyPE will only check syntax or rebuild the tree if the content has
+changed since the last time either operation was scheduled.
 
 
 What is Sloppy Cut/Copy?
@@ -508,7 +576,7 @@ What other nifty things are possible?  How about automatic curly and square
 brace matching with [, [%C] and {, {%C}?  Note that triggers with a single
 character in the 'enter' column are automatically done as you type, but
 triggers with multiple characters in the 'input' column require using
-Transofrms->Perform Trigger (or its equivalent hotkey if you have assigned
+Transforms->Perform Trigger (or its equivalent hotkey if you have assigned
 one via Options -> Change Menus and Hotkeys).
 
 As described, there is a ``%C`` directive that defines where the cursor will
@@ -524,19 +592,6 @@ If you have ' or " as the first character in a find or find/replace entry, and
 what you entered is a proper string declaration in Python, PyPE will use the
 compiler module to parse and discover the the string.  For example, to
 discover LF characters, use ``"\n"``, including quotes.
-
-
-String escapes in regular expressions and multiline searches?
-=============================================================
-You can use standard Python strings with escapes and quote marks just like
-when you use the find/replace bars with one minor difference; all searched
-data is normalized to have ``\n`` line endings regardless of the input.  This
-means that if you want to find a colon followed by a line ending followed by
-a space, you would use ``":\n "``, including quotes.
-
-If you include line endings in your search string, then multiline searching
-will be automatically enabled during the search (but the box will remain
-checked or unchecked).
 
 
 What happens when "Smart Case" is enabled during a replace?
@@ -568,11 +623,26 @@ Otherwise if the first letter of the found string is upper or lowercase, then
 its replacement will have the first letter be upper or lowercase respectively.
 
 
+String escapes in regular expressions and multiline searches?
+=============================================================
+When using the 'Search' tab, you can use standard Python strings with escapes
+and quote marks just like when you use the find/replace bars with one minor
+difference; all searched data is normalized to have ``\n`` line endings
+regardless of the input.  This means that if you want to find a colon followed
+by a line ending followed by a space, you would use ``":\n "``, including
+quotes.
+
+If you include line endings in your search string, then multiline searching
+will be automatically enabled during the search (but the box will remain
+checked or unchecked).
+
+
+
 How do I use the 'Todo' list?
 =============================
 On a line by itself (any amount of leading spaces), place something that
 matches the following regular expression: ``([a-zA-Z0-9 ]+):(.*)`` and is
-immediately preceeded with a language-specific single-line comment (``#``,
+immediately proceeded with a language-specific single-line comment (``#``,
 ``//``, ``%``, or ``<!--``).
 
 The first group (after a .strip().lower() translation) will become category in
@@ -597,6 +667,24 @@ The following lines are all valid todos ::
 In PyPE 2.6.5 and later, for Python, C/C++, and TeX files, PyPE supports the
 use of ``#>`` (or equivalents for non-XML/HTML languages) as a "strict" todo,
 with the option to only recognize these "strict" todos.
+
+
+Labels / Transforms -> Insert Comment
+=====================================
+When you use Transforms -> Insert Comment, you create a comment of the form
+(for example in Python)::
+
+    #--------------------- comment ---------------------
+
+With your comment centered, and the comment filling up the number of columns
+defined via Document -> Set Long Line Column.  Such comments will show up as
+'labels' within the Name, Line, and Filter tools as::
+
+    -- comment --
+
+This works similarly to SPE's display of such labels, but PyPE trims
+extraneous dashes and spaces from either end, inserting a single space and a
+double dash around the comment (for consistency and readability).
 
 
 What are the known issues within PyPE's parser?
@@ -674,11 +762,99 @@ in the following lines would be seen as a function, and not part of a string. ::
         return None
     '''
 
-This parser will also not pull out doc strings or handle multi-line function
+This parser will not pull out doc strings or handle multi-line function
 definitions properly.
 
-What precisely a parser would do on TeX/LaTeX, HTML or XML is beyond me, so
-they only extract %todo: and <!-- todo: --> items respectively.
+
+TeX/LaTeX
+---------
+In TeX/LaTeX, PyPE extracts \\(sub)*section and \\label headings, todo items,
+and labels (defined below).
+
+
+HTML/XML
+--------
+PyPE only extracts todo items and labels (defined below).
+
+
+Label Parser
+------------
+Knowing where to insert a label (in the trees) is tricky work, and we can only
+generally choose the right place to insert labels in one of the following two
+cases::
+
+    def foo():
+        #-- label 1 --
+        ...
+    
+    #--label 2--
+
+Relying on indentation for these is not generally reliable, so we place it in
+the context of the scope of the following function/class/whatever definition.
+The following source::
+
+
+    class foo:
+        def bar(self):
+            #-- label 1 --
+            def goo():
+                #-- label 2 --
+                ...
+        #-- label 3 --
+        def baz(self):
+            #-- label 4 --
+            ...
+        #-- label 5 --
+
+Will have a general tree layout of::
+
+    class foo:
+        def bar():
+            -- label 1 --
+            def goo():
+        -- label 2 --
+        -- label 3 --
+        def baz():
+    -- label 4 --
+    -- label 5 --
+
+Using a 'previous definition' semantic, we get a layout of::
+
+    class foo:
+        def bar():
+            -- label 1 --
+            def goo():
+                -- label 2 --
+                -- label 3 --
+        def baz():
+            -- label 4 --
+            -- label 5 --
+
+Which is different, but not substantially better, and may hide labels. It is
+better to show too many labels in a particular context than too few.
+
+
+Name/Line Expanded State
+------------------------
+PyPE will only be able to remember those items that were expanded, selected or
+first visible (to keep the scrollbar consistant) if the names hadn't been
+changed.  Say that you had an item named ``class foo:`` that was expanded
+prior to using Document -> Refresh.  If you renamed it to ``class foo_bar:``,
+then PyPE wouldn't remember that it was expanded in the browsable source tree.
+
+Also, if you have two classes with the same name like the following::
+
+    if CONDITION:
+        class foo:
+            def bar(self):
+                ...
+    else:
+        class foo:
+            def bar(self):
+                ...
+
+And one was expanded in the Name (or Line) tool, then both will be expanded in
+the Name (or Line) tool.
 
 
 How do you get usable Calltips?
@@ -758,8 +934,8 @@ tabs.  As it is not a menu option, you're probably wondering "how in the hell
 am I going to do this".  Well, if you read the above stuff about string
 escapes in the find/replace bar, it would be trivial.
 Both should INCLUDE the quotation marks.
-To convert from tabs to 8 spaces per tab; replace ``"\\t"`` with ``"        "``
-To convert from 8 spaces to one tab; replace ``"        "`` with ``"\\t"``
+To convert from tabs to 8 spaces per tab; replace ``"\t"`` with ``"        "``
+To convert from 8 spaces to one tab; replace ``"        "`` with ``"\t"``
 
 Note that you don't need to use the double quotes for the spaces, but it
 allowed me to be explicit in this documentation.
@@ -824,7 +1000,7 @@ Macro" button, whose contents are something like the following::
     using the Windows binary).
 
 The ``self`` parameter will actually be my own custom subclass of the
-``StyledTextCtrl``.  You will never recieve a shell or interpreter, and you
+``StyledTextCtrl``.  You will never receive a shell or interpreter, and you
 will not be able to execute macros on shells or interpreters. 
 
 Generally speaking, the ``wxStyledTextCtrl`` subclass has everything that the
@@ -834,7 +1010,7 @@ normal control subclass has, with a few caveats.
     of the document, paying attention to encodings as necessary.  That is, if
     you perform ``y = self.GetText()`` inside a macro on a document including
     unicode characters, or a document defining one of the standard Python
-    document encoding methods, you will recieve the encoded version of your
+    document encoding methods, you will receive the encoded version of your
     document.  Strictly ASCII documents or those without any encodings will
     produce the document as-is.
     
@@ -891,7 +1067,7 @@ normal control subclass has, with a few caveats.
             pass
 
     If you want your ``'\n'`` line endings to not include auto-indenting (as
-    is the default for normal triggers), use ``self.InterpretTirgger(text, 1)``.
+    is the default for normal triggers), use ``self.InterpretTrigger(text, 1)``.
 
 4.  ``self._autoindent(0)`` will perform the equivalent of
     ``self.InterpretTrigger('\n')``.
@@ -926,7 +1102,7 @@ those lines I wanted to update, and execute the macro.::
             lines.selectedlines = newlines
     
 Presumably one would want to include error handling in your nontrivial macros,
-but they shouldn't be terribly difficult.
+but that shouldn't be terribly difficult.
 
 
 Using macros as code snippets
@@ -967,19 +1143,6 @@ Timeout macros.  They will show you what things will and won't stop after the
 trying to kill PyPE because it stopped responding.  The general rule of thumb:
 don't perform any system calls that could take a long time to finish.
 
-An interesting macro is 'Run selected text in a Python Shell'.  This macro
-will, as described, run the selected text in a Python Shell.  If no Python
-Shell is currently open, it will open a new one.  It will then switch to the
-first Python Shell tab in the editor, and send the text you had selected.  You
-will be happy to know that it reindents the selection so that you don't get
-those annoying SyntaxError exceptions.  This macro also comes with a default
-hotkey of Ctrl+Shift+F5 .
-
-Another interesting macro is the 'Run Current File'.  This macro will, as
-described, run the currently open file.  It will only run .py and .pyw files
-as written, but it has stubs for html and tex files that you (the user) can
-add.
-
 
 ---
 FAQ
@@ -989,7 +1152,7 @@ How do you come up with new feature ideas?
 ==========================================
 Every once and a while, I'll be editing with PyPE, and I'll say, "hey, it
 would be neat if I could do X with PyPE".  This is rare, though it has
-produced things like the draggable document list, spell check, customizable
+produced things like the dragable document list, spell check, customizable
 menu hotkey bindings, open module, "One PyPE", etc.
 
 More often than not, I will be surfing the net, and someone will rant and rave
@@ -999,7 +1162,7 @@ usually go to the specific site, look at the editor, the features it offers,
 and consider if I would want PyPE to have such features, what changes would be
 necessary, and what it would take to make them happen.  This has produced
 things like workspaces, shells, find/replace bars (idea from Firefox),
-triggers (and everything else in the Transforms menu), the name and line
+triggers (and most everything else in the Transforms menu), the name and line
 oriented browsable source trees, etc.
 
 Occasionally, some user of PyPE will contact me, perhaps report a bug, or
@@ -1014,7 +1177,7 @@ context, the embedded HTML help, the Find Definition/filter tool, etc.
 
 Astute observers will note that I have not really come up with anything
 terribly original myself.  However, through observing other editors and IDEs,
-and recieving great suggestions from users, I think that PyPE has managed to
+and receiving great suggestions from users, I think that PyPE has managed to
 acquire some very useful features.  Generally, I have written PyPE primarily
 for myself, so if tools have a particular aesthetic or design, it's so that
 look and work according to how I think they should (the exception being how

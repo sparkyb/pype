@@ -7,14 +7,18 @@ import compiler
 import traceback
 import symbol
 import token
-from compiler import ast
-from compiler import consts
 from plugins import exparse
 
 todoexp = re.compile('(>?[a-zA-Z0-9 ]+):(.*)', re.DOTALL)
 
 _bad_todo = dict.fromkeys('if elif else def cdef class try except finally for while lambda'.split())
 _bad_urls = dict.fromkeys('http ftp mailto news gopher telnet file'.split())
+
+try:
+    _pype
+except:
+    class _pype:
+        STRICT_TODO = 0
 
 def is_url(left, right, ml=0):
     if left.lstrip().lower() in _bad_urls and right[:2] == '//':
@@ -74,6 +78,21 @@ for i in 'if for while switch case return'.split():
     badstarts.append(i+'\t')
 
 ops = '+-=<>?%!~^&(|/"\''
+
+def _shared_parse(ls, todo, line_no, bad_todo=(), start=1, texp=todoexp, ml=0):
+    r = texp.match(ls, start)
+    if not r:
+        return 0
+    tpl = r.groups()
+    if (tpl[0].split() or [''])[0] in bad_todo or is_url(tpl[0], tpl[1], ml):
+        return 0
+    if tpl[0][:1] == '>':
+        tpl = tpl[0][1:], tpl[1]
+    todo.append((tpl[0].strip().lower(),
+            line_no,
+            tpl[1].count('!'),
+            tpl[1].strip()))
+    return 1
 
 def c_parser(source, line_ending, flat, wxYield):
     posn = 0
@@ -144,27 +163,56 @@ def c_parser(source, line_ending, flat, wxYield):
     
     texp = todoexp
     todo = []
-    line_no = 0
-    for line in source.split(line_ending):
-        line_no += 1
+    _sp = _shared_parse
+    labels = []
+    for line_no, line in enumerate(source.replace('\r\n', '\n').replace('\r', '\n').split('\n')):
         ls = line.strip()
         if ls[:2] == '//':
-            r = texp.match(ls, 2)
-            if not r:
-                continue
-            
-            tpl = r.groups()
-            if is_url(*tpl):
-                continue
-            if tpl[0][:1] == '>':
-                tpl = tpl[0][1:], tpl[1]
-            todo.append((tpl[0].strip().lower(),
-                      line_no,
-                      tpl[1].count('!'),
-                      tpl[1].strip()))
-        #elif ...
+            _sp(ls, todo, line_no+1, start=2)
+        elif ls[:2] == '/*' and ls[-2:] == '*/':
+            _label(ls.strip('/*'), labels, line_no+1)
+    
+    if labels:
+        add_labels(out, labels)
     
     return out, docs.keys(), docs, todo
+
+def _flatten(out, seq=None):
+    #used for:
+    #------ labels like this one ------
+    first = 0
+    if seq is None:
+        seq = []
+        first = 1
+    
+    for i,j in enumerate(out):
+        ## print j[1], j[2]
+        seq.append((j[1][1], i, out, j[2]))
+        if j[-1]:
+            _flatten(j[-1], seq)
+    if first:
+        seq.append((0x7fffffff, len(seq), out, 0))
+    return seq
+
+def add_labels(out, labels):
+    labels.reverse()
+    seq = _flatten(out)
+    seq.reverse()
+    _ = seq[-1]
+    while labels:
+        #'seq and' portion semantically unnecessary
+        line, label = labels.pop()
+        while seq and line > seq[-1][0]:
+            _ = seq.pop()
+        __, posn, entry, indent = seq[-1]
+        #normalize the label
+        entry.insert(posn, ('-- %s --'%label, (label.lower(), line, label), indent, []))
+
+def _label(lss, labels, line_no):
+    #we may have a label of the form...
+    # ----- label -----
+    if len(lss) > 4 and lss[:1] == lss[-1:] == '-':
+        labels.append((line_no, lss.strip('\t\n\x0b\x0c\r -')))
 
 def slower_parser(source, _1, flat, _2):
     try:
@@ -176,20 +224,16 @@ def slower_parser(source, _1, flat, _2):
     texp = todoexp
     bad_todo = _bad_todo
     todo = []
+    _sp = _shared_parse
+    labels = []
     for line_no, line in enumerate(source.split('\n')):
-        ls = line.lstrip()
+        ls = line.strip()
         if ls[:1] == '#':
-            r = texp.match(ls, 1 + ls.startswith('##'))
-            if r:
-                tpl = r.groups()
-                if tpl[0].split()[0] in bad_todo or is_url(*tpl):
-                    continue
-                if tpl[0][:1] == '>':
-                    tpl = tpl[0][1:], tpl[1]
-                todo.append((tpl[0].strip().lower(),
-                        line_no+1,
-                        tpl[1].count('!'),
-                        tpl[1].strip()))
+            if not _sp(ls, todo, line_no+1, bad_todo, 1 + ls.startswith('##')):
+                _label(ls.strip('#>'), labels, line_no+1)
+                
+    if labels:
+        add_labels(out, labels)
     
     return out, docstring.keys(), docstring, todo
 #
@@ -234,6 +278,8 @@ def faster_parser(source, line_ending, flat, wxYield):
                 docstring.setdefault(f, []).append("%s %s"%(fn, '.'.join(map(FIL, stk))))
                 
     
+    _sp = _shared_parse
+    labels = []
     for line in lines:
         line_no += 1
         ls = line.lstrip()
@@ -245,25 +291,17 @@ def faster_parser(source, line_ending, flat, wxYield):
         elif ls[:6] == 'class ':
             fun('class ', line, ls, line_no, stk)
         elif ls[:1] == '#':
-            r = texp.match(ls, 1 + ls.startswith('##'))
-            if r:
-                tpl = r.groups()
-                if tpl[0].split()[0] in bad_todo or is_url(*tpl):
-                    continue
-                if tpl[0][:1] == '>':
-                    tpl = tpl[0][1:], tpl[1]
-                todo.append((tpl[0].strip().lower(),
-                        line_no+1,
-                        tpl[1].count('!'),
-                        tpl[1].strip()))
-
-        #elif ls[:3] == '#>>':
-        #    fun('#>>', line, ls, line_no, stk)
+            if not _sp(ls, todo, line_no, bad_todo, 1 + ls.startswith('##')):
+                _label(ls.strip('#>'), labels, line_no)
 
     while len(stk)>1:
         a = stk.pop()
         stk[-1][-1].append(a)
     out.extend(stk)
+    
+    if labels:
+        add_labels(out, labels)
+    
     if flat == 0:
         return out, docstring.keys()
     elif flat==1:
@@ -309,22 +347,15 @@ def latex_parser(source, line_ending, flat, _):
             else:
                 out.append((ls.rstrip(), (name.lower(), line_no, name), 0, []))
     
+    _sp = _shared_parse
+    labels = []
     for line in lines:
         line_no += 1
         ls = line.lstrip()
         
         if ls[:1] == '%':
-            r = texp.match(ls, 1)
-            if r:
-                tpl = r.groups()
-                if is_url(*tpl):
-                    continue
-                if tpl[0][:1] == '>':
-                    tpl = tpl[0][1:], tpl[1]
-                todo.append((tpl[0].strip().lower(),
-                             line_no,
-                             tpl[1].count('!'),
-                             tpl[1].strip()))
+            if not _sp(ls, todo, line_no, start=1):
+                _label(ls.strip('%>'), labels, line_no)
             continue
         elif ls[:6] == '\\label':
             f('\\label', line, ls, line_no, stk)
@@ -333,12 +364,14 @@ def latex_parser(source, line_ending, flat, _):
                 f(i, line, ls, line_no, stk)
                 break
                 
-        
-
     while len(stk)>1:
         a = stk.pop()
         stk[-1][-1].append(a)
     out.extend(stk)
+    
+    if labels:
+        add_labels(out, labels)
+    
     if flat == 0:
         return out, []
     elif flat==1:
@@ -361,39 +394,40 @@ def ml_parser(source, line_ending, flat, _):
     todo = []
     texp = todoexp
     bad_todo = _bad_todo
+    _sp = _shared_parse
+    labels = []
     for line_no, line in enumerate(source.split(line_ending)):
-        if '<!-- ' in line and ' -->' in line:
-            pass
-        else:
+        if '<!-- ' not in line or ' -->' not in line:
             continue
         
         posn1 = line.find('<!-- ')
-        posn2 = line.find(' -->')
+        if posn1 == -1:
+            posn2 == -2
+        else:
+            posn2 = line.find(' -->', posn1)
+        
         if posn1 > posn2:
             continue
         
         r = texp.match(line, posn1+5, posn2)
         
         if not r:
-            continue
-        
-        tpl = r.groups()
-        if is_url(tpl[0], tpl[1], 1):
-            continue
-        
-        todo.append((tpl[0].strip().lower(),
-                    line_no+1,
-                    tpl[1].count('!'),
-                    tpl[1].strip()))
+            _label(line[posn1+5:posn2], labels, line_no+1)
+        else:
+            _sp(r.group(), todo, line_no+1, bad_todo, 0, ml=1)
+    
+    out = []
+    if labels:
+        add_labels(out, labels)
     
     if flat == 0:
-        return [], []
+        return out, []
     elif flat==1:
         return {}
     elif flat==2:
-        return [], [], {}
+        return out, [], {}
     else:
-        return [], [], {}, todo
+        return out, [], {}, todo
 
 def preorder(h):
     #uses call stack; do we care?
@@ -452,7 +486,9 @@ def foo(x, y=6, *args,
     return None
 
 class bar:
+    #--- this is also a label ---
     def __init__(self, foo=a, bar={1:2}):
+        #--- this is a label! ---
         """blah!"""
 
 class Baz(object, int):

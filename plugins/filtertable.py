@@ -28,6 +28,7 @@ if 1:
     del i, j, k
 
 def lcsseq(x, y):
+    #stores the full table, not necessary
     _enum = enumerate
     _max = max
     z = {}
@@ -44,6 +45,47 @@ def lcsseq(x, y):
             z[i,j] = k
     
     return z[i,j]
+
+def lcsseq(x, y):
+    #only stores most recent 2 lines
+    #more than sufficient for our uses
+    #significantly faster than the above
+    #not necessary
+    _enum = enumerate
+    if len(y) > len(x):
+        x,y = y,x
+    if len(y) == 0:
+        return 0
+    z1 = len(y)*[0]
+    z2 = z1[:]
+    z1.append(0) #for == case and j==0
+    for i, xi in _enum(x):
+        z2[0] = z2[-1] = 0 #for != case and j==0
+        for j, yj in _enum(y):
+            if xi == yj:
+                z2[j] = z1[j-1]+1
+            else:
+                k = z1[j]
+                l = z2[j-1]
+                if l > k:
+                    k = l
+                z2[j] = k
+        z1[:-1] = z2[:] #for == case and j==0
+    return z1[-2]
+
+def lcsseq(x,y):
+    #we really only want to know if _all_ of the characters of the shorter 
+    #string are in the longer string in order
+    #significantly faster than either of the above at O(n+m), compared to
+    #O(n*m)
+    if len(y) > len(x):
+        x,y = y,x
+    posn = 0
+    for c in y:
+        posn = x.find(c, posn)
+        if posn == -1:
+            return 0
+    return len(y)
 
 class filtertable(todo.vTodo, mylistmix.ListSelect):
     def OnGetItemText(self, item, col):
@@ -95,7 +137,7 @@ def rstr1(str, rch):
     return str
 
 def get_line_counts(h, lang):
-    if lang not in ('python', 'cpp'):
+    if lang not in ('python', 'cpp') and not lang.endswith('ml'):
         return {}
     #need implementation for C/C++, but only after parser for C/C++ is done
     
@@ -118,6 +160,9 @@ def get_line_counts(h, lang):
                 key = '%s%s%s'%('.'.join(nstk), '.'[:bool(nstk)], shortname)
             
             elif lang == 'cpp':
+                key, shortname = name, line_no[2]
+            
+            elif lang.endswith('ml'):
                 key, shortname = name, line_no[2]
             
             if lastn:
@@ -207,7 +252,7 @@ class DefinitionList(wx.Panel):
     def new_hierarchy(self, hier):
         #parse the hierarchy, set the data
         lang = self.stc.style()
-        if lang not in ('python', 'tex', 'cpp'):
+        if lang not in ('python', 'tex', 'cpp') and not lang.endswith('ml'):
             return
         names = []
         stk = [hier[::-1]]
@@ -256,6 +301,8 @@ class DefinitionList(wx.Panel):
                                   "%s %s%s%s"%(name[:y].strip(), '.'.join(nstk), '.'[:bool(nstk)], name[y:].strip()),
                                   ' '.join(nstk2+[name]),
                                   (counts.get(name) or [0]).pop(0)))
+                elif lang.endswith('ml'):
+                    names.append((name, line_no, name, name, name, 1))
                 
                 if children:
                     stk.append(cur)

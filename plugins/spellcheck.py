@@ -84,30 +84,24 @@ class SpellCheck(scrolled.ScrolledPanel):
         s2 = wx.BoxSizer(wx.HORIZONTAL)
         
         go = wx.Button(self, -1, "Check!")
-        bs = go.GetDefaultSize()[1]
-        go.SetToolTipString("Check spelling in the current document")
-        s2.Add(go, 0, wx.RIGHT, 4)
         self.Bind(wx.EVT_BUTTON, self.OnSpellCheck, go)
-
-        checks = wx.Button(self, -1, "Check Sel")
-        checks.SetToolTipString("Check spelling in the selection of the current document")
-        s2.Add(checks, 0)
-        self.Bind(wx.EVT_BUTTON, self.OnSpellCheckSel, checks)
-
-        s.Add(s2, 0, wx.ALL, 2)
+        go.SetToolTipString("Check spelling in the current document (or selected words)")
+        s2.Add(go, 0, wx.RIGHT, 4)
+        
+        bs = go.GetDefaultSize()[1] #somewhat unrelated
+        
+        clear = wx.Button(self, -1, "Clear")
+        self.Bind(wx.EVT_BUTTON, self.OnClear, clear)
+        clear.SetToolTipString("Clear the results of the previous spell check")
+        s2.Add(clear, 0, wx.LEFT, 4)
+        
+        s.Add(s2, 0, wx.ALL|wx.EXPAND, 2)
         
         s2 = wx.BoxSizer(wx.HORIZONTAL)
         
-        self.ignore_funcdefs = wx.CheckBox(self, -1, "Ignore Defs")
+        self.ignore_funcdefs = wx.CheckBox(self, -1, "Ignore Function Definitions")
         self.ignore_funcdefs.SetToolTipString("If checked, will ignore all function definitions")
-        s2.Add(self.ignore_funcdefs, 0, wx.TOP|wx.BOTTOM, 6)
-        
-        clear = wx.Button(self, -1, "Clear")
-        clear.SetToolTipString("Clear the results of the previous spell check")
-        s2.Add(clear, 0, wx.LEFT, 4)
-        self.Bind(wx.EVT_BUTTON, self.OnClear, clear)
-
-        s.Add(s2, 0, wx.ALL|wx.EXPAND, 2)
+        s.Add(self.ignore_funcdefs, 0, wx.TOP|wx.BOTTOM, 6)
         
         ## ws.Add(s, 0, wx.ALL|wx.EXPAND, 2)
         
@@ -275,10 +269,6 @@ class SpellCheck(scrolled.ScrolledPanel):
         for i in xrange(self.badsp.GetCount()):
             self.badsp.Check(i)
     
-    def OnSpellCheckSel(self, evt):
-        self.load_d()
-        self.OnSpellCheck(evt, 1)
-    
     def OnSpellCheck(self, evt, sel=0):
         self.load_d()
         num, win = self.root.getNumWin(evt)
@@ -302,6 +292,8 @@ class SpellCheck(scrolled.ScrolledPanel):
                 dcts.update(d[self.dictionaries.GetString(i)])
         
         words = {}
+        x,y = win.GetSelection()
+        sel = x != y
         if not sel:
             doc = wx.stc.StyledTextCtrl.GetText(win)
             self.start = 0

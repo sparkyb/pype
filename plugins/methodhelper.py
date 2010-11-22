@@ -7,6 +7,7 @@ class _MethodHelper(object):
         self.root = root
         self.name = name
     def __call__(self, event):
+        self.root._activity()
         num, stc = self.root.getNumWin(event)
         if stc.recording:
             stc.macro.append((None, None, self.name))
