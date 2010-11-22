@@ -20,6 +20,9 @@ columns = (
     )
 
 class macroList(todo.vTodo, mylistmix.ListSelect):
+    def __init__(self, parent, columns):
+        todo.vTodo.__init__(self, parent, columns)
+        self.parent = parent
     def Refresh(self):
         self.SetItemCount(0)
         try:

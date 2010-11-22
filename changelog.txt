@@ -1,3 +1,6 @@
+#-------------------------------- PyPE 2.7.1 ---------------------------------
+(fixed) bug related to wxPython 2.7 conversion.
+
 #--------------------------------- PyPE 2.7 ----------------------------------
 (fixed) possible race condition in the 'kill macro thread' code.
 (fixed) trigger expansion 'input' handling for characters with code points 
