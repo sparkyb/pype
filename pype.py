@@ -522,6 +522,8 @@ class MainWindow(wxFrame):
         self.config['paths'] = pathmarks
         self.config['display2code'] = self.snippet.display2code
         self.config['displayorder'] = self.snippet.displayorder
+        self.config['lastpath'] = self.config['lp']
+        del self.config['lp']
         try:
             path = os.sep.join([self.configPath, 'history.txt'])
             f = open(path, "w")
@@ -631,6 +633,7 @@ class MainWindow(wxFrame):
 # Set the working directory to the last directory used or current working directory if it doesn't exist 
         if 'lastpath' in self.config:
             wd = self.config['lastpath']
+            del self.config['lastpath']
         else:
             wd = os.getcwd()
 #--------------------------- end cmt-001 - 08/06/2003 ----------------------------
@@ -644,7 +647,7 @@ class MainWindow(wxFrame):
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
 # Add the just-opened file to the file history menu and set the last directory 
                 self.fileHistory.AddFileToHistory(os.path.join(dn, fn))
-            self.config['lastpath'] = dn
+            self.config['lp'] = dn
 #--------------------------- end cmt-001 - 08/06/2003 ----------------------------
         dlg.Destroy()
 

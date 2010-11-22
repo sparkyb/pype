@@ -1,3 +1,8 @@
+(PyPE 1.4.1)
+(fixed) a problem with pathmarks introduced by the 'remember the last path you
+were in when PyPE last closed' addition.  Yes, this fix gets it's own version.
+
+
 (PyPE 1.4)
 (added) in commenting/uncommenting feature thanks to Mark Tipton's adaptation
 of some codeEditor code.
