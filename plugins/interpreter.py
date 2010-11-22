@@ -31,8 +31,14 @@ import keyword
 import code
 import new
 import os
+import stat
 from codeop import compile_command
 import atexit
+try:
+    import _winreg
+except:
+    pass
+
 
 import wx
 import traceback
@@ -54,8 +60,11 @@ def unimpl_factory(name):
 remote = []
 
 def KillProcess():
-    for i in remote:
-        i.Kill('SIGKILL')
+    for i in remote[:]:
+        try:
+            i.Kill('SIGKILL')
+        except:
+            pass
 
 atexit.register(KillProcess)
 
@@ -80,6 +89,131 @@ elif sys.platform == 'linux2':
     command = '/bin/sh --noediting -i'
 else:
     command = '/bin/sh'
+
+def discover_python_installs(print_discovered=0):
+    seen = {}
+    possible_pythons = []
+    ok = '2.2 2.3 2.4 2.5 2.6 3.0 .exe'.split()    
+    
+    pf = 0
+    
+    se = sys.executable
+    se1 = os.path.split(se)[1]
+    if se1.startswith('python') and se1[6:].lower() in ok:
+        try:
+            se = os.path.realpath(sys.executable)
+        except:
+            pass
+        if print_discovered: print "sys.executable:", se
+        possible_pythons.append((sys.maxint, sys.executable))
+        seen[os.path.normcase(se)] = None
+    del se
+    sp = ':'
+    if sys.platform == 'win32':
+        #check the registry on Windows
+        for mainkey in (_winreg.HKEY_LOCAL_MACHINE, _winreg.HKEY_CURRENT_USER):
+            a = None
+            try:
+                try:
+                    a = _winreg.ConnectRegistry(None,mainkey)
+                    
+                    for ver in '2.6 2.5 2.4 2.3 2.2 3.0'.split():
+                        spth = 'SOFTWARE\\Python\\PythonCore\\%s\\InstallPath'%ver
+                        b = None
+                        try:
+                            try:
+                                b = _winreg.OpenKey(a, spth)
+                                
+                                i_pth = _winreg.QueryValue(b, None)
+                                i_pth = os.path.join(i_pth, 'python.exe')
+                                i_pth = os.path.realpath(i_pth)
+                                
+                                if os.path.normcase(i_pth) in seen:
+                                    continue
+                                
+                                m = os.stat(i_pth)
+                                
+                                if stat.S_ISREG(m.st_mode):
+                                    if print_discovered: print "In Registry:", i_pth
+                                    possible_pythons.append((m.st_mtime, i_pth))
+                                    seen[os.path.normcase(i_pth)] = None
+                                
+                            except:
+                                pass
+                        finally:
+                            if b:
+                                try:
+                                    _winreg.CloseKey(b)
+                                except:
+                                    pass
+                        del b
+                except:
+                    pass
+            finally:
+                if a:
+                    try:
+                        _winreg.CloseKey(a)
+                    except:
+                        pass
+                del a
+        sp = ';'
+    
+    #check PATH on all platforms
+    for _pth in os.environ.get('PATH', '').split(';'):
+        if _pth:
+            try:
+                x = os.listdir(_pth)
+            except:
+                continue
+            for i in x:
+                if not i.startswith('python') or i[6:].lower() not in ok:
+                    continue
+                i_pth = os.path.join(_pth, i)
+                i_pth = os.path.realpath(i_pth)
+                
+                if os.path.normcase(i_pth) in seen:
+                    continue
+                try:
+                    m = os.stat(i_pth)
+                except:
+                    continue
+                if stat.S_ISREG(m.st_mode):
+                    pf += 1
+                    if print_discovered: print "On Path:", i_pth
+                    possible_pythons.insert(-1, (sys.maxint-pf, i_pth))
+                    seen[os.path.normcase(i_pth)] = None
+    
+    possible_pythons.sort()
+    possible_pythons.reverse()
+        
+    return [j for i,j in possible_pythons], seen
+    
+python_choices, pythons_seen = discover_python_installs()
+which_python = (python_choices or ['python'])[0]
+
+def check_paths(lst, ch=None):
+    for i in lst:
+        if os.path.normcase(i) not in pythons_seen:
+            try:
+                m = os.stat(i)
+            except:
+                continue
+            
+            if stat.S_ISREG(m.st_mode):
+                python_choices.append(i)
+                pythons_seen[os.path.normcase(i)] = None
+
+    if ch and os.path.normcase(ch) in pythons_seen:
+        global which_python
+        which_python = ch
+    
+    try:
+        _ = python_choices.remove(which_python)
+    except:
+        pass
+    
+    python_choices.insert(0, which_python)
+    
 
 def rsplit(st):
     st = list(st)
@@ -110,7 +244,7 @@ GetSaveState jump GetText SetText Undo Redo changeStyle pos_ch OnUpdateUI
 do'''.split()
 pypeprefix = '''SetSaveState'''.split()
 
-python_cmd = '''python -u -c "import sys;sys.stderr=sys.__stderr__=\
+python_cmd = '''%s -u -c "import sys;sys.stderr=sys.__stderr__=\
  sys.stdout;import __builtin__;__builtin__.quit=__builtin__.exit=\
  'use Ctrl-Break to restart *this* interpreter';import code;\
  code.interact(readfunc=raw_input)"'''
@@ -132,6 +266,10 @@ Your shell may not output a prompt even if it is working otherwise.
 If you would like to help fix this, please contact the author.
 '''
 
+killsteps = ['SIGKILL', shell.close_stdin]
+if 'win' not in sys.platform:
+    #non-windows platforms should have a working signal implementation
+    killsteps.append('SIGINT')
 
 class MyShell(stc.StyledTextCtrl):
     if 1:
@@ -548,6 +686,12 @@ class MyShell(stc.StyledTextCtrl):
         #call from the subprocess ending, we can *hopefully* pull the
         #exception from the subprocess shell
         
+        try:
+            self.restart
+        except:
+            print "Process Ended, pid:%s,  exitCode: %s"%(evt.GetPid(), evt.GetExitCode())
+            return
+        
         if not self.restart:
             ## print "not restart"
             self.restart = 1
@@ -578,12 +722,16 @@ class MyShell(stc.StyledTextCtrl):
         if evt and not isinstance(evt, tuple):
             self._close(evt)
         self.queue = []
+        self.killsteps = killsteps[:]
         
         if self.restartable:
             ## print "Restartable!"
             d = ''
             if self.filter:
-                c = python_cmd
+                wp = which_python
+                if ' ' in wp:
+                    wp = '"%s"'%wp
+                c = python_cmd%wp
             else:
                 c = command
         elif isinstance(evt, tuple) and len(evt) == 2:
@@ -613,28 +761,33 @@ class MyShell(stc.StyledTextCtrl):
         # commands/responses.
         if not self.CanEdit():
             return
-        key = event.KeyCode()
+        key = GetKeyCode(event)
         # Return (Enter) needs to be ignored in this handler.
         if key == wx.WXK_RETURN:
             pass
         else:
             # Allow the normal event handling to take place.
             event.Skip()
-
-    def OnKeyDown2(self, event):
-        ## print event.GetEventType()
-        key = event.KeyCode()
-        controlDown = event.ControlDown()
-        if controlDown and key in (wx.WXK_CANCEL, wx.WXK_PAUSE):
-            self.clearCommand()
-            if not self.remote.process._stdin_:
-                how = 'SIGKILL'
+    
+    def _kill_me(self):
+        self.clearCommand()
+        if self.killsteps:
+            how = self.killsteps.pop()
+            if how == 'SIGKILL':
                 self.write("#Trying to terminate with SIGKILL\n")
-            else:
-                how = shell.close_stdin
+            elif how == 'SIGINT':
+                self.write("#Trying to interrupt with SIGINT\n")
+            elif how == shell.close_stdin:
                 self.write("#Closing subshell STDIN\n")
             self.remote.Kill(how)
-        elif not controlDown and key in (wx.WXK_CANCEL, wx.WXK_PAUSE):
+    
+    def OnKeyDown2(self, event):
+        ## print event.GetEventType()
+        key = event.GetKeyCode()
+        controlDown = event.ControlDown()
+        if controlDown and key in (wx.WXK_CANCEL, wx.WXK_PAUSE):
+            self._kill_me()
+        elif not controlDown and key in (wx.WXK_SCROLL, wx.WXK_CANCEL, wx.WXK_PAUSE):
             self.scroll ^= 1
         elif not self.filter and key in (wx.WXK_UP, wx.WXK_DOWN):
             self.OnHistoryReplace(step={wx.WXK_DOWN:-1,wx.WXK_UP:1}[key])

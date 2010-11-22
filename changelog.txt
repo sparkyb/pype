@@ -1,3 +1,62 @@
+#--------------------------------- PyPE 2.7 ----------------------------------
+(fixed) possible race condition in the 'kill macro thread' code.
+(fixed) trigger expansion 'input' handling for characters with code points 
+greater than 127 (basically all non-US-english characters).
+(fixed) problem when trying to close a shell on Unicode PyPE with unicode
+characters.
+(changed) starting up PyPE no longer creates the directory tree initially.  It
+will now be created the first time you click on the 'Browse...' tab after PyPE
+has started up.  This change removes the initial delay when starting PyPE up,
+and removes the floppy drive seek on platforms with floppy drives.
+(added) better Python interpreter discovery and selection.  Checks the
+registry on Windows, and checks the environment PATH on all platforms.  Will
+follow symlinks, etc., and allows for the user to browse for a Python not on
+their path.
+(changed) sample 'Run Current File' macro to include stubs for other types of
+files, and to use the Python interpreter chosen for the Python Shell.
+(added) sending SIGINT to shells on non-Windows platforms.
+(fixed) hitting the escape key now closes the autocomplete and calltip
+windows.  Previously the autocomplete window was very difficult to get rid of.
+(added) method autocomplete for self.? methods on the current class, enabled
+by default when autocomplete is enabled.
+(added) documentation about the sample macros shipped with PyPE.
+(added) documentation about what to expect when starting to use PyPE when
+coming from another editor/ide.
+(added) optional (on by default) colored icons next to function, method, and
+class names in the source trees, based on how 'private' they are according to
+Python naming semantics.
+(changed) Swapping the position of the editor via "Options -> Editor on top"
+or "Options -> Editor on left" no longer require a restart.
+(fixed) linux GTK platforms no longer have strange bottom/right toolbar
+resizing artifacts (the 'resize' cursor won't show unless you are actually on
+the sash), as long as you have at least one document open.
+(fixed) linux GTK platforms now have a working scrolled 'search' tab.
+(fixed) bug where resizing PyPE to be too short would cause PyPE to crash on
+some platforms.
+(fixed) exception when closing shells on slower platforms.
+(added) saving of the sash position in the find in files tab between PyPE
+restarts.
+(fixed) Browse... tab's Pathmark -> Add Pathmark .  You can create new
+pathmarks again!  I don't know when this was broken.
+(fixed) searching with the Search tab will now stop while searching within a
+file if you hit "Stop Search".  Previously it would finish a file before
+actually stopping.
+(fixed) explicit or implicit muliline searches with the Search tab will now
+have the GUI refresh while searching a file.  Previously it would hang PyPE
+when processing each file.
+(fixed) unecessary "would you like to save?" dialog when closing down a newly
+created empty document.
+(fixed) potential error when switching between PyPE and other applications 
+when a document includes characters not encodable by the currently specified
+encoding.
+(changed) made PyPE use the wx namespace everywhere.
+(added) support for wxPython 2.7 prerelease.
+(added) support for recent Scintilla 'round box' indicator for shell output.
+(fixed) Transforms->Wrap try/except/finally .
+(added) ability to ignore subdirectories with a leading period when searching
+"Directories" in the Search tab.
+
+
 #-------------------------------- PyPE 2.6.5 ---------------------------------
 (added) command line option for setting the base font size of the text in the
 editor window.

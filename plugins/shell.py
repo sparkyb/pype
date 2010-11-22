@@ -98,7 +98,7 @@ class process:
     def __init__(self, parent, cmd, end_callback):
         self.process = wx.Process(parent)
         self.process.Redirect()
-        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC|flags, self.process)
+        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC|wx.EXEC_MAKE_GROUP_LEADER|flags, self.process)
         self.b = []
         if self.process.pid:
             #what was up with wx.Process.Get*Stream names?

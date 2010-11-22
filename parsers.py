@@ -395,6 +395,34 @@ def ml_parser(source, line_ending, flat, _):
     else:
         return [], [], {}, todo
 
+def preorder(h):
+    #uses call stack; do we care?
+    for i in h:
+        yield i[1][2], i
+        for j in preorder(i[3]):
+            yield j
+
+def _preorder(h):
+    #uses explicit stack, may be slower, no limit to depth
+    s = [h]
+    while s:
+        c = s.pop()
+        yield c[1][2]
+        s.extend(c[3][::-1])
+
+_name_start = dict.fromkeys(iter('abcdefghijklmnopqrstuvwxyzABCDEFGHIJLKMNOPQRSTUVWXYZ_'))
+_name_characters = dict(_name_start)
+_name_characters.update(dict.fromkeys(iter('0123456789')))
+
+def get_last_word(line):
+    nch = _name_characters
+    for i in xrange(len(line)):
+        if line[-1-i] not in nch:
+            break
+    
+    if line[-1-i] in _name_start:
+        return line[-1-i:]
+    return ''
 
 '''
 ([('def foo(x, y=6, *args, **kwargs)', ('foo', 5, 'foo'), 0, []),

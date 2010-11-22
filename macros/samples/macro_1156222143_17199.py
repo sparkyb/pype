@@ -1,5 +1,6 @@
 
 import wx
+import os
 
 creation_date = 'Mon Aug 21 21:49:03 2006'
 name = 'Run Current File'
@@ -20,9 +21,19 @@ def macro(self, data=None):
         if extn in ('py', 'pyw'):
             #if we don't embed it via os.system(), wx applications fail to
             #display the GUIs
-            cmd = '''python -c "import os;os.system('python -u %s')"'''%(fn.replace('"', '\\"'))
+            py = _pype.interpreter.which_python
+            if ' ' in py:
+                py = '"%s"'%py
+            cmd = '''%s -c "import os;os.system('%s -u %s')"'''%(py, py.replace('"', '\\"'), fn.replace('"', '\\"'))
         ## elif extn in ('tex',):
             ## cmd = 'pdflatex %s'%fn
+        ## elif extn in ('html', 'htm', 'shtml', 'shtm'):
+            ## try: import webbrowser
+            ## except:
+                ## print "can't import webbrowser module!"
+                ## return
+            ## webbrowser.open(os.path.join(dir, fn))
+            ## return
         else:
             print "don't know how to run file type %r"%extn
             return

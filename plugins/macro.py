@@ -385,17 +385,27 @@ class macroPanel(wx.Panel):
         kill_main_thread_in(condition)
         try:
             try:
-                getattr(module, 'macro')(stc)
-            except Exception, why:
-                _ = condition.pop()
-                end_macro()
-                finished = 1
-                self.root.exceptDialog("Failure in macro!")
+                try:
+                    getattr(module, 'macro')(stc)
+                except Exception, why:
+                    _ = condition.pop()
+                    end_macro()
+                    finished = 1
+                    self.root.exceptDialog("Failure in macro!")
+            finally:
+                if condition:
+                    _ = condition.pop()
+                if not finished:
+                    end_macro()
+                    finished = 1
         finally:
+            #We try to cleanup twice to guarantee that the cleanup happens;
+            #the kill_main_thread_in() function only tries to kill us once.
             if condition:
                 _ = condition.pop()
             if not finished:
                 end_macro()
+                finished = 1
 
     def OnDel(self, e):
         x = self.macros.GetFirstSelected()

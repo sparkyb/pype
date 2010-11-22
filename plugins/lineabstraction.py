@@ -1,3 +1,12 @@
+
+'''
+Line-based abstraction layer over StyledTextCtrl.
+
+Written for PyPE and Copyright 2006 Josiah Carlson, released under the
+GNU GPL v.2
+
+'''
+
 import sys
 
 KE = "%s does not support %s"

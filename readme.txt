@@ -194,6 +194,54 @@ are enabled by default in 2.6+.
 PyPE features and functionality
 -------------------------------
 
+What to expect when coming from other editors/IDEs
+==================================================
+While PyPE has quite a few of the features that one would expect from an IDE,
+I do not consider PyPE to be an IDE; I consider PyPE to be an editor.  The
+semantic difference between the two in my mind is a bit wishy-washy, but one
+feature that sets an editor apart from an IDE (in my opinion) is the existance
+of a run menu item or button with debugger.  Every IDE that is worth talking
+about has both of these features, but PyPE doesn't.  The reasons why are
+somewhat personal, so I'll not bore you, but suffice it to say:
+
+1. Hitting F5 will not run your Python, nor compile the latex, nor compile the
+   C/C++, nor open a browser for the HTML.  There is a macro in the sample
+   macros that implements a stub of such functionality, but it is up to you
+   (the user) to put in what you really want.
+
+2. If PyPE seems complicated when you are first starting out, hide all of the
+   optional features; Options -> Show Bottom Toolbar, Show Right Toolbar, and
+   Options -> Toolbar -> Hide .  Start editing.  If it isn't doing what you
+   want/expect it to, check the 'Document' menu for per-document settings or
+   the 'Options' menu for other editor-wide options.  Want to change hotkeys?
+   Use Options -> Change Menus and Hotkeys .
+
+
+3. PyPE is not going to gain a debugger any time soon, if ever.  I agree with
+   many of you that debuggers can be useful, but aside from attempting to
+   steal Idle's or some other project's remote debugger and making it work in
+   PyPE, 1) I wouldn't know where to begin, 2) it may kill bookmark
+   indicators, 3) I find that print statements are sufficient for me, 4) I
+   have not had the desire to make it happen.
+
+4. PyPE is not like every other editor you have ever used.  It may share some
+   features, but it is likely just a bit different.  Before you freak out and
+   email me with, "PyPE sux, go find something else to do with your time
+   newb! lols" spend some time looking for the feature in the menus, the
+   various tabs, etc.  You may find that your desired feature is available.
+   Also note that if the key bindings are not to your liking, you can change
+   them with 'Options -> Change Menus and Hotkeys' for all the menus.  Macros
+   are handled a bit differently, which you will find out by hitting the
+   'hotkey' button in the Macros tab.
+
+5. PyPE has macros.  These macros can record what you do with the keyboard and
+   some menu actions, then play them back.  You can also use them to
+   programmatically edit the document you are working on, including the
+   handling of 'code snippets'.  Look at the macro help below, and the samples
+   included with PyPE (including the failure conditions).
+
+
+
 Encoding detection for opening files
 ====================================
 If you are using the Unicode version of PyPE, when opening a file, PyPE will
@@ -219,7 +267,8 @@ Note that PyPE does not default to assuming XML or HTML files are UTF-8 as per
 spec: http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl due to
 backwards compatability concerns with PyPE 2.6.3 and earlier. Users desiring
 UTF-8 decoding support should make sure that their xml/html files include a
-UTF-8 encoding directive or BOM at the beginning of their file.
+UTF-8 encoding directive or BOM at the beginning of their file, which is
+recommended for all xml/html anyways.
 
 
 Encoding detection for saving files
@@ -876,11 +925,10 @@ but they shouldn't be terribly difficult.
 
 Using macros as code snippets
 =============================
-
 1. Create a macro.
 
-2.  Paste the content of your snippet into a global variable in the macro and
-    call it something like ``snippet``.
+2. Paste the content of your snippet into a global variable in the macro and
+   call it something like ``snippet``.
 
 3. Use ``self.InterpretTrigger(snippet)``.
 
@@ -901,6 +949,30 @@ You would create the following macro::
     
     def macro(self):
         self.InterpretTrigger(snippet, 1)
+
+
+Sample Macros included with PyPE
+================================
+
+PyPE includes a handful of sample macros to give you some idea of what works
+and what doesn't.  The most important ones you should look at are the various
+Timeout macros.  They will show you what things will and won't stop after the
+5 second timeout.  The timeout conditions are there to try to prevent you from
+trying to kill PyPE because it stopped responding.  The general rule of thumb:
+don't perform any system calls that could take a long time to finish.
+
+An interesting macro is 'Run selected text in a Python Shell'.  This macro
+will, as described, run the selected text in a Python Shell.  If no Python
+Shell is currently open, it will open a new one.  It will then switch to the
+first Python Shell tab in the editor, and send the text you had selected.  You
+will be happy to know that it reindents the selection so that you don't get
+those annoying SyntaxError exceptions.  This macro also comes with a default
+hotkey of Ctrl+Shift+F5 .
+
+Another interesting macro is the 'Run Current File'.  This macro will, as
+described, run the currently open file.  It will only run .py and .pyw files
+as written, but it has stubs for html and tex files that you (the user) can
+add.
 
 
 ---

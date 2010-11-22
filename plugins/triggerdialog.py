@@ -159,6 +159,8 @@ class TriggerDialog(wx.Dialog):
                     continue
                 pr[p[0]] = r
         
+        ## print repr(d)
+        
         self.stc.triggers.clear()
         self.stc.triggers.update(d)
         self.Destroy()

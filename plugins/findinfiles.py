@@ -134,7 +134,7 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
         wx.ListCtrl.__init__(
             self, parent, -1,
             style=wx.LC_REPORT|wx.LC_VIRTUAL|wx.LC_HRULES|wx.LC_VRULES)
-        self.parent = parent
+        self.parent = parent.GetParent()
         self.c = columns
         
         self.imageList = wx.ImageList(16, 16)
@@ -164,6 +164,12 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
         #self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnItemDeselected)
         self.pattern = None
         self.currentItem = 0
+        self.Bind(wx.EVT_SIZE, self._thisResize)
+        
+    def _thisResize(self, e):
+        if e.GetSize()[1] < 32:
+            return
+        e.Skip()
 
     def setData(self, arrayOfTuples, copy=1):
         if copy:
@@ -257,7 +263,7 @@ class FoundText(wx.ListBox):
         wx.ListBox.__init__(
             self, parent, -1,
             style=wx.LB_SINGLE|wx.LB_NEEDED_SB)
-        self.parent = parent
+        self.parent = parent.GetParent()
         wx.EVT_LISTBOX_DCLICK(parent, self.GetId(), self.OnItemActivated)
         self.last = ''
         self.pattern = None
@@ -305,7 +311,7 @@ class FoundTree(wx.TreeCtrl):
     def __init__(self, parent):
         wx.TreeCtrl.__init__(self, parent,
                              style=wx.TR_HAS_BUTTONS | wx.TR_HIDE_ROOT | wx.TR_NO_LINES)
-        self.parent = parent
+        self.parent = parent.GetParent()
 
         isz = (16,16)
         il = wx.ImageList(isz[0], isz[1])
@@ -382,35 +388,37 @@ class FindInFiles(wx.Panel):
 
         winids = []
 
-        controlsWindow = wx.SashLayoutWindow(
-            self, -1, wx.DefaultPosition, (200, 30),
-            wx.NO_BORDER|wx.SW_3D)
-        controlsWindow.SetOrientation(wx.LAYOUT_VERTICAL)
-        controlsWindow.SetAlignment(wx.LAYOUT_LEFT)
-        controlsWindow.SetSashVisible(wx.SASH_RIGHT, True)
-        self.controlsWindow = controlsWindow
-        winids.append(controlsWindow.GetId())
-
+        ## controlsWindow = wx.SashLayoutWindow(
+            ## self, -1, wx.DefaultPosition, (200, 30),
+            ## wx.NO_BORDER|wx.SW_3D)
+        ## controlsWindow.SetOrientation(wx.LAYOUT_VERTICAL)
+        ## controlsWindow.SetAlignment(wx.LAYOUT_LEFT)
+        ## controlsWindow.SetSashVisible(wx.SASH_RIGHT, True)
+        ## self.controlsWindow = controlsWindow
+        ## winids.append(controlsWindow.GetId())
+        
+        self.controlsWindow = controlsWindow = wx.SplitterWindow(self, -1, style=wx.SP_NOBORDER)
+        
         fc = self.readPreferences()
         self.scope = fc['scope']
 
-        self.viewResultsAs = fc['view']
-        
-        self.resultsWindow = viewoptions.get(fc['view'], FoundText)(self)
-            
-        winids.append(self.resultsWindow.GetId())
-
-        self.Bind(
-            wx.EVT_SASH_DRAGGED_RANGE, self.OnSashDrag,
-            id=min(winids), id2=max(winids)
-            )
-
-        self.Bind(wx.EVT_SIZE, self.OnSize)
+        ## self.Bind(wx.EVT_SIZE, self.OnSize)
 
         self.scrolledPanel = scrolled.ScrolledPanel(controlsWindow, -1,
             style=wx.TAB_TRAVERSAL|wx.SUNKEN_BORDER)
         SLF = self.scrolledPanel
-
+        
+        self.viewResultsAs = fc['view']
+        
+        self.resultsWindow = viewoptions.get(fc['view'], FoundText)(controlsWindow)
+        ## winids.append(self.resultsWindow.GetId())
+        
+        ## self.Bind(
+            ## wx.EVT_SASH_DRAGGED_RANGE, self.OnSashDrag,
+            ## id=min(winids), id2=max(winids)
+            ## )
+        
+        
         def static(text, style=wx.ALIGN_LEFT):
             return wx.StaticText(SLF, -1, text, style=style)
 
@@ -553,7 +561,12 @@ class FindInFiles(wx.Panel):
 
         row+=1
         self.ss = checkb("Search Subdirectories", fc['search_sub_dirs'])
-        gbs.Add(self.ss, (row,1), (1,lastColumn),
+        ## gbs.Add(self.ss, (row,1), (1,lastColumn),
+        gbs.Add(self.ss, (row,1), (1,2),
+            flag=wx.ALIGN_LEFT|wx.BOTTOM,
+            border=outsideBorder)
+        self.dd = checkb("Ignore .subdirs", fc['ignore_dotted_dirs'])
+        gbs.Add(self.dd, (row,3), (1,2),
             flag=wx.ALIGN_LEFT|wx.BOTTOM,
             border=outsideBorder)
 
@@ -584,27 +597,37 @@ class FindInFiles(wx.Panel):
         #gbs.AddGrowableRow(0)
         gbs.AddGrowableCol(1)
 
-        self.scrolledPanel.SetSizerAndFit(gbs)
-        self.scrolledPanel.SetAutoLayout(True)
+        self.scrolledPanel.SetSizer(gbs)
+        ## self.scrolledPanel.SetAutoLayout(True)
         self.scrolledPanel.SetupScrolling()
 
-        cwSizer = wx.BoxSizer(wx.HORIZONTAL)
-        cwSizer.Add(self.scrolledPanel, 1, wx.EXPAND)
-        self.controlsWindow.SetSizerAndFit(cwSizer)
-        self.controlsWindow.SetAutoLayout(True)
-        self.controlsWindow.Layout()
-        #HACK:
-        minSize=[i+40 for i in self.controlsWindow.GetMinSize()]
-        self.controlsWindow.SetDefaultSize(minSize)
-        parent.SetClientSize(self.GetSize())
-
+        ## cwSizer = wx.BoxSizer(wx.HORIZONTAL)
+        ## cwSizer.Add(self.scrolledPanel, 1, wx.EXPAND)
+        ## self.controlsWindow.SetSizerAndFit(cwSizer)
+        ## self.controlsWindow.SetAutoLayout(True)
+        ## self.controlsWindow.Layout()
+        ## #HACK:
+        ## minSize=[i+40 for i in self.controlsWindow.GetMinSize()]
+        ## self.controlsWindow.SetDefaultSize(minSize)
+        ## parent.SetClientSize(self.GetSize())
+        
+        s = wx.BoxSizer(wx.VERTICAL)
+        self.controlsWindow.SplitVertically(self.scrolledPanel, self.resultsWindow)
+        s.Add(self.controlsWindow, 1, wx.EXPAND)
+        self.SetSizer(s)
+        
         #------------------------------
 
-        self.SetAutoLayout(True)
+        ## self.SetAutoLayout(True)
         tid = wx.NewId()
         self.timer = wx.Timer(self, tid)
         wx.EVT_TIMER(self, tid, self.OnFindButtonClick)
-
+        
+        wx.CallAfter(self.splitctrl, _pype.SEARCH_SASH_POSITION)
+    
+    def splitctrl(self, size):
+        self.controlsWindow.SetSashPosition(max(size, 200))
+    
     #-------------------------------------------------------------------------
     def VerifyChecks(self, evt):
         if self.commented.IsChecked() and self.uncommented.IsChecked():
@@ -636,15 +659,18 @@ class FindInFiles(wx.Panel):
             self.viewResultsAs=view
             self.savePreferences()
             #toss old results window
-            x = self.resultsWindow.pattern 
+            x = self.resultsWindow.pattern
+            y = self.controlsWindow.GetSashPosition()
+            self.controlsWindow.Unsplit()
             self.resultsWindow.Destroy()
             #create new results window
-            self.resultsWindow = viewoptions.get(view, FoundText)(self)
+            self.resultsWindow = viewoptions.get(view, FoundText)(self.controlsWindow)
+            self.controlsWindow.SplitVertically(self.scrolledPanel, self.resultsWindow, y)
             self.resultsWindow.pattern = x
-            self.Bind(wx.EVT_SASH_DRAGGED_RANGE, self.OnSashDrag, self.resultsWindow)
+            ## self.Bind(wx.EVT_SASH_DRAGGED_RANGE, self.OnSashDrag, self.resultsWindow)
             #populate new results window
             self.resultsWindow.setData(self.found)
-            self.OnSize(event)
+            ## self.OnSize(event)
 
     def OnSashDrag(self, event):
         if event.GetDragStatus() == wx.SASH_STATUS_OUT_OF_RANGE:
@@ -661,9 +687,18 @@ class FindInFiles(wx.Panel):
         wx.LayoutAlgorithm().LayoutWindow(self, self.resultsWindow)
         #self.controlsWindow.Layout()
         self.resultsWindow.Refresh()
+        
+        x = self.scrolledPanel.GetSize()[0]
+        y = self.GetSize()[1]
+        self.scrolledPanel.SetSize((x,y))
+        print "sash dragged", (x,y)
 
     def OnSize(self, event):
+        y = event.GetSize()[1]
         wx.LayoutAlgorithm().LayoutWindow(self, self.resultsWindow)
+        x = self.scrolledPanel.GetSize()[0]
+        self.scrolledPanel.SetSize((x,y))
+        print "resized", (x,y)
 
     def OnClear(self, e):
         print "OnClear"
@@ -752,9 +787,9 @@ class FindInFiles(wx.Panel):
         try:
             wx.Yield()
         except:
-            print "excepted", 1
+            ## print "excepted", 1
             #would have tried to start while in another function's
-            #wxYield() call.  Will wait 100ms and try again
+            #wx.Yield() call.  Will wait 100ms and try again.
             self.timer.Start(100, wx.TIMER_ONE_SHOT)
             return
 
@@ -775,6 +810,7 @@ class FindInFiles(wx.Panel):
         self.checkQuoted = self.quoted.IsChecked()
         multiline = self.multiline.IsChecked()
         subd = self.ss.IsChecked()
+        igndot = self.dd.IsChecked()
 
         #python strings
         if pattern and pattern[-1] in ['"', "'"]:
@@ -821,7 +857,7 @@ class FindInFiles(wx.Panel):
             wx.Yield()
             if not self.running:
                 break
-            for filename, data in fcn(path, subd, include, exclude):
+            for filename, data in fcn(path, subd, include, exclude, igndot):
                 self.root.SetStatusText(ss%(len(found), hitFileCount, fileCount, "so far ", '"'+filename+'"'), log=0)
                 fileCount+=1
                 wx.Yield()
@@ -855,7 +891,7 @@ class FindInFiles(wx.Panel):
         except cancelled:
             pass
     
-    def current_file_with_includes(self, path, subdirs, include, exclude):
+    def current_file_with_includes(self, path, subdirs, include, exclude, ignore_dotted=0):
         try:
             _, win = self.root.getNumWin()
             t = fixnewlines(StyledTextCtrl.GetText(win))
@@ -922,12 +958,12 @@ class FindInFiles(wx.Panel):
         except cancelled:
             pass
     
-    def open_files(self, path, subdirs, include, exclude):
+    def open_files(self, path, subdirs, include, exclude, ignore_dotted=0):
         for win in self.root.control:
             if namematches(win.filename, include, exclude):
                 yield self.getfn(win), fixnewlines(StyledTextCtrl.GetText(win))
         
-    def directories(self, path, subdirs, include, exclude):
+    def directories(self, path, subdirs, include, exclude, ignore_dotted=0):
         try:
             lst = os.listdir(path)
         except Exception, e:
@@ -941,7 +977,8 @@ class FindInFiles(wx.Panel):
                 if namematches(filen, include, exclude):
                     yield a, open(a, 'rU').read()
             elif subdirs and os.path.isdir(a):
-                d.append(a)
+                if not ignore_dotted or filen[:1] != '.':
+                    d.append(a)
         if subdirs:
             for p in d:
                 for f in self.directories(p, subdirs, include, exclude):
@@ -960,11 +997,18 @@ class FindInFiles(wx.Panel):
         found = []
         cp = 0
         lc = 0
+        t = time.time()
         for match in self.pattern.finditer(data):
             lc += data.count('\n', cp, match.start())
             cp = match.start()
             found.append((fileName, lc + 1, match.group().replace('\n', '\\n'), ''))
-        wx.Yield()
+            if self.stopping:
+                break
+            if time.time()-t > .05:
+                t = time.time()
+                wx.Yield()
+        if _pype.UNICODE:
+            return [(i,j,k.decode('latin-1'),l.decode('latin-1')) for i,j,k,l in found]
         return found
 
     def searchFileEachLine(self, fileName, data):
@@ -973,6 +1017,7 @@ class FindInFiles(wx.Panel):
         search=self.pattern.search
         pth = os.path.split(fileName)[0] #for tags support
         language = _pype.get_filetype(fileName)
+        t = time.time()
         for number, line in enumerate(lines):
             itemOrig=line
             if self.checkComment == 2:
@@ -1007,7 +1052,13 @@ class FindInFiles(wx.Panel):
                             found.append((fileName, int(number) + 1, itemOrig.strip(), ''))
                     else:
                         found.append((fileName, int(number) + 1, itemOrig.strip(), ''))
-            wx.Yield()
+            if self.stopping:
+                break
+            if time.time()-t > .05:
+                t = time.time()
+                wx.Yield()
+        if _pype.UNICODE:
+            return [(i,j,k.decode('latin-1'),l.decode('latin-1')) for i,j,k,l in found]
         return found
 
 #---------------------------- preference handling ----------------------------
@@ -1034,8 +1085,10 @@ class FindInFiles(wx.Panel):
         prefs.setdefault('include', ['*.*'])
         prefs.setdefault('exclude', ['.*;*.bak;*.orig;~*;*.swp;CVS'])
         prefs.setdefault('search_sub_dirs', 1)
+        prefs.setdefault('ignore_dotted_dirs', 1)
 
         prefs.setdefault('view', 'table')
+        
         self.preferences = prefs
         return prefs
 
@@ -1072,6 +1125,7 @@ class FindInFiles(wx.Panel):
             'include': getlist(self.include),
             'exclude': getlist(self.exclude),
             'search_sub_dirs': self.ss.IsChecked(),
+            'ignore_dotted_dirs': self.dd.IsChecked(),
 
             'view': self.viewChoice.GetStringSelection(),
             }

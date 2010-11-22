@@ -4,6 +4,7 @@ import wx
 import wx.stc
 import wx.lib.mixins.listctrl as listmix
 import __main__
+import time
 
 OB1 = 0
 class FileDropTarget(wx.FileDropTarget):
@@ -136,7 +137,7 @@ class MyNB(wx.Notebook):
                 wx.CallAfter(self.updateChecks, win)
                 #width = self.GetClientSize()[0]
                 #split = win.parent
-                #if win.GetWrapMode() == wxSTC_WRAP_NONE:
+                #if win.GetWrapMode() == wx.STC_WRAP_NONE:
                 #    self.parent.SetStatusText("", 1)
                 #else:
                 #    self.parent.SetStatusText("WRAP",1)
@@ -215,6 +216,8 @@ class MyNB(wx.Notebook):
         self.root.menubar.Check(__main__.INDENTGUIDE, win.GetIndentationGuides())
         self.root.menubar.Check(__main__.USETABS, win.GetUseTabs())
         self.root.menubar.Check(__main__.AUTO, win.showautocomp)
+        self.root.menubar.Check(__main__.FETCH_M, win.fetch_methods)
+        self.root.menubar.Enable(__main__.FETCH_M, win.showautocomp)
         self.root.menubar.Check(__main__.WRAPL, win.GetWrapMode() != wx.stc.STC_WRAP_NONE)
         self.root.menubar.Check(__main__.SLOPPY, win.sloppy)
         self.root.menubar.Check(__main__.SMARTPASTE, win.smartpaste)
@@ -301,7 +304,14 @@ class setupmix:
         #2 -> path
         #3 -> filename, path
         self.resizeColumn(32)
+        
+        self.Bind(wx.EVT_SIZE, self._thisResize)
     
+    def _thisResize(self, e):
+        if e.GetSize()[1] < 32:
+            return
+        e.Skip()
+        
 
 class MyLC(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, setupmix):
     def __init__(self, parent, root):

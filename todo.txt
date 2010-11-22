@@ -111,6 +111,16 @@ Fix Shells for Mac
 * Fix line number column width for large files
 * Check/fix %L for triggers
 
-2.6.6+/2.7
-Better autocomplete for self. methods
-"Find all" tool
+2.6.6+/2.7+
+* Better autocomplete for self. methods
+"Find all uses of fcn X" (maybe use Search tab?)
+* Add help for "what to expect when coming from another editor"
+* Add help for the sample macros
+* Only create the directory tree for the Browse... tab when it is first clicked
+* Add option to detect and define where the Python executable is
+* Check on pathmarks (fixed)
+* Check on workspaces (verified working)
+* Transition completely to wx namespace
+* Add "Ignore Dotted Directories" to Search tab.
+* Fix "wrap try/except/finally"
+

@@ -8,16 +8,15 @@ REM_SWAP = 1
 
 import os
 import sys
-#from wxPython.wx import *
-from wxPython.stc import wxSTC_EOL_CRLF, wxSTC_EOL_LF, wxSTC_EOL_CR
+from wx.stc import STC_EOL_CRLF, STC_EOL_LF, STC_EOL_CR
 import zlib
 from parsers import *
 
 startup_path = os.getcwd()
 
-fmt_mode = {"\r\n":wxSTC_EOL_CRLF,
-              "\n":wxSTC_EOL_LF,
-              "\r":wxSTC_EOL_CR}
+fmt_mode = {"\r\n":STC_EOL_CRLF,
+              "\n":STC_EOL_LF,
+              "\r":STC_EOL_CR}
 fmt_Rmode = {}
 for i,j in fmt_mode.items():
     fmt_Rmode[j] = i

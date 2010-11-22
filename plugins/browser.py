@@ -10,12 +10,46 @@ import wx
 #local imports
 import filehistory
 
+def ChangedPage(evt):
+    nb = evt.GetEventObject()
+    pn = evt.GetSelection()
+    if nb.GetPageText(pn).startswith('Browse'):
+        nb.GetPage(pn).showstuff()
+    evt.Skip()
+
+class LateBinding:
+    def __init__(self, obj, name, attr):
+        self.obj = obj
+        self.name = name
+        self.attr = attr
+    def __call__(self, *args, **kwargs):
+        return getattr(getattr(self.obj, self.name), self.attr)(*args, **kwargs)
+
 class FilesystemBrowser(wx.Panel):
     def __init__(self, parent, root, pathnames=[], maxlen=0):
         wx.Panel.__init__(self, parent)
         self.root = root
         
-        self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
+        self.pathnames = pathnames
+        self.maxlen = maxlen
+        
+        self.op = filehistory.FileHistory(self, callback=[self.chdir, LateBinding(self, 'browser', 'SetPath')], seq=self.pathnames,maxlen=self.maxlen)
+        self.rp = filehistory.FileHistory(self, remove=1, callback=[self.op.ItemRemove], seq=self.pathnames,maxlen=self.maxlen,
+                                delmsg=('Are you sure you want to delete the pathmark?\n%s', "Delete Pathmark?"))
+        self.op.callback.append(self.rp.ItemAdd)
+        
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.sizer)
+        
+        ## self.showstuff()
+    
+    def showstuff(self):
+        if hasattr(self, 'button'):
+            return
+        
+        print "called showstuff!"
+        
+        sizer = self.sizer
         
         self.button = wx.Button(self, -1, "Pathmark...")
         wx.EVT_BUTTON(self, self.button.GetId(), self.OnButton)
@@ -28,22 +62,16 @@ class FilesystemBrowser(wx.Panel):
         sizer.Add(self.browser, 1, wx.EXPAND)
         
         #create menu
-        
         self.m = wx.Menu()
         np = wx.NewId()
         self.m.Append(np, "Add Selected Path")
         wx.EVT_MENU(self, np, self.OnNewPathmark)
         
-        self.op = filehistory.FileHistory(self, callback=[self.chdir, self.browser.SetPath], seq=pathnames,maxlen=maxlen)
-        self.rp = filehistory.FileHistory(self, remove=1, callback=[self.op.ItemRemove], seq=pathnames,maxlen=maxlen,
-                                delmsg=('Are you sure you want to delete the pathmark?\n%s', "Delete Pathmark?"))
-        self.op.callback.append(self.rp.ItemAdd)
         self.m.AppendMenu(wx.NewId(), "Choose Path", self.op)
         self.m.AppendSeparator()
         self.m.AppendMenu(wx.NewId(), "Remove Path", self.rp)
         
-        self.sizer.Fit(self)
-        self.SetSizer(self.sizer)
+        wx.CallAfter(self.sizer.Layout)
     
     def chdir(self, path):
         self.root.config.pop('lastpath', None)
@@ -51,7 +79,7 @@ class FilesystemBrowser(wx.Panel):
     
     def gethier(self):
         p = self.browser.GetFilePath()
-        ## print "Path:", p
+        print "Path:", p
         return p
 
     def OnActivate(self, evt):
@@ -64,7 +92,7 @@ class FilesystemBrowser(wx.Panel):
             evt.Skip()
     
     def OnNewPathmark(self, evt):
-        fn = self.gethier()
+        fn = self.browser.GetPath()
         try:
             st = os.stat(fn)[0]
             if stat.S_ISDIR(st):

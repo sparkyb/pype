@@ -1,8 +1,10 @@
 import wx
 import sys
+import os
 
 icons = 1
 colors = 1
+colored_icons = 1
 newroot = sys.platform != 'win32'
 
 blue = wx.Colour(0, 0, 200)
@@ -26,6 +28,11 @@ class TreeCtrl(wx.TreeCtrl):
             self.images = [wx.ArtProvider_GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, isz),
                         wx.ArtProvider_GetBitmap(wx.ART_FILE_OPEN, wx.ART_OTHER, isz),
                         wx.ArtProvider_GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz)]
+            
+            for icf in ('icons/green.gif', 'icons/yellow.gif', 'icons/red.gif'):
+                icf = os.path.join(_pype.runpath, icf)
+                self.images.append(wx.BitmapFromImage(wx.Image(icf)))
+            
             for i in self.images:
                 il.Add(i)
             self.SetImageList(il)
@@ -84,8 +91,22 @@ class hierCodeTreePanel(wx.Panel):
                     root.append(item_no)
                     cur = children[:]
                 elif icons:
-                    self.tree.SetItemImage(item_no, 2, wx.TreeItemIcon_Normal)
-                    self.tree.SetItemImage(item_no, 2, wx.TreeItemIcon_Selected)
+                    color = 2
+                    if colored_icons:
+                        n = line_no[2]
+                        green = n.startswith('__') and n.endswith('__')
+                        green = green or not n.startswith('_')
+                        red = (not green) and n.startswith('__')
+                        
+                        if green:
+                            color = 3
+                        elif red:
+                            color = 5
+                        else:
+                            color = 4
+                    
+                    self.tree.SetItemImage(item_no, color, wx.TreeItemIcon_Normal)
+                    self.tree.SetItemImage(item_no, color, wx.TreeItemIcon_Selected)
             self.tree.SortChildren(root[-1])
             root.pop()
 
