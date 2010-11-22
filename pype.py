@@ -59,7 +59,7 @@ from configuration import *
 if 1:
     #under an if so that I can collapse the declarations
 
-    VERSION = "1.8.1"
+    VERSION = "1.8.2"
     VREQ = '2.4.2.4'
 
     import string
@@ -117,6 +117,7 @@ if 1:
         WRAPL = wxNewId()
         SORTBY = wxNewId()
         TODOT = wxNewId()
+        SAVE_CURSOR = wxNewId()
 
         ZI = wxNewId()
         
@@ -379,6 +380,7 @@ class MainWindow(wxFrame):
         menuAdd(self, setmenu, "Show line numbers", "Show or hide the line numbers on the current document", self.OnNumberToggle, NUM, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show margin", "Show or hide the bookmark signifier margin on the current document", self.OnMarginToggle, MARGIN, wxITEM_CHECK)
         menuAdd(self, setmenu, "Show Indentation Guide", "Show or hide gray indentation guides in indentation", self.OnIndentGuideToggle, INDENTGUIDE, wxITEM_CHECK)
+        menuAdd(self, setmenu, "Save Position", "Remember or forget the last position of the cursor when the current document is closed", self.OnSavePositionToggle, SAVE_CURSOR, wxITEM_CHECK)
         setmenu.AppendSeparator()
         menuAdd(self, setmenu, "Show/hide tree\tCtrl+Shift+G", "Show/hide the hierarchical source tree for the currently open document", self.OnTree, wxNewId())
         menuAdd(self, setmenu, "Hide all trees", "Hide the browsable source tree for all open documents", self.OnTreeHide, wxNewId())
@@ -471,6 +473,7 @@ class MainWindow(wxFrame):
         self.menubar.Check(INDENTGUIDE, indent_guide)
         self.menubar.Check(SORTBY, sortmode)
         self.menubar.Check(lexers3[DEFAULTLEXER], 1)
+        self.menubar.Check(SAVE_CURSOR, save_cursor)
 
 #---------------- A nice lookup table for control keypresses -----------------
 #-------------- it saves the trouble of a many if calls during ---------------
@@ -628,7 +631,9 @@ class MainWindow(wxFrame):
              'showautocomp':0,
                  'wrapmode':wxSTC_WRAP_NONE,
                  'sortmode':1,
-            'SAVEDPOSITION':splittersize}
+            'SAVEDPOSITION':splittersize,
+              'save_cursor':0,
+              'cursor_posn':0}
         
         globals().update(dct)
         globals().update(self.config.setdefault('DOCUMENT_DEFAULTS', dct))
@@ -1543,6 +1548,9 @@ class MainWindow(wxFrame):
     def OnIndentGuideToggle(self, e):
         n, win = self.getNumWin(e)
         win.SetIndentationGuides((win.GetIndentationGuides()+1)%2)
+    def OnSavePositionToggle(self, e):
+        n, win = self.getNumWin(e)
+        win.save_cursor = (1+win.save_cursor)%2
 
     def OnExpandAll(self, e):
         n, win = self.getNumWin(e)
@@ -2215,7 +2223,9 @@ class PythonSTC(wxStyledTextCtrl):
                 'showautocomp':self.showautocomp,
                 'wrapmode':self.GetWrapMode(),
                 'sortmode':self.tree.tree.SORTTREE,
-                'SAVEDPOSITION':self.SAVEDPOSITION
+                'SAVEDPOSITION':self.SAVEDPOSITION,
+                'save_cursor':self.save_cursor,
+                'cursor_posn':self.GetCurrentPos()
                }
         for line in xrange(self.GetLineCount()):
             if self.MarkerGet(line) & BOOKMARKMASK:
@@ -2241,6 +2251,7 @@ class PythonSTC(wxStyledTextCtrl):
             self.root.WrapToggle(self)
         self.tree.tree.SORTTREE = saved.get('sortmode', sortmode)
         self.SAVEDPOSITION = saved.get('SAVEDPOSITION', SAVEDPOSITION)
+        self.save_cursor = saved.get('save_cursor', save_cursor)
         
         for bml in saved.get('BM', []):
             self.MarkerAdd(bml, BOOKMARKNUMBER)
@@ -2249,6 +2260,14 @@ class PythonSTC(wxStyledTextCtrl):
             a = self.GetLastChild(exl, -1)
             self.HideLines(exl+1,a)
             self.SetFoldExpanded(exl, 0)
+        
+        wxYield()
+        
+        if self.save_cursor:
+            a = saved.get('cursor_posn', 0)
+            self.SetSelection(a,a)
+            self.EnsureCaretVisible()
+            self.ScrollToColumn(0)
 
 #-------------------- fix for SetText for the 'dirty bit' --------------------
     def SetText(self, txt, emptyundo=1):
@@ -2564,6 +2583,7 @@ class MyNB(wxNotebook):
             self.root.menubar.Check(WRAPL, win.GetWrapMode() != wxSTC_WRAP_NONE)
             self.root.menubar.Check(SORTBY, win.tree.tree.SORTTREE)
             self.root.menubar.Check(LE_RMAPPING[win.GetEOLMode()], 1)
+            self.root.menubar.Check(SAVE_CURSOR, win.save_cursor)
             width = self.GetClientSize()[0]
             split = win.parent
             split.SetSashPosition(max(width-win.SAVEDPOSITION, int(width/2)))
@@ -3105,7 +3125,7 @@ class lastused:
             self.me = me
             self.next = None
     def __init__(self, count, lst=[]):
-        self.count = max(count, 1)
+        self.count = max(count, 2)
         self.d = {}
         self.first = None
         self.last = None
@@ -3132,9 +3152,9 @@ class lastused:
                 return
             a = self.first
             a.next.prev = None
-            self.first = a
+            self.first = a.next
             a.next = None
-            del self.d[a[0]]
+            del self.d[a.me[0]]
             del a
     def __delitem__(self, obj):
         nobj = self.d[obj]
