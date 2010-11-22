@@ -103,6 +103,9 @@ Move PythonSTC definition out of pype.py
 If I can get more than one indicator working, or perhaps disable syntax
 highlighting, getting a remote pair/group programming setup similar to
 SubEthaEdit would be quite neat.
+    The newest version of scintilla (not yet wrapped for wxPython) supports
+    the use of up to 32 indicators.  Plenty for any pair/group programming
+    task.  Need to decide on some sort of editing workflow.
 
 * Optional indicators for stdout/stderr from Python and Command shells.
 * Display Macro buttons as text or bitmaps.
@@ -170,3 +173,6 @@ Replace View -> Split * commands with a 'split in second window' command.
 
 2.9:
 Add multi-language support via I18N or equivalent.
+Add -w workspace management.
+Switch to optparse for command line argument parsing.
+* Fix fast tree updates and sorting.

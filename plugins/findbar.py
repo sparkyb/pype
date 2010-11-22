@@ -1,7 +1,7 @@
 
+import re
 import wx
 import wx.stc
-import compiler
 
 class OnCloseBar: #embedded callback to destroy the findbar on removal
     def __init__(self, control):
@@ -16,6 +16,7 @@ word = dict.fromkeys(map(ord, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 non_word = dict.fromkeys([chr(i) for i in xrange(256) if i not in word])
 
 MEM_LEAK_TEST = 0
+COUNTLIMIT = 20
 
 class ReplaceBar(wx.Panel):
     def __init__(self, parent, root):
@@ -34,8 +35,12 @@ class ReplaceBar(wx.Panel):
         self.wholeword = 0
         
         self.replace_t = wx.Timer(self, wx.NewId())
-        self.Bind(wx.EVT_TIMER, self._replace_again1)
+        self.Bind(wx.EVT_TIMER, self._replace_again1, self.replace_t)
         self._replace_args = None
+        
+        self.replace_t2 = wx.Timer(self, wx.NewId())
+        self.Bind(wx.EVT_TIMER, self._re_replace_again1, self.replace_t2)
+        self._re_replace_args = None
         
         prefs = self.readPreferences()
         self.setup()
@@ -211,13 +216,9 @@ class ReplaceBar(wx.Panel):
                 raise cancelled
             return "", None, None
         
-        #python strings in find
-        if findTxt and findTxt[0] in ['"', "'"]:
-            try:
-                findTxt = [i for i in compiler.parse(str(findTxt)).getChildren()[:1] if isinstance(i, basestring)][0]
-            except Exception, e:
-                pass
-        
+        #python strings in find automatically handled
+        findTxt = self.root.getglobal('str_unrepr')(findTxt)
+       
         #nothing to find!
         if not findTxt:
             if not which:
@@ -515,7 +516,7 @@ class ReplaceBar(wx.Panel):
                 ostart -= delta
                 oend -= delta
             count += 1
-            if count >= 10 and not self.loop:
+            if count >= COUNTLIMIT and not self.loop:
                 break
         else:
             cont = 0
@@ -554,7 +555,114 @@ class ReplaceBar(wx.Panel):
         if self.replacing:
             return
         self.replaceAll(evt, 1)
+    
+    def _simple_re_all(self, expression, template, flags=0):
+        win = self.parent.GetWindow1()
+        text = wx.stc.StyledTextCtrl.GetText(win)
+        c = re.compile(expression, flags)
+        win.SetText(c.sub(template, text))
+    
+    def _replace_re_all(self, expression, template, flags=0):
+        win = self.parent.GetWindow1()
+        text = wx.stc.StyledTextCtrl.GetText(win)
+        c = re.compile(expression, flags)
+        
+        #need to implement the equivalent of...
+        ## win.SetText(c.sub(template, text))
+        
+        lastpw = 0
+        lastp = 0
+        c = re.compile(expression, flags)
+        try:
+            _1, win.recording = win.recording, 0
+            win.BeginUndoAction()
+            try:
+                for match in c.finditer(text):
+                    start, end = match.span()
+                    plain = match.group()
+                    plainn = match.expand(template)
+                    
+                    plainl = len(plain.encode('utf-8'))
+                    lastpw += len(text[lastp:start].encode('utf-8'))
+                    
+                    assert win.GetTextRange(lastpw, lastpw+plainl) == plain
+                    
+                    win.SetSelection(lastpw, lastpw+plainl)
+                    win.ReplaceSelection(plainn)
+                    plainnl = len(plainn.encode('utf-8'))
+                    
+                    assert win.GetTextRange(lastpw, lastpw+plainnl) == plainn
+                    
+                    lastpw += plainnl
+                    lastp = end
+            finally:
+                win.EndUndoAction()
+                win.recording = _1
+        except:
+            _1, win.recording = win.recording, 0
+            win.Undo()
+            win.recording = _1
+            raise
+    
+    def _re_replace_again1(self, evt):
+        self._re_replace_args, args = None, self._re_replace_args
+        self.ReentrantRegularExpressionReplace(args)
+    
+    def _re_replace_again2(self, args):
+        self._re_replace_args = args
+        self.replace_t2.Start(1, wx.TIMER_ONE_SHOT)
+    
+    def REreplaceAll(self, expression, template, flags=0):
+        win = self.parent.GetWindow1()
+        lastpw = 0
+        c = re.compile(expression, flags)
+        _1, win.recording = win.recording, 0
 
+        wx.CallAfter(self.ReentrantRegularExpressionReplace, (lastpw, c, template, _1, win))
+    
+    def ReentrantRegularExpressionReplace(self, state):
+        lastpw, c, template, _1, win = state
+        
+        lastp = 0
+        cont = 1
+        
+        text = win.GetTextRange(lastpw, win.GetTextLength())
+        for i, match in enumerate(c.finditer(text)):
+            start, end = match.span()
+            plain = match.group()
+            plainn = match.expand(template)
+            
+            plainl = len(plain.encode('utf-8'))
+            lastpw += len(text[lastp:start].encode('utf-8'))
+            
+            assert win.GetTextRange(lastpw, lastpw+plainl) == plain
+            
+            win.SetSelection(lastpw, lastpw+plainl)
+            win.ReplaceSelection(plainn)
+            plainnl = len(plainn.encode('utf-8'))
+            
+            assert win.GetTextRange(lastpw, lastpw+plainnl) == plainn
+            
+            lastpw += plainnl
+            lastp = end
+            if i == COUNTLIMIT-1:
+                break
+        else:
+            cont = 0
+        
+        if MEM_LEAK_TEST:
+            win.EmptyUndoBuffer()
+        
+        if cont:
+            if MEM_LEAK_TEST:
+                wx.FutureCall(1, self.ReentrantRegularExpressionReplace, (lastpw, c, template, _1, win))
+            else:
+                self._re_replace_again2((lastpw, c, template, _1, win))
+        else:
+            if not MEM_LEAK_TEST:
+                win.EndUndoAction()
+                win.recording = _1
+                
     #----------------------------------
 
     def readPreferences(self):

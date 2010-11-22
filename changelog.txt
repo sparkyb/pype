@@ -1,3 +1,37 @@
+#-------------------------------- PyPE 2.8.6 ---------------------------------
+(fixed) a bug with "Wrap Try/Except" as per emailed bug report from Ian York.
+(added) ability to choose what port PyPE will listen on via --port= .
+(fixed) workspaces in wxPython 2.8+, patch thanks to Craig Mahaney.
+(added) explicit exclude dirs for find in files, patch thanks to CraigMahaney.
+(added) paste and down mechanism to paste and move the cursor down, patch
+thanks to Craig Mahaney.
+(added) delete right mechanism to delete everything from the cursor to the end
+of the line, patch thanks to Craig Mahaney.
+(added) delete line mechanism to delete the current line, patch thanks to
+Craig Mahaney.
+(added) paste rectangle command for rectangular pasting, patch thanks to Craig
+Mahaney.
+(fixed) support for alternate background colors thanks to bug report from
+Craig Mahaney.
+(added) macro support to Craig Mahaney's added functionality.
+(added) implementation for regular expression replacements, possibly to be
+integrated as part of a 'replace in all open documents' in the future.
+(added) automatic spellcheck for text and tex documents of up to 200,000 byes
+in size.  Will only spellcheck if the user has enabled "check syntax" in the
+"Realtime Options".
+(fixed) issue when trying to save language settings when cursor position is
+not to be saved.
+(added) support for \chapter section delimiter in *tex files.
+(fixed) issue that prevented the highest level source listing from being
+sorted in the Name and Line sorted source trees.
+(changed) rather than reading and executing a file for configuration loading,
+we now use a variant of the 'unrepr()' mechanism with support for True/False.
+(changed) find/replace bar now uses variant of 'unrepr()' rather than the
+compiler module directly.
+(changed) moved parsers.py to plugins and stopped using import * to get its
+contents.
+
+
 #-------------------------------- PyPE 2.8.5 ---------------------------------
 (fixed) issue where double-clicking on a result while search was still going
 wouldn't actually go to the line of the result.

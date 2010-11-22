@@ -19,6 +19,65 @@ D = {'cl':blue,
      '\\s':blue,
      '#d':green}
 
+#------------------------------------ ... ------------------------------------
+# Node and getTree thanks to the foldExplorer from Stani.
+# Some modifications have been made, among them are language-specific
+# mechanisms for only pulling out function and class definitions.
+
+class Node:
+    def __init__(self,level,start,end,text,parent=None,styles=[]):
+        """Folding node as data for tree item."""
+        self.parent     = parent
+        self.level      = level
+        self.start      = start
+        self.end        = end
+        self.text       = text
+        self.styles     = styles #can be useful for icon detection
+        self.children   = []
+
+def getTree(self):
+    #self must be an stc instance
+    n = self.GetLineCount()+1
+    prevNode = root  = Node(level=-1,start=0,end=n,text='root',parent=None)
+    for line in xrange(n-1):
+        foldBits = self.GetFoldLevel(line)
+        if not foldBits&stc.STC_FOLDLEVELHEADERFLAG:
+            continue
+        #folding point
+        level = foldBits&stc.STC_FOLDLEVELNUMBERMASK
+        while level <= prevNode.level:
+            prevNode.end = line
+            prevNode = prevNode.parent
+            
+        text = self.GetLine(line).strip()
+        if self.lexer in ('cpp', 'java',):
+            if text.startswith('{'):
+                text = self.GetLine(max(line-1, 0)).strip()
+                if text.startswith('{'):
+                    continue
+            if text.split()[0] in ('if', 'else', 'while', 'for', 'do'):
+                continue
+        elif self.lexer == 'python':
+            #it's terribly convenient that Python has only two ways of
+            #starting a definition
+            if text.split()[0] not in ('def', 'class'):
+                continue
+        elif self.lexer == 'pyrex':
+            if text.split()[0] not in ('def', 'class', 'cdef'):
+                continue
+                
+        node = Node(level=level,start=line,end=n,text=text)
+            
+        #give birth to child (only one level deep)
+        node.parent = prevNode
+        prevNode.children.append(node)
+        prevNode = node
+    prevNode.end = line
+    return root
+
+#------------------------------------ ... ------------------------------------
+
+
 class TreeCtrl(wx.TreeCtrl):
     def __init__(self, parent, st):
         wx.TreeCtrl.__init__(self, parent, -1, style=wx.TR_DEFAULT_STYLE|wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
@@ -51,7 +110,7 @@ class TreeCtrl(wx.TreeCtrl):
                          self.GetItemData(item2).GetData())
     
     def SortAll(self):
-        stk = self._get_children(self.root)
+        stk = [self.root]
         while stk:
             cur = stk.pop()
             if self.GetChildrenCount(cur):

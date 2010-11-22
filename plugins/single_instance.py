@@ -8,6 +8,8 @@ configuration = _pype
 
 callback = None
 
+port = 9999
+
 def partition(string, sep):
     offset = string.find(sep)
     if offset == -1:
@@ -44,7 +46,7 @@ class Listener(asyncore.dispatcher):
     def __init__(self):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.bind(('127.0.0.1', 9999))
+        self.bind(('127.0.0.1', port))
         self.listen(5)
 
     def handle_accept(self):
@@ -65,16 +67,20 @@ def send_documents(docs):
         if why[0] != 10048:
             traceback.print_exc()
             return 0
-        print "trying to send documents!"
+    else:
+        shutdown(0)
+        return 0
+    try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(('127.0.0.1', 9999))
+        s.connect(('127.0.0.1', port))
         docs.append('')
         s.sendall('\n'.join(docs))
         s.close()
-        return 1
+    except socket.error:
+        return 0
     else:
-        shutdown(0)
-    return 0
+        print "sent documents to already running PyPE at port %i"%(port,)
+        return 1
 
 def poll():
     asyncore.poll()

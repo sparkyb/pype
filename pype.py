@@ -10,7 +10,7 @@ if sys.platform == 'linux2' and 'DISPLAY' not in os.environ:
     raise SystemError('DISPLAY not set when importing or running pype')
 
 if not hasattr(sys, 'frozen'):
-    v = '2.6'
+    v = '2.8'
     import wxversion
     if '--unicode' in sys.argv:
         wxversion.ensureMinimal(v+'-unicode', optionsRequired=True)
@@ -18,6 +18,7 @@ if not hasattr(sys, 'frozen'):
         wxversion.ensureMinimal(v+'-ansi', optionsRequired=True)
     else:
         wxversion.ensureMinimal(v)
+
 DEBUG = '--debug' in sys.argv
 USE_THREAD = '--nothread' not in sys.argv
 
@@ -27,6 +28,15 @@ for i in sys.argv:
     if i.startswith('--fontsize='):
         try:
             FONTSIZE = int(i[11:])
+        except:
+            pass
+        else:
+            break
+
+for i in sys.argv:
+    if i.startswith('--port='):
+        try:
+            PORTNUM = int(i[11:])
         except:
             pass
         else:
@@ -53,7 +63,7 @@ def _restart(orig_path=os.getcwd(), orig_sysargv=sys.argv[:]):
 def keep(i):
     if i in ('--ansi', '--unicode', '--debug', '--nothread', '--macros', '--standalone'):
         return 0
-    if i.startswith('--fontsize=') or i.startswith('--font='):
+    if i.startswith('--font=') or i.startswith('--fontsize=') or i.startswith('--port='):
         return 0
     return 1
 
@@ -150,6 +160,8 @@ from plugins import findinfiles
 from plugins import shell
 from plugins import textrepr
 from plugins import single_instance
+if 'PORTNUM' in globals():
+    single_instance.port = PORTNUM
 from plugins import interpreter
 from plugins import spellcheck
 from plugins import help
@@ -162,6 +174,8 @@ from plugins.window_management import docstate, _choicebook
 from plugins import methodhelper
 from plugins import lineabstraction
 from plugins import macro
+
+from plugins import parsers
 
 if DEBUG:
     try:
@@ -670,9 +684,9 @@ RESET = {'cursor_posn':0,
 #threaded parser
 if 1:
     parse_queue = Queue.Queue()
-    from wx.lib.newevent import NewEvent
+    import wx.lib.newevent
     
-    DoneParsing, EVT_DONE_PARSING = NewEvent()
+    DoneParsing, EVT_DONE_PARSING = wx.lib.newevent.NewEvent()
     
     def _parse(lang, source, le, which, x, slowparse=0):
         source = source.replace('\r\n', '\n').replace('\r', '\n')
@@ -680,24 +694,22 @@ if 1:
         if lang in ('python', 'pyrex'):
             if slowparse:
                 try:
-                    a = fast_parser(source, le, which, x)
+                    a = parsers.fast_parser(source, le, which, x)
                     return a
                 except:
                     traceback.print_exc()
-                    pass
-            return faster_parser(source, le, which, x)
+            return parsers.faster_parser(source, le, which, x)
         elif lang == 'tex':
-            return latex_parser(source, le, which, x)
+            return parsers.latex_parser(source, le, which, x)
         elif lang == 'cpp':
-            return c_parser(source, le, which, x)
+            return parsers.c_parser(source, le, which, x)
         elif lang in ('xml', 'html'):
-            return ml_parser(source, le, which, x)
+            return parsers.ml_parser(source, le, which, x)
         else:
             return [], [], {}, []
     
     def parse(lang, source, le, which, x, slowparse=0):
         r = _parse(lang, source, le, which, x, slowparse)
-        import parsers
         r2 = parsers._get_tags(r[0], r[-1])
         return r + (r2,)
     
@@ -768,7 +780,7 @@ class MainWindow(wx.Frame):
                 if os.path.exists(p):
                     path = p
             print "Loading menus from", path
-            try:    OLD_MENUPREF.update(self.readAndEvalFile(path))
+            try:    OLD_MENUPREF.update(unrepr(open(path, 'rb').read()))
             except: pass
             
             single_instance.callback = self.OnDrop
@@ -941,8 +953,13 @@ class MainWindow(wx.Frame):
             menuAdd(self, editmenu, "Start/End Selection",  "Will allow you to set selection start and end positions without holding shift", self.redirect.OnSelectToggle, wx.NewId())
             menuAdd(self, editmenu, "Cut\tCtrl+X",          "Cut selected text", self.OnCut, wx.ID_CUT)
             menuAdd(self, editmenu, "Copy\tCtrl+C",         "Copy selected text", self.OnCopy, wx.ID_COPY)
-            menuAdd(self, editmenu, "Paste\tCtrl+V",        "Paste selected text", self.OnPaste, wx.ID_PASTE)
+            menuAdd(self, editmenu, "Paste\tCtrl+V",        "Paste clipboard text", self.OnPaste, wx.ID_PASTE)
             menuAdd(self, editmenu, "Delete",               "Delete selected text", self.OnDeleteSelection, pypeID_DELETE)
+            editmenu.AppendSeparator()
+            menuAdd(self, editmenu, "PasteAndDown",         "Paste clipboard text and move cursor down", self.OnPasteAndDown, wx.NewId())
+            menuAdd(self, editmenu, "Paste Rectangular",    "Paste clipboard text as a rectangle", self.OnPasteRectangular, wx.NewId())
+            menuAdd(self, editmenu, "Delete Right",         "Delete from caret to end of line", self.OnDeleteRight, wx.NewId())
+            menuAdd(self, editmenu, "Delete Line",          "Delete current line", self.OnDeleteLine, wx.NewId())
             editmenu.AppendSeparator()
             menuAdd(self, editmenu, "Show Find Bar\tCtrl+F", "Shows the find bar at the bottom of the editor", self.OnShowFindbar, pypeID_FINDBAR)
             menuAdd(self, editmenu, "Show Replace Bar\tCtrl+R", "Shows the replace bar at the bottom of the editor", self.OnShowReplacebar, pypeID_REPLACEBAR)
@@ -1366,7 +1383,7 @@ class MainWindow(wx.Frame):
                 self.t2.Start(stc.lastparse2, wx.TIMER_ONE_SHOT)
             
             #we always want to check syntax in the shell
-            if py and (HOW_OFTEN1 != -1 or not isinstance(stc, PythonSTC)):
+            if HOW_OFTEN1 != -1 or not isinstance(stc, PythonSTC):
                 self.t.Stop()
                 self.t.Start(stc.lastparse, wx.TIMER_ONE_SHOT)
     
@@ -1714,8 +1731,10 @@ class MainWindow(wx.Frame):
             if os.path.exists(p):
                 path = p
         print "Loading history from", path
-        try:    self.config = self.readAndEvalFile(path)
-        except: self.config = {}
+        try:
+            self.config = unrepr(open(path, 'rb').read())
+        except:
+            self.config = {}
         if 'history' in self.config:
             history = self.config['history']
             history.reverse()
@@ -1844,7 +1863,6 @@ class MainWindow(wx.Frame):
                 sav.append(self.getAlmostAbsolute(win.filename, win.dirname))
                 LASTOPEN.append((self.getAlmostAbsolute(win.filename, win.dirname), win.GetSaveState()))
 
-
         if 'LASTOPEN' in self.config:
             del self.config['LASTOPEN']
         #saving document state
@@ -1929,12 +1947,6 @@ class MainWindow(wx.Frame):
             f.close()
         except:
             self.exceptDialog("Could not save preferences to %s"%path)
-
-    def readAndEvalFile(self, filename):
-        f = open(filename)
-        txt = f.read().replace('\r\n','\n')
-        f.close()
-        return eval(txt)
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
 
     def redrawvisible(self, win=None):
@@ -2291,7 +2303,7 @@ class MainWindow(wx.Frame):
                 nwin.format = eol
                 nwin.SetText('')
             else:
-                nwin.format = detectLineEndings(txt)
+                nwin.format = parsers.detectLineEndings(txt)
                 nwin.SetText(txt)
 
             #if FN in self.config['LASTOPEN']:
@@ -2512,6 +2524,14 @@ class MainWindow(wx.Frame):
         self.OneCmd('Paste',e)
     def OnDeleteSelection(self, e):
         self.OneCmd('DeleteSelection',e)
+    def OnPasteAndDown(self, e):
+        self.OneCmd('PasteAndDown',e)
+    def OnPasteRectangular(self, e):
+        self.OneCmd('PasteRectangular',e)
+    def OnDeleteRight(self, e):
+        self.OneCmd('DeleteRight',e)
+    def OnDeleteLine(self, e):
+        self.OneCmd('DeleteLine',e)
         
 #----------------------- Find and Replace Bar Display ------------------------
     def getNumWin(self, e=None):
@@ -2916,10 +2936,10 @@ class MainWindow(wx.Frame):
         lang, desc = SOURCE_ID_TO_OPTIONS.get(mid, ('python', ''))
         n, win = self.getNumWin()
         dct = win.GetSaveState()
-        del dct['BM']
-        del dct['FOLD']
-        del dct['checksum']
-        del dct['cursor_posn']
+        dct.pop('BM', None)
+        dct.pop('FOLD', None)
+        dct.pop('checksum', None)
+        dct.pop('cursor_posn', None)
         document_defaults[lang].update(dct)
         self.SetStatusText("Updated document defaults for " + desc)
     
@@ -3521,6 +3541,7 @@ class PythonSTC(stc.StyledTextCtrl):
         stc.StyledTextCtrl.__init__(self, parent, ID)#, style = wx.NO_FULL_REPAINT_ON_RESIZE)
         self.SetWordChars('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         self.SetEndAtLastLine(False)
+        self.paste_rectangle = None
         self.cached = None
         self.MarkerDefine(BOOKMARKNUMBER, BOOKMARKSYMBOL, 'blue', 'blue')
                 
@@ -4424,9 +4445,69 @@ class PythonSTC(stc.StyledTextCtrl):
             finally:
                 self.EndUndoAction()
             return
-                
+        
         self.do(stc.StyledTextCtrl.Paste)
-    def DeleteSelection(self):   self.do(stc.StyledTextCtrl.DeleteBack)
+    
+    def PasteRectangular(self):
+        if self.recording:
+            self.macro.append((None, '', 'PasteRectangular'))
+        _, self.recording = self.recording, 0
+        try:
+            sel = GetClipboardText()
+            currentPos = self.GetCurrentPos()
+            xInsert = self.GetColumn(currentPos)
+            line = self.GetCurrentLine()
+            prevCr = 0
+            self.BeginUndoAction()
+            try:
+                for i, c in enumerate(sel):
+                    if c == '\r' or c == '\n':
+                        if c == '\r' or not prevCr:
+                            line += 1
+                        if line >= self.GetLineCount():
+                            if self.GetEOLMode() != wx.SC_EOL_LF:
+                                self.InsertText(self.GetLength(), "\r")
+                            if self.GetEOLMode() != wx.SC_EOL_CR:
+                                self.InsertText(self.GetLength(), "\n")
+                        # Pad the end of lines with spaces if required
+                        currentPos = self.FindColumn(line, xInsert)
+                        if self.GetColumn(currentPos) < xInsert and i + 1 < len(sel):
+                            k = max(xInsert - self.GetColumn(currentPos), 0)
+                            if k:
+                                self.InsertText(currentPos, k*' ')
+                                currentPos += k
+                        prevCr = c == '\r'
+                    else:
+                        self.InsertText(currentPos, c);
+                        currentPos += 1
+                        prevCr = 0
+            finally:
+                self.EndUndoAction()
+        finally:
+            self.recording = _
+        self.SetSelection(currentPos, currentPos)
+        
+    def PasteAndDown(self):
+        if self.recording:
+            self.macro.append((None, '', 'PasteAndDown'))
+        pos = self.GetCurrentPos()
+        npr = 1
+        if self.paste_rectangle:
+            if md5.new(GetClipboardText()).digest() == self.paste_rectangle:
+                npr = 0
+        _, self.recording = self.recording, 0
+        try:
+            self.Paste()
+            self.SetCurrentPos(pos)
+            self.CharLeft()
+            if npr:
+                self.LineDown()
+        finally:
+            self.recording = _
+        
+    def DeleteSelection(self):  self.do(stc.StyledTextCtrl.DeleteBack)
+    def DeleteRight(self):      self.do(stc.StyledTextCtrl.DelLineRight)
+    def DeleteLine(self):       self.do(stc.StyledTextCtrl.LineDelete)
     def Undo(self):     self.do(stc.StyledTextCtrl.Undo)
     def Redo(self):     self.do(stc.StyledTextCtrl.Redo)
     def CanEdit(self):
@@ -4438,51 +4519,11 @@ class PythonSTC(stc.StyledTextCtrl):
             self.lexer = language
         except:
             
-            #self.root.exceptDialog("Style Change failed, assuming plain text")
             self.root.SetStatusText("Style Change failed for %s, assuming plain text"%language)
             self.root.exceptDialog()
-#----------------- Defaults, in case the other code was bad. -----------------
-            #for some default font styles
-
+            # we'll go plain text for now
             self.SetLexer(stc.STC_LEX_NULL)
             self.lexer = 'text'
-
-            ### Python styles
-            ##
-            ### White space
-            ##self.StyleSetSpec(stc.STC_P_DEFAULT, "fore:#000000,face:%(helv)s,size:%(size)d" % faces)
-            ### Comment
-            ##self.StyleSetSpec(stc.STC_P_COMMENTLINE, "fore:#007F00,face:%(mono)s,back:#E0FFE0,size:%(size)d" % faces)
-            ### Number
-            ##self.StyleSetSpec(stc.STC_P_NUMBER, "fore:#007F7F,face:%(times)s,size:%(size)d" % faces)
-            ### String
-            ##self.StyleSetSpec(stc.STC_P_STRING, "fore:#7F007F,face:%(times)s,size:%(size)d" % faces)
-            ### Single quoted string
-            ##self.StyleSetSpec(stc.STC_P_CHARACTER, "fore:#7F007F,face:%(times)s,size:%(size)d" % faces)
-            ### Keyword
-            ##self.StyleSetSpec(stc.STC_P_WORD, "fore:#F0B000,face:%(mono)s,size:%(size)d,bold" % faces)
-            ### Triple quotes
-            ##self.StyleSetSpec(stc.STC_P_TRIPLE, "fore:#603000,face:%(times)s,back:#FFFFE0,size:%(size)d" % faces)
-            ### Triple double quotes
-            ##self.StyleSetSpec(stc.STC_P_TRIPLEDOUBLE, "fore:#603000,face:%(times)s,back:#FFFFE0,size:%(size)d" % faces)
-            ### Class name definition
-            ##self.StyleSetSpec(stc.STC_P_CLASSNAME, "fore:#0000FF,face:%(times)s,size:%(size)d,bold" % faces)
-            ### Function or method name definition
-            ##self.StyleSetSpec(stc.STC_P_DEFNAME, "fore:#0000FF,face:%(times)s,size:%(size)d,bold" % faces)
-            ### Operators
-            ##self.StyleSetSpec(stc.STC_P_OPERATOR, "face:%(times)s,size:%(size)d" % faces)
-            ### Identifiers
-            ##self.StyleSetSpec(stc.STC_P_IDENTIFIER, "fore:#000000,face:%(helv)s,size:%(size)d" % faces)
-            ### Comment-blocks
-            ##self.StyleSetSpec(stc.STC_P_COMMENTBLOCK, "fore:#7F7F7F,face:%(times)s,size:%(size)d" % faces)
-            ### End of line where string is not closed
-            ##self.StyleSetSpec(stc.STC_P_STRINGEOL, "fore:#000000,face:%(mono)s,back:#E0C0E0,eol,size:%(size)d" % faces)
-            ##
-            ##self.SetCaretForeground("BLACK")
-            ##
-            ### prototype for registering some images for use in the AutoComplete box.
-            ###self.RegisterImage(1, images.getSmilesBitmap())
-
 #------------ copied and pasted from the wxStyledTextCtrl_2 demo -------------
     def OnUpdateUI(self, evt):
         # check for matching braces
@@ -4958,10 +4999,10 @@ class PythonSTC(stc.StyledTextCtrl):
     def _get_min_indent(self, text, ignoreempty=0):
         lines = []
         for line in text.split('\n'):
-            if ignoreempty and i.strip('\t\r '):
-                lines.append(i.rstrip('\r'))
+            if ignoreempty and line.strip('\t\r '):
+                lines.append(line.rstrip('\r'))
             elif not ignoreempty:
-                lines.append(i.rstrip('\r'))
+                lines.append(line.rstrip('\r'))
         
         lineind = []
         tw = self.GetTabWidth()-1
@@ -5031,7 +5072,7 @@ class PythonSTC(stc.StyledTextCtrl):
                 lsis = lsi.strip()
                 lsil = lsi.lower()
                 c = 0
-                for i in no_ends:
+                for i in parser.no_ends:
                     if lsil.startswith(i):
                         c = 1
                         break
@@ -5303,6 +5344,11 @@ class PythonSTC(stc.StyledTextCtrl):
         if HOW_OFTEN1 == -1:
             return
         
+        if self.lexer in ('text', 'tex') and isinstance(self, PythonSTC) and self.GetTextLength() < 200000:
+            ## print "spellchecking", self.lexer
+            self._spellcheck()
+            return
+        
         if self.lexer != 'python':
             return
         
@@ -5359,6 +5405,50 @@ class PythonSTC(stc.StyledTextCtrl):
                 endpos = self.GetTextLength()
                 self.indicate_text(startpos, endpos-startpos, 0)
                 self.has_bad = 0
+        self.lastparse = fcn(time.time()-t)
+    
+    def _spellcheck(self):
+        spellcheck.SCI.load_d(1)
+        if not spellcheck.dictionary:
+            ## print "delaying spellcheck"
+            self.root.t.Start(500, wx.TIMER_ONE_SHOT)
+            return
+        
+        if isinstance(self, PythonSTC):
+            fcn = lambda dt: int(max(dt, 1)*_MULT[HOW_OFTEN1]*1000)
+        else:
+            fcn = lambda dt: int(max(dt, .02)*5*1000)
+        
+        t = time.time()
+        m1 = md5.new(_to_str(self.GetText())).digest()
+        if m1 == self.m1:
+            return
+        self.m1 = m1
+        ## print "actually spellchecking", self.lexer
+        dcts = {}
+        d = self.root.config["DICTIONARIES"]
+        for i in xrange(spellcheck.SCI.dictionaries.GetCount()):
+            if spellcheck.SCI.dictionaries.IsChecked(i):
+                _ = d[spellcheck.SCI.dictionaries.GetString(i)]
+                dcts.update(_)
+                ## print "dictionary", _.keys()
+        
+        ## _dcts = {}
+        ## for i in dcts:
+            ## if type(i) is str:
+                ## i = i.decode('latin-1')
+            ## _dcts[i] = None
+        
+        ## dcts = _dcts.keys()
+        ## dcts.sort()
+        ## print 80*'*'
+        ## print '\n'.join(dcts)
+        ## print 80*'*'
+        
+        errors = spellcheck.SCI.find_errors(self, (spellcheck.dictionary, dcts))
+        self.indicate_text(0, self.GetTextLength(), 0)
+        for start, end in errors:
+            self.indicate_text(start, end-start, 1)
         self.lastparse = fcn(time.time()-t)
     
     def _gotcharacter2(self, e=None):

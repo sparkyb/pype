@@ -252,6 +252,17 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin, listmix.ListCtrlAutoWid
         data = self.GetItem(self.currentItem, 3).GetText()
         self.parent.OpenFound(os.path.join(path, file), int(line), self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
 
+    def OnItemRightClick(self, event):
+        self.PopupMenu(self.popm)
+    
+    def OpenAll(self, event):
+        for i in range(self.GetItemCount()):
+            path = self.GetItem(i, 0).GetText()
+            file = self.GetItem(i, 1).GetText()
+            line = self.GetItem(i, 2).GetText()
+            data = self.GetItem(i, 3).GetText()
+            self.parent.OpenFound(os.path.join(path, file), int(line), self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
+
     def OnGetItemText(self, item, col):
         if col in (0,1):
             return self.cache[item][col]
@@ -546,6 +557,13 @@ class FindInFiles(wx.Panel):
             border=outsideBorder)
 
         row+=1
+        gbs.Add(static("Exclude Dirs:"), (row,0),
+            flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT,
+            border=outsideBorder)
+        self.exdirs = combobox(fc['excludedirs'])
+        gbs.Add(self.exdirs, (row,1), editBoxSpan, flag=wx.EXPAND)
+        
+        row+=1
         gbs.Add(static("Include:"), (row,0),
                 flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT,
                 border=outsideBorder)
@@ -812,6 +830,7 @@ class FindInFiles(wx.Panel):
 
         pattern = self.search.GetValue()
         paths = self.sdirs.GetValue().split(';')
+        exdirs = self.exdirs.GetValue().split(';')
         include = self.include.GetValue().split(';')
         exclude = self.exclude.GetValue().split(';')
         caseSensitive = self.cs.IsChecked()
@@ -836,11 +855,18 @@ class FindInFiles(wx.Panel):
         
         if wholeWord:
             pattern = "\\b%s\\b"%(pattern,)
-        
-        if caseSensitive:
-            pattern = re.compile(pattern)
-        else:
-            pattern = re.compile(pattern, re.IGNORECASE)
+        try:
+            if caseSensitive:
+                pattern = re.compile(pattern)
+            else:
+                pattern = re.compile(pattern, re.IGNORECASE)
+        except Exception, why:
+            self.starting = 0
+            self.stopping = 0
+            self.running = 0
+            self.b.SetLabel("Start Search")
+            self.root.SetStatusText("regular expression compilation failed: %r"%(why,))
+            return
 
         self.pattern = pattern
         self.resultsWindow.Clear()
@@ -863,7 +889,7 @@ class FindInFiles(wx.Panel):
             paths = ('',)
         self.startTime=time.time()
         
-        state = iter(paths), iter(()), fcn, searchFile, found, 0, 0, subd, include, exclude, igndot
+        state = iter(paths), iter(()), fcn, searchFile, found, 0, 0, exdirs, subd, include, exclude, igndot
         self._threaded_search('', [], state)
         
         
@@ -897,7 +923,7 @@ class FindInFiles(wx.Panel):
         ## self.found = found
     
     def _threaded_search(self, ofn, new_found, state):
-        path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, subd, include, exclude, igndot = state
+        path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, exdirs, subd, include, exclude, igndot = state
         if new_found:
             hfc += 1
             found += new_found
@@ -912,7 +938,7 @@ class FindInFiles(wx.Panel):
             try:
                 fn, data = data_i.next()
                 fc += 1
-                state = path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, subd, include, exclude, igndot
+                state = path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, exdirs, subd, include, exclude, igndot
                 t = threading.Thread(target = s_fcn, args=(fn, data, state))
                 t.setDaemon(1)
                 t.start()
@@ -925,8 +951,8 @@ class FindInFiles(wx.Panel):
             except StopIteration:
                 pass
             else:
-                data_i = nf_fcn(path, subd, include, exclude, igndot)
-                state = path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, subd, include, exclude, igndot
+                data_i = nf_fcn(path, exdirs, subd, include, exclude, igndot)
+                state = path_i, data_i, nf_fcn, s_fcn, found, hfc, fc, exdirs, subd, include, exclude, igndot
                 wx.CallAfter(self._threaded_search, '', [], state)
                 return
         
@@ -1024,7 +1050,7 @@ class FindInFiles(wx.Panel):
             if namematches(win.filename, include, exclude):
                 yield self.getfn(win), fixnewlines(StyledTextCtrl.GetText(win))
         
-    def directories(self, path, subdirs, include, exclude, ignore_dotted=0):
+    def directories(self, path, exdirs, subdirs, include, exclude, ignore_dotted=0):
         try:
             lst = os.listdir(path)
         except Exception, e:
@@ -1039,10 +1065,15 @@ class FindInFiles(wx.Panel):
                     yield a, open(a, 'rU').read()
             elif subdirs and os.path.isdir(a):
                 if (not ignore_dotted) or filen[:1] != '.':
-                    d.append(a)
+                    excluded = 0
+                    for exdir in exdirs:
+                        if fnmatch.fnmatch(filen, exdir):
+                            excluded = 1
+                    if not excluded:
+                        d.append(a)
         if subdirs:
             for p in d:
-                for f in self.directories(p, subdirs, include, exclude, ignore_dotted):
+                for f in self.directories(p, exdirs, subdirs, include, exclude, ignore_dotted):
                     yield f
     
     def tags_in_directories(self, *args):
@@ -1137,6 +1168,7 @@ class FindInFiles(wx.Panel):
 
         prefs.setdefault('scope', 'Current File')
         prefs.setdefault('dirs', [])
+        prefs.setdefault('excludedirs',[])
         prefs.setdefault('include', ['*.*'])
         prefs.setdefault('exclude', ['.*;*.bak;*.orig;~*;*.swp;CVS'])
         prefs.setdefault('search_sub_dirs', 1)
@@ -1177,6 +1209,7 @@ class FindInFiles(wx.Panel):
             'uncommented': self.uncommented.IsChecked(),
 
             'dirs': getlist(self.sdirs),
+            'excludedirs': getlist(self.exdirs),
             'include': getlist(self.include),
             'exclude': getlist(self.exclude),
             'search_sub_dirs': self.ss.IsChecked(),

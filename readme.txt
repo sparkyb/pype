@@ -221,6 +221,12 @@ Providing this command line option will use the path in which the PyPE source
 or binary is for where PyPE's state is saved (document history, menu
 configuration, etc.).  This will allow for 'embedded' applications.
 
+--port
+======
+Providing this command line option will allow you to choose the port number
+that PyPE uses when Options -> One PyPE is checked.  The default port number
+is 9999.
+
 
 -------------------------------
 PyPE features and functionality
@@ -1164,6 +1170,14 @@ Timeout macros.  They will show you what things will and won't stop after the
 5 second timeout.  The timeout conditions are there to try to prevent you from
 trying to kill PyPE because it stopped responding.  The general rule of thumb:
 don't perform any system calls that could take a long time to finish.
+
+
+Non-white background colors
+===========================
+
+In PyPE 2.8.6, the stylesetter now has support for non-white background
+colors.  To set a non-white background color, change the 'backcol' value in
+the proper common.defs.* in your 'stc-styles.rc.cfg'.
 
 
 ---

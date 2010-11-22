@@ -59,8 +59,8 @@ class FileHistory(wx.Menu):
         
         for item in self:
             if item.GetLabel() == name:
-                self.Remove(item.GetId())
-                self.PrependItem(item)
+                ll = self.Remove(item.GetId())
+                self.PrependItem(ll)
                 return
         
         if self.maxlen > 0 and len(self) >= self.maxlen:

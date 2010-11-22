@@ -1,16 +1,20 @@
-## from STCStyleEditor import initSTC
-## initSTC(self, stylefile, language)
 
+import sys
 import wx
 import wx.stc
 
+import configuration #for unrepr
+
 cn = 'Courier New'
 fs = 10
+if 'darwin' == sys.platform:
+    fs = 13
 
 def update_faces():
     global faces
     faces = {'times': cn, 'mono' : cn, 'helv' : cn, 'other': cn, 'lucd': cn,
-             'size' : fs, 'size2': fs, 'lnsize': fs, "backcol": "#FFFFFF"}
+             'size' : fs, 'size2': fs, 'lnsize': fs, "forecol":"#000000",
+             "backcol": "#ffffff"}
 
 update_faces()
 
@@ -28,7 +32,7 @@ def rpartition(st, sep):
 
 _default = {34:'fore:#0000FF,back:#FFFF88,bold', 35:'fore:#FF0000,back:#FFFF88,bold'}
 
-def get_style(stylefile, language, profile=''):
+def get_style(stylefile, language, _faces, profile=''):
     #gets the main styling information for [style.<language>[.profile]]
     found1 = 0
     dct = {}
@@ -52,7 +56,7 @@ def get_style(stylefile, language, profile=''):
                     num = int(num, 10)
                 except:
                     continue
-            dct[num] = right.strip()%faces
+            dct[num] = right.strip()%_faces
         elif found1 and not line.strip():
             pass
         elif found1:
@@ -76,17 +80,36 @@ def get_extra(stylefile, language):
             break
     return dct
 
+def get_faces(stylefile):
+    if 'win32' in sys.platform:
+        start = 'common.defs.msw'
+    else:
+        start = 'common.defs.gtk'
+    
+    x = {}
+    for line in open(stylefile):
+        if line.startswith(start):
+            try:
+                x = configuration.unrepr(line[len(start):].lstrip(' ='))
+            except:
+                pass
+    return x
+
 def initSTC(stc, stylefile, language, custom=''):
     #get the styling information
-    styles = get_style(stylefile, language, 'default')
-    styles.update(get_style(stylefile, language, custom))
+    _faces = dict(faces)
+    _faces.update(get_faces(stylefile))
+    
+    styles = get_style(stylefile, language, _faces, 'default')
+    styles.update(get_style(stylefile, language, _faces, custom))
     
     ## print "got styling information:", [i.strip() for i in lines1]
     
     #get any extra bits
 
     extra = get_extra(stylefile, language)
-            
+    ## import pprint
+    ## pprint.pprint(extra)
     #get the actual lexer
     lexer = wx.stc.STC_LEX_NULL
     if 'lexer' in extra:
@@ -97,11 +120,12 @@ def initSTC(stc, stylefile, language, custom=''):
             if hasattr(wx.stc, lex):
                 lexer = getattr(wx.stc, lex)
     
+    _base = 'fore:%(forecol)s,back:%(backcol)s,face:%(mono)s,size:%(size)d'%_faces
     stc.StyleResetDefault()
     stc.ClearDocumentStyle()
     stc.SetLexer(lexer)
     stc.SetKeyWords(0, extra.get('keywords', ''))
-    stc.StyleSetSpec(wx.stc.STC_STYLE_DEFAULT, 'fore:#000000,face:%(mono)s,size:%(size)d'%faces)
+    stc.StyleSetSpec(wx.stc.STC_STYLE_DEFAULT, _base)
     stc.StyleClearAll()
     
     for num, style in styles.iteritems():
@@ -114,6 +138,17 @@ def initSTC(stc, stylefile, language, custom=''):
         elif num == -3:
             setEdgeColour(stc, style)
     
+    #borrowed from STCStyleEditor
+    bkCol = None
+    if 0 in styles: prop = styles[0]
+    else: prop = _base
+    names, vals = parseProp(prop)
+    if 'back' in names:
+        bkCol = strToCol(vals['back'])
+    if bkCol is None:
+        bkCol = '#ffffff'
+    stc.SetBackgroundColour(bkCol)
+        
     stc.Colourise(0, stc.GetTextLength())
 
 #from STCStyleEditor.py

@@ -6,6 +6,8 @@ import os
 import time
 import traceback
 import sys
+import threading
+import re
 
 try:
     UNICODE = _pype.UNICODE
@@ -22,13 +24,20 @@ class defdict(dict):
 goodch = dict.fromkeys('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 transtable = ''.join([(' ', i.lower())[i in goodch] for i in [chr(j) for j in xrange(256)]])
 
-
 non_word = defdict([(chr(i), ' ') for i in xrange(256) if chr(i) not in goodch])
 non_word.update(dict([(unichr(i), ' ') for i in xrange(256) if chr(i) not in goodch]))
+_ = []
+for i in non_word:
+    if type(i) is str:
+        i = i.decode('latin-1')
+    _.append(re.escape(i))
+non_word_re = re.compile('[' + ''.join(_) + ']+')
+del _
 
 fil = os.path.join(_pype.runpath, 'dictionary.txt')
 
 dictionary = {}
+loading = 0
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 
 def _dri(word, alphabet):
@@ -51,23 +60,28 @@ def _dri(word, alphabet):
         #inserts a new character at the end of the word
         yield word + j
 
-
 def suggest(word, dcts):
     _a = alphabet
     x = {}
-    for i in _dri(word, _a):
-        if i not in x:
-            for j in dcts:
-                if i in j:
-                    x[i] = None
-                    break
+    for k in _dri(word, _a):
+        for i in _dri(k, _a):
+            if i not in x:
+                for j in dcts:
+                    if i in j:
+                        x[i] = None
+                        break
     x = x.keys()
     x.sort()
     return x
 
+SCI = None
+
 class SpellCheck(scrolled.ScrolledPanel):
     def __init__(self, parent, root):
         scrolled.ScrolledPanel.__init__(self, parent, -1)
+        global SCI
+        SCI = self
+        
         
         self.document = None
         self.root = root
@@ -194,20 +208,17 @@ class SpellCheck(scrolled.ScrolledPanel):
         global dictionary
         if dictionary:
             dictionary = {}
-        
-    def load_d(self):
-        if dictionary:
-            #set the unload for 10 minutes from now
-            self.timer.Start(600000, wx.TIMER_ONE_SHOT)
-            return
-        
+    
+    def _load(self):
+        global loading
+        loading = 1
         rp = self.root.getglobal('runpath')
         df = os.path.join(rp, 'dictionary.txt')
         while os.path.exists(df):
             try:
                 dct = open(df, 'rb').read()
             except Exception, why:
-                self.root.SetStatusText("Dictionary load failed! %s"%why)
+                wx.CallAfter(self.root.SetStatusText, "Dictionary load failed! %s"%(why,))
                 break
             
             if dct.startswith('\xef\xbb\xbf'):
@@ -216,7 +227,7 @@ class SpellCheck(scrolled.ScrolledPanel):
             try:
                 dct = dct.decode('utf-8')
             except:
-                self.root.SetStatusText("Dictionary load failed!")
+                wx.CallAfter(self.root.SetStatusText, "Dictionary load failed!")
                 traceback.print_exc()
                 break
             
@@ -226,8 +237,8 @@ class SpellCheck(scrolled.ScrolledPanel):
             if not UNICODE:
                 for i in x:
                     if type(i) is unicode:
-                        self.root.SetStatusText("Dictionary load failed!")
-                        self.root.SetStatusText("You must use a unicode-enabled PyPE/wxPython for the given dictionary")
+                        wx.CallAfter(self.root.SetStatusText, "Dictionary load failed!")
+                        wx.CallAfter(self.root.SetStatusText, "You must use a unicode-enabled PyPE/wxPython for the given dictionary")
                         break
             dictionary.update(x)
             break
@@ -237,7 +248,7 @@ class SpellCheck(scrolled.ScrolledPanel):
             try:
                 ab = open(af, 'rb').read()
             except Exception, why:
-                self.root.SetStatusText("Alphabet load failed! %s"%why)
+                wx.CallAfter(self.root.SetStatusText, "Alphabet load failed! %s"%(why,))
                 break
             
             if ab.startswith('\xef\xbb\xbf'):
@@ -246,7 +257,7 @@ class SpellCheck(scrolled.ScrolledPanel):
             try:
                 ab = ab.decode('utf-8')
             except:
-                self.root.SetStatusText("Alphabet load failed!")
+                wx.CallAfter(self.root.SetStatusText, "Alphabet load failed!")
                 traceback.print_exc()
                 break
             
@@ -255,15 +266,27 @@ class SpellCheck(scrolled.ScrolledPanel):
             if not UNICODE:
                 for i in x:
                     if type(i) is unicode:
-                        self.root.SetStatusText("Alphabet load failed!")
-                        self.root.SetStatusText("You must use a unicode-enabled PyPE/wxPython for the given alphabet")
+                        wx.CallAfter(self.root.SetStatusText, "Alphabet load failed!")
+                        wx.CallAfter(self.root.SetStatusText, "You must use a unicode-enabled PyPE/wxPython for the given alphabet")
                         break
             
             global alphabet
             alphabet = tuple(x)
             break
         #set the unload for 10 minutes from now
-        self.timer.Start(600000, wx.TIMER_ONE_SHOT)
+        wx.CallAfter(self.timer.Start, 600000, wx.TIMER_ONE_SHOT)
+        loading = 0
+    
+    def load_d(self, lazy=0):
+        if dictionary or (lazy and loading):
+            #set the unload for 10 minutes from now
+            self.timer.Start(600000, wx.TIMER_ONE_SHOT)
+            return
+        
+        if lazy:
+            threading.Thread(target=self._load).start()
+        else:
+            self._load()
     
     def OnCheckAll(self, evt):
         for i in xrange(self.badsp.GetCount()):
@@ -339,7 +362,6 @@ class SpellCheck(scrolled.ScrolledPanel):
                     self.root.control.SetSelection(i)
                     break
         except Exception, why:
-            print why
             self.badsp.Clear()
             self.replsp.Clear()
             self.document = None
@@ -475,7 +497,47 @@ class SpellCheck(scrolled.ScrolledPanel):
         del dct[dele]
         dsp = len([i for i in dct if i < dele])
         self.dictionaries.Delete(dsp)
+    
+    def find_errors(self, stc, dictionaries, start=None, end=None):
+        ## t = time.time()
+        if start == None:
+            start = 0
+        if end == None:
+            end = stc.GetTextLength()
         
+        nf = {}
+        badwords = []
+        def check():
+            word = to_check[start:_start]
+            if word:
+                word = word.lower()
+                if word in nf:
+                    badwords.append((start, _start))
+                    return
+                for j in dictionaries:
+                    if word in j:
+                        break
+                else:
+                    badwords.append((start, _start))
+                    nf[word] = None
+        
+        count = 1
+        to_check = stc.GetTextRange(start, end)
+        for match in non_word_re.finditer(to_check):
+            count += 1
+            _start = match.start()
+            check()
+            start = match.end()
+        _start = end
+        check()
+        ## if nf:
+            ## nf = nf.keys()
+            ## nf.sort()
+            ## print '\n'.join(nf)
+        
+        ## print "checked ~%i in %.1f"%(count, time.time()-t)
+        return badwords
+
 #FindPrefixListBox derived from the wxPython demo
 class FindPrefixListBox(wx.ListBox):
     def __init__(self, parent, id=-1, choices=[], style=wx.LB_SINGLE):

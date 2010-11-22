@@ -379,11 +379,11 @@ def latex_parser(source, line_ending, flat, _):
     out = []
     stk = []
     line_no = 0
-    sections = ('\\section', '\\subsection', '\\subsubsection')
+    sections = ('\\chapter', '\\section', '\\subsection', '\\subsubsection')
     
     def f(which, line, ls, line_no, stk):
         if which in sections:
-            ind = which.count('sub')
+            ind = which.count('sub') + which.endswith('section')
         elif stk:
             ind = 3
         else:
@@ -511,7 +511,11 @@ def get_last_word(line):
             break
     
     if line[-1-i] in _name_start:
+        #handles a word that is the whole line
         return line[-1-i:]
+    ## if i and line[-i] in _name_start and line[-1-i] in :
+        ## #handles a word that isn't the whole line
+        ## return line[-i:]
     return ''
 
 '''

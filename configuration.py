@@ -10,7 +10,6 @@ import os
 import sys
 from wx.stc import STC_EOL_CRLF, STC_EOL_LF, STC_EOL_CR
 import zlib
-from parsers import *
 
 startup_path = os.getcwd()
 
@@ -208,3 +207,73 @@ Y\xee\xcd\xcf\xa9\xc1\xe88\x9b\xa5y\xb7O\xd5Xe!?\t\xdf4\x8d\xec\xd9#Z\\\xf0\
 \x07\xcfse\xebz \xf1\xde\x96\x9a\x85\xbc\x0ci\xcf\x02\xbcB\x9aK\xcf\xab\xba\
 \xb2\xff\x07\n$<\xcc\x9c\x11r\xaf\x00\x00\x00\x00IEND\xaeB`\x82_YY\xda' )
     return a
+
+# The remainder of this file is in the public domain.
+# This version acquired from:
+# http://www.cherrypy.org/browser/branches/ticket-132/cherrypy/lib/unrepr.py?rev=194
+# JC - 7/18/2007 - Added support for True/False, added StringBuilder variant
+#    for string-only unrepr operations.
+import compiler
+
+def getObj(s):
+    s="a="+s
+    return compiler.parse(s).getChildren()[1].getChildren()[0].getChildren()[1]
+
+class UnknownType(Exception):
+    pass
+
+class _Builder:
+    def build(self, o):
+        m = getattr(self, 'build_'+o.__class__.__name__, None)
+        if m is None:
+            raise UnknownType(o.__class__.__name__)
+        return m(o)
+
+class StringBuilder(_Builder):
+    def build_Const(self, o):
+        if type(o) in (str, unicode):
+            return o
+        raise Exception
+
+class Builder(_Builder):
+    def build_List(self, o):
+        return map(self.build, o.getChildren())
+    def build_Const(self, o):
+        return o.value
+    def build_Dict(self, o):
+        d = {}
+        i = iter(map(self.build, o.getChildren()))
+        for el in i:
+            d[el] = i.next()
+        return d
+    def build_Tuple(self, o):
+        return tuple(self.build_List(o))
+    def build_Name(self, o):
+        if o.name == 'None':
+            return None
+        elif o.name == 'True':
+            return True
+        elif o.name == 'False':
+            return False
+        raise UnknownType('Name: %r'%(o,))
+    def build_Add(self, o):
+        real, imag = map(self.build_Const, o.getChildren())
+        try:
+            real = float(real)
+        except TypeError:
+            raise UnknownType('Add')
+        if not isinstance(imag, complex) or imag.real != 0.0:
+            raise UnknownType('Add')
+        return real+imag
+
+def unrepr(s):
+    return Builder().build(getObj(s))
+
+#variant of 'unreprWrapper' by robinson
+def str_unrepr(s):
+    if not s:
+        return s
+    try:
+        return StringBuilder().build(getObj(s))
+    except:
+        return s
