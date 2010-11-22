@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 
 #------------ User-changable settings are available in the menus -------------
 from __version__ import *
@@ -4385,7 +4385,7 @@ class PythonSTC(stc.StyledTextCtrl):
                 foundcoding += 1
                 break
             if 'utf-8' not in tryencodings:
-                tryencodings.append('utf-8')
+                tryencodings.insert(0, 'utf-8')
             te = []
             while tryencodings:
                 i = tryencodings.pop()
