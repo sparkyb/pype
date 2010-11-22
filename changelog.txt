@@ -1,5 +1,21 @@
+#-------------------------------- PyPE 2.2.2 ---------------------------------
+(added) Ability to have the toolbar hidden, on the top, or on the left side.
+Feature thanks to Dave Schuyler.
+(added) Ability to use tabs inside the shell combobox.  On some platforms it
+will show a box glyph, but it will send an actual tab character to the
+program.  Now interactive Python sessions (without syntax highlighting) are
+a bit better.  Note: future versions of the shell will be much better.
+(changed) The 'search' tab now has separated the 'path' and 'filename'
+portions of results when used in the table version.
+(added) Ability to automatically forward open document requests to a single
+running PyPE instance.  Uses a socket listening on 127.0.0.1, port 9999.  See
+the readme/help for details.
+(fixed) Segfaults on linux were caused by an icon size mismatch.  This has
+been fixed.  A big thank you to Michele Petrazzo for figuring out where the
+problem was (I don't have a linux box for testing).
+
 #-------------------------------- PyPE 2.2.1 ---------------------------------
-(fixed) exception when creating a new document.
+(fixed) exception when opening any document (new or old).
 
 #--------------------------------- PyPE 2.2 ----------------------------------
 (removed) a debug statement or two.

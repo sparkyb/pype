@@ -57,6 +57,8 @@ else:
 runpath = ''.join(runpath.split('"'))
 runpath = os.path.dirname(os.path.normpath(os.path.abspath(runpath)))
 
+nosocket = os.path.exists(os.path.join(runpath, 'nosocket'))
+
 stylefile = os.path.join(runpath, 'stc-styles.rc.cfg')
 
 #for open/save dialogs

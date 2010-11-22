@@ -55,6 +55,27 @@ doesn't mean that you /have/ to run them.
 
 
 #----------------------------------- Help ------------------------------------
+How does "One PyPE" work?
+If "One PyPE" is selected, it will remove the file named 'nosocket' from the
+path in which PyPE is running from (if it exists), and start a listening
+socket on 127.0.0.1:9999 .  If "One PyPE" is deselected, it will create a file
+called 'nosocket' in the path from which PyPE is running, and close the
+listening socket (if one was listening).
+
+Any new PyPE instances which attempt to open will check for the existance of
+the nosocket file.  If it does not find that file, it will attempt to create a
+new listening socket on 127.0.0.1:9999 .  If the socket creation fails, it
+will attempt to connect to 127.0.0.1:9999 and send the documents provided on
+the command-line to the other PyPE instance.  If it found the file, or if it
+was able to create the socket, then a new instance of PyPE will be created,
+and will use the preferences-defined "One PyPE" (preventing certain issues
+involving a read-only path which PyPE is on, or a read-only nosocket file).
+
+If you want to prevent new instances of PyPE from ever creating or using
+sockets, create a file called 'nosocket' and make it read-only to PyPE.
+
+
+
 What the heck is a Trigger?
 Let us say that you writing a web page from scratch.  Let us also say that
 typing in everything has gotten a bit tiresome, so you want to offer yourself

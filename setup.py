@@ -18,8 +18,9 @@ setup(name=nam,
       version=pype.VERSION_,
       windows=[{"script": "pype.py",
                 "icon_resources": [(1, "icons\\pype.ico")]}],
-      data_files=[('', glob.glob('*.txt')+['stc-styles.rc.cfg', 'pype.pyw']),
-                  ('icons', glob.glob('icons\\*.*'),
+      data_files=[('', glob.glob('*.txt')+\
+                   ['stc-styles.rc.cfg', 'pype.pyw', 'nosocket']),
+                   ('icons', glob.glob('icons\\*.*'),
                   )],
       options = {"py2exe": {"packages": ["encodings"]}}
 )

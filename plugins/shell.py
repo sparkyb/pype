@@ -115,7 +115,7 @@ class Shell(wx.Panel):
         if sys.platform == 'win32':
             ch = [ch[0], ch[9], ch[15]]
 
-        self.inp = wx.ComboBox(self, -1, choices=prefs.get('history', []), style=wx.TE_PROCESS_ENTER|wx.CB_DROPDOWN)
+        self.inp = wx.ComboBox(self, -1, choices=prefs.get('history', []), style=wx.TE_PROCESS_ENTER|wx.CB_DROPDOWN|wx.WANTS_CHARS)
         self.sndBtn = wx.Button(self, -1, 'Send')
         self.echo = ToggleButton(self, -1, 'Echo')
         self.echo.SetValue(prefs.get('echo', 0))
@@ -138,6 +138,7 @@ class Shell(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnShowPopup, b)
         self.Bind(wx.EVT_BUTTON, self.OnSendText, self.sndBtn)
         self.Bind(wx.EVT_TEXT_ENTER, self.OnSendText, self.inp)
+        self.inp.Bind(wx.EVT_CHAR, self.OnChar, self.inp)
         self.Bind(wx.EVT_END_PROCESS, self.OnProcessEnded)
         self.Bind(wx.EVT_BUTTON, self.OnKillProcess, self.killBtn)
 
@@ -166,6 +167,16 @@ class Shell(wx.Panel):
         #create a timer
         self.timer = wx.Timer(self, -1)
         self.Bind(wx.EVT_TIMER, self.OnPoll, self.timer)
+    
+    def OnChar(self, evt):
+        if evt.GetKeyCode() == wx.WXK_TAB:
+            f,t = self.inp.GetMark()
+            self.inp.Remove(f,t)
+            val = self.inp.GetValue()
+            self.inp.SetValue(val[:f] + '\t' + val[f:])
+            self.inp.SetMark(f+1,f+1)
+        else:
+            evt.Skip()
 
     def OnShowPopup(self, evt):
         win = popup.Popup(self, quickhelp)

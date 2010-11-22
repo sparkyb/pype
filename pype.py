@@ -61,6 +61,7 @@ from plugins import todo
 from plugins import findinfiles
 from plugins import shell
 from plugins import textrepr
+from plugins import single_instance
 
 ## from plugins import project
 
@@ -70,8 +71,8 @@ for i in [logger, findbar, lru, filehistory, browser, workspace, todo,
     i.isdirty = isdirty
 
 #
-VERSION = "2.2.1"
-VERSION_ = "2.2.1"
+VERSION = "2.2.2"
+VERSION_ = "2.2.2"
 
 if 1:
     #under an if so that I can collapse the declarations
@@ -252,8 +253,11 @@ if 1:
         LB_ID = wxNewId()
         WIDE_ID = wxNewId()
         TALL_ID = wxNewId()
+        SINGLE_ID = wxNewId()
         TD_ID = wxNewId()
-        TB_ID = wxNewId()
+        TB_TOP_ID = wxNewId()
+        TB_LEFT_ID = wxNewId()
+        TB_HIDE_ID = wxNewId()
         FINDBAR_BELOW_EDITOR = wxNewId()
         NO_FINDBAR_HISTORY = wxNewId()
         CLEAR_FINDBAR_HISTORY = wxNewId()
@@ -435,7 +439,9 @@ class MainWindow(wxFrame):
                 path = p
         try:    OLD_MENUPREF.update(self.readAndEvalFile(path))
         except: pass
-
+        
+        single_instance.callback = self.OnDrop
+        
         #recent menu relocated to load configuration early on.
         recentmenu = wxMenu()
 #--------------------------- cmt-001 - 08/06/2003 ----------------------------
@@ -696,7 +702,7 @@ class MainWindow(wxFrame):
         
         optionsmenu.AppendSeparator()
                 #---------------------------- Default Style submenu ------------------
-        stylemenu2= wxMenu()
+        stylemenu2 = wxMenu()
         menuAddM(optionsmenu, stylemenu2, "Default Highlighting", "Set the default syntax highlighting for new or unknown documents")
         menuAdd(self, stylemenu2, 'Python', "All new or unknown documents will be highlighted as Python", self.OnDefaultStyleChange, PY_DS, typ)
         menuAdd(self, stylemenu2, 'HTML',   "All new or unknown documents will be highlighted as HTML", self.OnDefaultStyleChange, HT_DS, typ)
@@ -712,7 +718,12 @@ class MainWindow(wxFrame):
         menuAdd(self, optionsmenu, "Show Wide Tools", "Shows or hides the tabbed tools that are above or below the editor", self.OnShowWideToggle, WIDE_ID, wxITEM_CHECK)
         menuAdd(self, optionsmenu, "Show Tall Tools", "Shows or hides the tabbed tools that are right or left of the editor", self.OnShowTallToggle, TALL_ID, wxITEM_CHECK)
         menuAdd(self, optionsmenu, "Wide Todo", "When checked, the todo list will be near the Log tab, when unchecked, will be near the Documenst tab (requires restart)", self.OnTodoToggle, TD_ID, wxITEM_CHECK)
-        menuAdd(self, optionsmenu, "Show Toolbar", "When checked, will show a toolbar (requires restart)", self.OnToolbarToggle, TB_ID, wxITEM_CHECK)
+        menuAdd(self, optionsmenu, "One PyPE", "When checked, will listen on port 9999 for filenames to open", self.OnSingleToggle, SINGLE_ID, wxITEM_CHECK)
+        toolbarOptionsMenu = wxMenu()
+        menuAddM(optionsmenu, toolbarOptionsMenu, "Toolbar", "When checked, will show a toolbar (requires restart)")
+        menuAdd(self, toolbarOptionsMenu, 'Hide', "Don't show the tool bar", self.OnToolBarHide, TB_HIDE_ID, typ)
+        menuAdd(self, toolbarOptionsMenu, 'Top',  "Show the toolbar accross the top horizontally", self.OnToolBarTop, TB_TOP_ID, typ)
+        menuAdd(self, toolbarOptionsMenu, 'Left', "Show the toolbar along the left side vertically", self.OnToolBarLeft, TB_LEFT_ID, typ)
         optionsmenu.AppendSeparator()
         caretmenu = wxMenu()
         menuAddM(optionsmenu, caretmenu, "Caret Options", "Set how your caret behaves while it is moving around")
@@ -762,8 +773,11 @@ class MainWindow(wxFrame):
         self.menubar.Check(DB_ID, docbarlocn)
         self.menubar.Check(WIDE_ID, SHOWWIDE)
         self.menubar.Check(TALL_ID, SHOWTALL)
+        self.menubar.Check(SINGLE_ID, single_pype_instance)
         self.menubar.Check(TD_ID, TODOBOTTOM)
-        self.menubar.Check(TB_ID, TOOLBAR)
+        self.menubar.Check(TB_HIDE_ID, TOOLBAR == 0)
+        self.menubar.Check(TB_TOP_ID, TOOLBAR == 1)
+        self.menubar.Check(TB_LEFT_ID, TOOLBAR == 2)
         self.menubar.Check(USETABS, use_tabs)
         self.menubar.Check(INDENTGUIDE, indent_guide)
         self.menubar.Check(lexers3[DEFAULTLEXER], 1)
@@ -806,6 +820,8 @@ class MainWindow(wxFrame):
             self.OnSize(None)
         
         self.OnDrop(fnames, 0)
+        if single_pype_instance:
+            single_instance.startup()
 
     #...
 
@@ -820,10 +836,8 @@ class MainWindow(wxFrame):
         if resp != wxID_OK:
             raise cancelled
         return validate(valu, default)
-
     
     def _setupToolBar(self):
-        
         size = (16,16)
         def getBmp(artId, client):
             bmp = wxArtProvider_GetBitmap(artId, client, size)
@@ -831,8 +845,12 @@ class MainWindow(wxFrame):
                 bmp = EmptyBitmap(*size)
             return bmp
         
+        if TOOLBAR == 1:
+            orient = wxTB_HORIZONTAL
+        else:
+            orient = wxTB_VERTICAL
         tb = self.CreateToolBar(
-            wxTB_HORIZONTAL|wxNO_BORDER|wxTB_FLAT|wxTB_TEXT)
+            orient|wxNO_BORDER|wxTB_FLAT|wxTB_TEXT)
         
         tb.SetToolBitmapSize(size)
         
@@ -970,6 +988,9 @@ class MainWindow(wxFrame):
             win.pos_ch(evt)
         except cancelled:
             pass
+        
+        if single_pype_instance:
+            single_instance.poll()
 
     def OnSashDrag(self, event):
         if event.GetDragStatus() == wxSASH_STATUS_OUT_OF_RANGE:
@@ -1164,6 +1185,7 @@ class MainWindow(wxFrame):
                             ('SHOWTALL', 1),
                             ('shellprefs', {}),
                             ('findbar_location', 1),
+                            ('single_pype_instance', 0),
                             ]:
             if nam in self.config:
                 if isinstance(dflt, dict):
@@ -1209,6 +1231,7 @@ class MainWindow(wxFrame):
         self.config['no_findbar_history'] = no_findbar_history
         self.config['title_option'] = title_option
         self.config['TODOBOTTOM'] = TODOBOTTOM
+        self.config['single_pype_instance'] = single_pype_instance
         self.config['TOOLBAR'] = TOOLBAR
         self.config['SHOWWIDE'] = SHOWWIDE
         self.config['SHOWTALL'] = SHOWTALL
@@ -2224,10 +2247,43 @@ class MainWindow(wxFrame):
     def OnTodoToggle(self, e):
         global TODOBOTTOM
         TODOBOTTOM = (TODOBOTTOM + 1)%2
+    def OnSingleToggle(self, e):
+        global single_pype_instance
+        
+        if single_pype_instance:
+            single_instance.shutdown()
+            try:
+                x = open(os.path.join(runpath, 'nosocket'), 'w')
+                x.close()
+            except:
+                pass
+            single_pype_instance = 0
+        else:
+            try:
+                os.remove(os.path.join(runpath, 'nosocket'))
+            except:
+                if nosocket:
+                    self.menubar.Check(SINGLE_ID, single_pype_instance)
+                    return
+            try:
+                single_instance.startup()
+            except:
+                single_instance.traceback.print_exc()
+                self.menubar.Check(SINGLE_ID, single_pype_instance)
+            else:
+                single_pype_instance = 1
     
-    def OnToolbarToggle(self, e):
+    def OnToolBarHide(self, e):
         global TOOLBAR
-        TOOLBAR = (TOOLBAR + 1)%2
+        TOOLBAR = 0
+    
+    def OnToolBarTop(self, e):
+        global TOOLBAR
+        TOOLBAR = 1
+    
+    def OnToolBarLeft(self, e):
+        global TOOLBAR
+        TOOLBAR = 2
 
     def OnCaret(self, e):
         global caret_option
@@ -4073,13 +4129,21 @@ VS = wx.VERSION_STRING
 del wx
 
 def main():
+    if single_instance.send_documents(
+    [os.path.abspath(os.path.join(os.getcwd(), i))
+    for i in sys.argv[1:] if i != '--last']):
+        return
+    
     global IMGLIST1, IMGLIST2, root
     app = wxPySimpleApp()
     IMGLIST1 = wxImageList(16, 16)
     IMGLIST2 = wxImageList(16, 16)
     for il in (IMGLIST1, IMGLIST2):
-        il.AddIcon(wxIcon('icons/blank.ico', wxBITMAP_TYPE_ICO))
-        il.AddIcon(wxIcon('icons/py.ico', wxBITMAP_TYPE_ICO))
+        for icf in ('icons/blank.ico', 'icons/py.ico'):
+            img = wxImageFromBitmap(wxBitmap(icf)) 
+            img.Rescale(16,16) 
+            bmp = wxBitmapFromImage(img) 
+            il.AddIcon(wxIconFromBitmap(bmp)) 
 
     opn=0
     if len(sys.argv)>1 and (sys.argv[1] == '--last'):

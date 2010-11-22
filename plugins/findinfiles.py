@@ -43,9 +43,10 @@ def namematches(name, include, exclude):
 
 columns = (
     (0, "", 0, 0),
-    (1, "File", 100, wx.LIST_FORMAT_RIGHT),
-    (2, "#", 40, wx.LIST_FORMAT_RIGHT),
-    (3, "Item", 550, 0))
+    (1, "Path", 200, 0),
+    (2, "Filename", 100, 0),
+    (3, "L#", 40, wx.LIST_FORMAT_RIGHT),
+    (4, "Item", 550, 0))
 
 OP = tokenize.OP
 NAME = tokenize.NAME
@@ -136,6 +137,7 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
             self.SetColumnWidth(i[0], i[2])
 
         self.data=[]
+        self.cache=[]
         listmix.ColumnSorterMixin.__init__(self, len(columns))
 
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected)
@@ -148,11 +150,13 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
             self.data=arrayOfTuples[:]
         else:
             self.data=arrayOfTuples
+        self.cache = [os.path.split(i[0]) for i in self.data]
         self.SetItemCount(len(arrayOfTuples))
         self.Refresh()
 
     def Clear(self):
         self.data=[]
+        self.cache=[]
         self.SetItemCount(0)
         self.DeleteAllItems()
         self.Refresh()
@@ -162,10 +166,12 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
         ((filename, line, line contents, extra), *)
         """
         self.data.append(tuple)
+        self.cache.append(os.path.split(tuple[0]))
         self.SetItemCount(len(self.data))
     
     def ExtendEntries(self, array):
         self.data.extend(array)
+        self.cache.extend([os.path.split(i[0]) for i in array])
         self.SetItemCount(len(self.data))
 
     # Used by the ColumnSorterMixin, see wx/lib/mixins/listctrl.py
@@ -186,13 +192,21 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
         ascending = self._colSortFlag[col]
         col -= 1
         
+        if col in (0,1):
+            ops = os.path.split
+            fcn = lambda a:ops(a[0])[col]
+        else:
+            fcn = lambda a:a[col-1]
+        
         def cmpf(a,b):
-            return cmp(a[col], b[col])
+            return cmp(fcn(a), fcn(b))
             
         if ascending:
             self.data.sort(cmpf)
+            self.cache = [os.path.split(i[0]) for i in self.data]
         else:
             self.data.reverse()
+            self.cache.reverse()
         
         self.Refresh()
 
@@ -201,15 +215,18 @@ class FoundTable(wx.ListCtrl, listmix.ColumnSorterMixin):#, listmix.ListCtrlAuto
 
     def OnItemActivated(self, event):
         self.currentItem = event.m_itemIndex
-        file = self.GetItem(self.currentItem, 1).GetText()
-        line = self.GetItem(self.currentItem, 2).GetText()
-        data = self.GetItem(self.currentItem, 3).GetText()
-        self.parent.OpenFound(file, int(line), self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
+        path = self.GetItem(self.currentItem, 1).GetText()
+        file = self.GetItem(self.currentItem, 2).GetText()
+        line = self.GetItem(self.currentItem, 3).GetText()
+        data = self.GetItem(self.currentItem, 4).GetText()
+        self.parent.OpenFound(os.path.join(path, file), int(line), self.pattern, ('\\n' in data) and len(data.encode('utf-8')))
 
     def OnGetItemText(self, item, col):
         if col == 0:
             return ''
-        return "%s" % (self.data[item][col-1],)
+        if col in (1,2):
+            return self.cache[item][col-1]
+        return "%s" % (self.data[item][col-2],)
 
 #-----------------------------------------------------------------------------
 

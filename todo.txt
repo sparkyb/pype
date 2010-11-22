@@ -58,6 +58,6 @@ support to run the shell in another process.  Caveat:
   without significant additional work (which I probably won't ever have time
   for)
 ? Use external command support to spawn persistant slow parser for tooltips,
-calltips, and 
+calltips, and better parsing.
 ? Use optional listening socket to support later callings of PyPE pushing
 document opening into a single PyPE instance ("only single instance")
