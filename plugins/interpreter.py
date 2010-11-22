@@ -96,7 +96,7 @@ if sys.platform == 'win32':
     if " " in command:
         command = '"%s"'%command
 elif sys.platform == 'linux2':
-    command = '/bin/sh --noediting -i'
+    command = '/bin/sh -i'
 else:
     command = '/bin/sh'
 
@@ -321,6 +321,7 @@ class MyShell(stc.StyledTextCtrl):
         stc.StyledTextCtrl.__init__(self, parent, id)
         self.lines = lineabstraction.LineAbstraction(self)
         self.NEWDOCUMENT = _pype.NEWDOCUMENT+1
+        self.loaded = True
         
         global pypestc
         if not pypestc:
@@ -896,6 +897,7 @@ class MyShell(stc.StyledTextCtrl):
 
     def CanPaste(self):
         return stc.StyledTextCtrl.CanPaste(self) and self.CanEdit()
+
     def Paste(self):
         success = False
         do = wx.TextDataObject()
@@ -916,6 +918,7 @@ class MyShell(stc.StyledTextCtrl):
         self.ReplaceSelection('')
         
         self.queue.extend(spliti(do.GetText(), '\n'))
+
     def Cut(self):
         if self.CanCut:
             stc.StyledTextCtrl.Cut(self)
@@ -927,6 +930,7 @@ class MyShell(stc.StyledTextCtrl):
             if x[-1:] == '\n':
                 self.processLine()
         ## wx.FutureCall(pushlines_t, self.pushlines)
+
     def MakeDirty(self, e=None):
         f = self.filename
         if f == ' ':
@@ -938,6 +942,7 @@ class MyShell(stc.StyledTextCtrl):
             c += 1
         self.root.control.SetPageText(c, f)
         self.root.redrawvisible(self)
+
     def DeleteSelection(self, e=None):
         range = self.GetSelection()
         mi = min(range)
