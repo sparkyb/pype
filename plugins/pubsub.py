@@ -67,7 +67,9 @@ def publish_now(topic, kwargs):
         for sub_topic in topic.split('.'):
             ct += ('.' if ct else '') + sub_topic
             kwargs._topic_delivered = ct
-            for call in _topics.get(ct, ()):
+            calls = _topics.get(ct, ())
+            ## print "trying to send to", ct, len(calls)
+            for call in calls:
                 delivered += 1
                 # Everyone gets the same dictionary, figure that if they
                 # mangle the data, it is expected.

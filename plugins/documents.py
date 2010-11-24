@@ -168,6 +168,9 @@ class MyNB(BaseNotebook):
         return None
 
     def OnPageChanged(self, event):
+        if event:
+            event.Skip()
+
         if self.calling:
             return
 
@@ -208,8 +211,6 @@ class MyNB(BaseNotebook):
                     win.loadfile()
 
             self.root.timer.Start(10, wx.TIMER_ONE_SHOT)
-            if event:
-                event.Skip()
             if self.other_focus:
                 wx.CallAfter(win.SetFocus)
                 self.other_focus = 0
@@ -299,7 +300,7 @@ class MyNB(BaseNotebook):
         self.root.menubar.Check(__main__.AC_KEYWORDS, win.use_keywords)
         self.root.menubar.Enable(__main__.AC_KEYWORDS, win.showautocomp)
         self.root.menubar.Enable(__main__.AC_LENGTH, win.showautocomp)
-        
+        self.root.menubar.Check(__main__.ANNOTATIONS_VISIBLE, bool(win.AnnotationGetVisible()))
         self.root.menubar.Check(__main__.WRAPL, win.GetWrapMode() != wx.stc.STC_WRAP_NONE)
         self.root.menubar.Check(__main__.SLOPPY, win.sloppy)
         self.root.menubar.Check(__main__.SMARTPASTE, win.smartpaste)
@@ -329,7 +330,7 @@ class MyNB(BaseNotebook):
 
     def AddPage(self, page, text, switch=1):
         which = __main__.GDI(text)
-        BaseNotebook.AddPage(self, page, text, 0, self.GNBI(which))
+        BaseNotebook.AddPage(self, page, text, switch, self.GNBI(which))
         self.root.dragger._AddItem(text)
         if switch or self.GetPageCount() == 1:
             self.root.OnDocumentChange(page.GetWindow1())
@@ -340,7 +341,7 @@ class MyNB(BaseNotebook):
 
     def InsertPage(self, posn, page, text, switch=1):
         which = __main__.GDI(text)
-        BaseNotebook.InsertPage(self, posn, page, text, 0, self.GNBI(which))
+        BaseNotebook.InsertPage(self, posn, page, text, switch, self.GNBI(which))
         self.root.dragger._InsertItem(posn, text)
         if self.GetSelection() == posn or switch:
             self.root.OnDocumentChange(page.GetWindow1())
@@ -376,7 +377,7 @@ class MyNB(BaseNotebook):
                                    self.GetPage(page).GetWindow1().SetFocus(),
                                    self.root.dragger._SelectItem(page)
                                    )
-        
+
                 wx.CallAfter(_callme, page)
         finally:
             self.root.starting = 0

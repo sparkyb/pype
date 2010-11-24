@@ -114,8 +114,8 @@ class TreeCtrl(wx.TreeCtrl):
         self.root = self.AddRoot("Unseen Root")
 
     def OnCompareItems(self, item1, item2):
-        d1 = self.GetItemData(item1).GetData()
-        d2 = self.GetItemData(item2).GetData()
+        d1 = self.GetPyData(item1)
+        d2 = self.GetPyData(item2)
         ## print "got data", d1.name, d2.name
         return self.parent.cmpf(d1, d2)
     
@@ -362,7 +362,7 @@ class hierCodeTreePanel(wx.Panel):
                     done[name] = item_no
                 self.tree.SetPyData(item_no, data)
             for item_no in done.itervalues():
-                data = self.tree.GetItemData(item_no).GetData()
+                data = self.tree.GetPyData(item_no)
                 if not data:
                     continue
                 set_color_and_icon(self.tree, item_no, data.defn, data.name, item_no in hasch)
@@ -389,7 +389,7 @@ class hierCodeTreePanel(wx.Panel):
 
     def OnActivate(self, event):
         num, win = self.root.getNumWin(event)
-        dat = self.tree.GetItemData(event.GetItem()).GetData()
+        dat = self.tree.GetPyData(event.GetItem())
         if dat == None:
             return event.Skip()
         if USE_NEW:

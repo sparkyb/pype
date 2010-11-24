@@ -84,6 +84,7 @@ else:
     __builtins__.USE_NEW = USE_NEW
 #------------------------------ System Imports -------------------------------
 import bisect
+import collections
 import cStringIO
 import fnmatch
 import keyword
@@ -106,6 +107,8 @@ if wx.VERSION[:4] == (2, 6, 3, 3) and not wx.USE_UNICODE:
     must use wxPython 2.6.3.3, please use wxPython 2.6.3.3 unicode and pass the
     --unicode command line option.
     '''.replace('    ', ''))
+
+HAS_NATIVE_ANNOTATIONS = wx.version() >= '2.9.'
 
 import wx.gizmos
 import wx.lib.newevent
@@ -404,6 +407,7 @@ if 1:
     FETCH_M = wx.NewId()
     AC_KEYWORDS = wx.NewId()
     AC_LENGTH = wx.NewId()
+    ANNOTATIONS_VISIBLE = wx.NewId()
     NUM = wx.NewId()
     MARGIN = wx.NewId()
     USETABS = wx.NewId()
@@ -607,7 +611,8 @@ if 1:
     for i,j in BOM:
         ADDBOM[j] = i
         ENCODINGS[j] = wx.NewId()
-    del i;del j;
+    del i
+    del j
 
 #font stuff
 if 1:
@@ -1109,6 +1114,7 @@ class MainWindow(wx.Frame):
             menuAdd(self, viewmenu, "Toggle Bookmark\tCtrl+M", "Create/remove bookmark for this line", self.OnToggleBookmark, pypeID_TOGGLE_BOOKMARK)
             menuAdd(self, viewmenu, "Next Bookmark\tF2", "Hop to the next bookmark in this file", self.OnNextBookmark, pypeID_NEXT_BOOKMARK)
             menuAdd(self, viewmenu, "Previous Bookmark\tShift+F2", "Hop to the previous bookmark in this file", self.OnPreviousBookmark, pypeID_PRIOR_BOOKMARK)
+            menuAdd(self, viewmenu, "Clear Notifications", "Clears all notifications and line annotations", self.OnClearNotifications, wx.NewId())
             viewmenu.AppendSeparator()
             menuAdd(self, viewmenu, "Find Definition", "Shows the filter tool and tries to find the current word in the definitions", self.OnFindDefn, wx.NewId())
             viewmenu.AppendSeparator()
@@ -1166,6 +1172,7 @@ class MainWindow(wx.Frame):
             menuAdd(self, setmenu, "Show Line Endings", "Show or hide line ending characters", self.OnLineEndingToggle, S_LEND, wx.ITEM_CHECK)
             menuAdd(self, setmenu, "Save Position", "Remember or forget the last position of the cursor when the current document is closed", self.OnSavePositionToggle, SAVE_CURSOR, wx.ITEM_CHECK)
             menuAdd(self, setmenu, "Highlight Current line", "When checked, will change the background color of the current line", self.HightlightLineToggle, HIGHLIGHT_LINE, wx.ITEM_CHECK)
+            menuAdd(self, setmenu, "Show Annotations", "When checked, will show annotations when available", self.AnnotationsToggle, ANNOTATIONS_VISIBLE, wx.ITEM_CHECK)
             setmenu.AppendSeparator()
             menuAdd(self, setmenu, "Refresh\tF5", "Refresh the browsable source tree, autocomplete listing, and the tooltips (always accurate, but sometimes slow)", self.OnRefresh, wx.NewId())
             menuAdd(self, setmenu, "Run Macro", "Run the currently selected macro on the current document", self.macropage.OnPlay, wx.NewId())
@@ -1480,6 +1487,14 @@ class MainWindow(wx.Frame):
             wx.CallAfter(check_files, self)
 
         pubsub.subscribe('document.selected', self.OnDocumentChange)
+        # work-around for a refresh bug in wxPython 2.9+
+        pubsub.subscribe('document', (lambda x,sc=self.control: sc.SendSizeEvent()))
+
+    def redrawvisible(self, win=None):
+        if (not isinstance(win, PythonSTC)) and self.control.GetPageCount() > 0:
+            num, win = self.getNumWin()
+        if win:
+            win.parent.Refresh()
 
     ## def RunEvents(self, evt):
         ## scheduler.GlobalSchedule.run(time.time())
@@ -1923,6 +1938,7 @@ class MainWindow(wx.Frame):
             'fetch_methods':1,
             'use_keywords':1,
             'ac_length':1,
+            'annotations_visible':2,
         }
         for _i in ASSOC:
             doc_def[_i[2]] = dict(dct)
@@ -2113,14 +2129,8 @@ class MainWindow(wx.Frame):
             f.close()
         except:
             self.exceptDialog("Could not save preferences to %s"%path)
+
 #------------------------- end cmt-001 - 08/06/2003 --------------------------
-
-    def redrawvisible(self, win=None):
-
-        if (not win) and self.control.GetPageCount() > 0:
-            num, win = self.getNumWin()
-        if win:
-            win.parent.Refresh()
 #----------------------------- File Menu Methods -----------------------------
     def getPositionAbsolute(self, path, newf=0):
         ## print path
@@ -2270,7 +2280,7 @@ class MainWindow(wx.Frame):
 
     def OnOpen(self,e):
         wd = self.config.get('lastpath', current_path)
-        dlg = wx.FileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wx.OPEN|wx.MULTIPLE|wx.HIDE_READONLY, pos=(0,0))
+        dlg = wx.FileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wx.OPEN|wx.MULTIPLE, pos=(0,0))
         if dlg.ShowModal() == wx.ID_OK:
             self.OnDrop(dlg.GetPaths())
             self.config['lp'] = dlg.GetDirectory()
@@ -2549,7 +2559,6 @@ class MainWindow(wx.Frame):
         wx.CallAfter(self._updateChecks)
         pubsub.publish('document.open', stc_id=id(nwin))
         return nwin.enc
-    ## newTab = auto_thaw(newTab)
 
     def OnReload(self, e, win=None):
         if win == None:
@@ -2899,6 +2908,12 @@ class MainWindow(wx.Frame):
         win.EnsureVisible(win.GetCurrentLine())
         win.EnsureCaretVisible()
 
+    def OnClearNotifications(self, e):
+        wnum, win = self.getNumWin(e)
+        if win:
+            win.UpdateNotifications([])
+        win.AnnotationClearAll()
+
     def OnLeft(self, e):
         if self.control.GetSelection() == 0:
             self.control.SetSelection(self.control.GetPageCount() - 1)
@@ -2910,7 +2925,7 @@ class MainWindow(wx.Frame):
         if pc and self.control.GetSelection() == (pc - 1):
             self.control.SetSelection(0)
         else:
-           self.control.AdvanceSelection(True)
+            self.control.AdvanceSelection(True)
 
     def OnFindDefn(self, e):
         if 'filter' not in window_management.enabled:
@@ -3055,6 +3070,10 @@ class MainWindow(wx.Frame):
     def HightlightLineToggle(self, e):
         n, win = self.getNumWin(e)
         win.SetCaretLineVisible(not win.GetCaretLineVisible())
+
+    def AnnotationsToggle(self, e):
+        n, win = self.getNumWin(e)
+        win.AnnotationSetVisible((not win.AnnotationGetVisible())*2)
 
     def OnExpandAll(self, e):
         n, win = self.getNumWin(e)
@@ -3566,7 +3585,7 @@ class MainWindow(wx.Frame):
 
         PyPE %s (Python Programmers Editor)
         http://come.to/josiah
-        PyPE is copyright 2003-2006 Josiah Carlson.
+        PyPE is copyright 2003-2010 Josiah Carlson.
         Contributions are copyright their respective authors.
 
         This software is licensed under the GPL (GNU General Public License) version 2
@@ -3577,7 +3596,8 @@ class MainWindow(wx.Frame):
         software, please inform the me of the violation at the web page near the top
         of this document.
 
-        You have used PyPE for: %s"""%(VERSION, t)
+        You have used PyPE for: %s
+        PyPE is using wxPython version %s"""%(VERSION, t, wx.version())
         self.dialog(txt.replace('        ', ''), "About...")
 
     def OnHelp(self, e):
@@ -3798,6 +3818,14 @@ def chain(*args):
         for j in i:
             yield j
 
+def bisect_getall(lst, item):
+    index = bisect.bisect_left(lst, item)
+    out = []
+    while item and index < len(lst) and lst[index][:len(item)] == item:
+        out.append(lst[index])
+        index += 1
+    return out
+
 class PythonSTC(stc.StyledTextCtrl):
     def __init__(self, notebook, ID, parent):
         stc.StyledTextCtrl.__init__(self, parent, ID)#, style = wx.NO_FULL_REPAINT_ON_RESIZE)
@@ -3837,6 +3865,14 @@ class PythonSTC(stc.StyledTextCtrl):
         self.use_keywords = 0
         self.ac_length = 1
         self.fetch_methods_cache = [-1, 0, '', []]
+        self.annotations = collections.defaultdict(list)
+        self.annotations_lines = []
+        self.annotation_shown_for = (None, None, None)
+        self.annotations_visible = 2
+        self.AnnotationSetVisible(self.annotations_visible)
+        ## if HAS_NATIVE_ANNOTATIONS:
+            ## self.AnnotationSetStyleOffset(256)
+            ## self.StyleSetSpec(512, "fore:#000000,face:%(mono)s,back:#B0B0FF,size:%(size)d" % faces)
 
         #drop file and text support
         self.SetDropTarget(FileDropTarget(self.root))
@@ -4161,6 +4197,9 @@ class PythonSTC(stc.StyledTextCtrl):
         if e:
             e.Skip()
 
+        if (not HAS_NATIVE_ANNOTATIONS) and self.AnnotationGetVisible():
+            self._CheckForAnnotation()
+
         self.gotcharacter()
 
     def added(self, e):
@@ -4299,6 +4338,7 @@ class PythonSTC(stc.StyledTextCtrl):
                 'fetch_methods':self.fetch_methods,
                 'use_keywords':self.use_keywords,
                 'ac_length':self.ac_length,
+                'annotations_visible':self.AnnotationGetVisible(),
                }
         if not self.save_cursor and not scp:
             del ret['cursor_posn']
@@ -4339,6 +4379,7 @@ class PythonSTC(stc.StyledTextCtrl):
         self.SetCaretLineVisible(saved['showline'])
         self.SetViewWhiteSpace(saved['whitespace'])
         self.SetViewEOL(saved['show_line_ends'])
+        self.AnnotationSetVisible(saved['annotations_visible'])
         if self.GetWrapMode() != saved['wrapmode']:
             self.root.WrapToggle(self)
         ## self.tree.tree.SORTTREE = saved.get('sortmode', sortmode)
@@ -4773,7 +4814,7 @@ class PythonSTC(stc.StyledTextCtrl):
                                 currentPos += k
                         prevCr = c == '\r'
                     else:
-                        self.InsertText(currentPos, c);
+                        self.InsertText(currentPos, c)
                         currentPos += 1
                         prevCr = 0
             finally:
@@ -4881,7 +4922,7 @@ class PythonSTC(stc.StyledTextCtrl):
         for lineNum in range(lineCount):
             if self.GetFoldLevel(lineNum) & stc.STC_FOLDLEVELHEADERFLAG:
                 expanding = not self.GetFoldExpanded(lineNum)
-                break;
+                break
 
         lineNum = 0
         while lineNum < lineCount:
@@ -4903,7 +4944,7 @@ class PythonSTC(stc.StyledTextCtrl):
 
     def Expand(self, line, doExpand, force=False, visLevels=0, level=-1):
         lastChild = self.GetLastChild(line, level)
-        line = line + 1
+        line += 1
         while line <= lastChild:
             if force:
                 if visLevels > 0:
@@ -4931,7 +4972,7 @@ class PythonSTC(stc.StyledTextCtrl):
                     else:
                         line = self.Expand(line, False, force, visLevels-1)
             else:
-                line = line + 1;
+                line += 1
 
         return line
 #-------------- end of copied code from wxStyledTextCtrl_2 demo --------------
@@ -5910,8 +5951,79 @@ class PythonSTC(stc.StyledTextCtrl):
         while lineno != -1:
             self.MarkerDelete(lineno, NOTIFICATIONNUMBER)
             lineno = self.MarkerNext(0, NOTIFICATIONMASK)
-        for lineno in lines:
+        self.AnnotationClearAll()
+        for lineno, text in lines:
             self.MarkerAdd(lineno, NOTIFICATIONNUMBER)
+            self.AnnotationSetText(lineno, text)
+            # need to find a proper style for annotations that doesn't suck
+            ## if HAS_NATIVE_ANNOTATIONS:
+                ## self.AnnotationSetStyle(lineno, lineno % 32)
+        if lines:
+            self.AnnotationSetVisible(2)
+            if not HAS_NATIVE_ANNOTATIONS:
+                self._CheckForAnnotation()
+        self.Refresh(True)
+
+    def AnnotationClearAll(self):
+        if HAS_NATIVE_ANNOTATIONS:
+            return stc.StyledTextCtrl.AnnotationClearAll(self)
+        self.annotations.clear()
+        self.annotations_lines = []
+
+    def AnnotationSetText(self, line, text):
+        if HAS_NATIVE_ANNOTATIONS:
+            return stc.StyledTextCtrl.AnnotationSetText(self, line, text)
+        ann = (line, text)
+        bisect.insort_left(self.annotations_lines, ann)
+        # {line_text: [(line, annotation), ...]}
+        bisect.insort_left(self.annotations[self.lines[line]], ann)
+
+    def AnnotationGetVisible(self):
+        if HAS_NATIVE_ANNOTATIONS:
+            return stc.StyledTextCtrl.AnnotationGetVisible(self)
+        return self.annotations_visible
+
+    def AnnotationSetVisible(self, visible):
+        if not visible:
+            self.UpdateNotifications([])
+        if HAS_NATIVE_ANNOTATIONS:
+            return stc.StyledTextCtrl.AnnotationSetVisible(self, visible)
+        self.annotations_visible = visible
+
+    def _CheckForAnnotation(self):
+        # we are here because someone has said "check for annotations"
+        curline = self.lines.curlinei
+        count_before = bisect.bisect_left(self.annotations_lines, (curline,))
+        ann = None
+        if count_before < len(self.annotations_lines) and self.annotations_lines[count_before][0] == curline:
+            ann = self.annotations_lines[count_before]
+        # If line numbers never changed, then this text would always be
+        # perfect.  Such is rarely the case.
+        line_text = self.lines[curline]
+
+        anns = self.annotations.get(line_text, [])
+        if anns:
+            known = bisect_getall(self.annotations.get(line_text, []), ann)
+            if known:
+                # same line, same text, show the annotation
+                self._ShowAnnotation('\n'.join(a for l,a in known))
+                return
+
+            # look for potentially matching annotations
+            matched = []
+            words = set(re.sub('[^a-zA-Z0-9_]', ' ', line_text).split())
+            for line, anno in anns:
+                if words & set(re.sub('[^a-zA-Z0-9_]', ' ', anno).split()):
+                    matched.append(anno)
+            if matched:
+                self._ShowAnnotation('Possible Annotations:\n' + '\n'.join(matched))
+
+        # either the line has changed, or it's the wrong line number
+
+    def _ShowAnnotation(self, ann):
+        self.CallTipSetBackground(wx.Colour(255, 255, 232))
+        self.CallTipShow(self.GetCurrentPos(), "")
+        self.CallTipShow(self.GetCurrentPos(), ann)
 
 class View(PythonSTC):
     def __init__(self, *args):
