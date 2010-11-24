@@ -24,6 +24,11 @@ requested by Christoph Thielecke.
 accident.
 (changed) the way PyPE parses command line options.  Should have done this
 years ago.
+(fixed) some startup issues with PyPE using wxPython 2.9 .
+(added) method of having line-based annotations via calltips in wxPython 2.8 .
+(changed) notifications now require a line and a message, to be used with the
+custom annotations for wxPython 2.8, or the standard annotations in wxPython
+2.9 .
 
 #-------------------------------- PyPE 2.9.2 ---------------------------------
 (changed) Fixed licensing information for PyPE release on Linux.  There are no

@@ -3867,7 +3867,6 @@ class PythonSTC(stc.StyledTextCtrl):
         self.fetch_methods_cache = [-1, 0, '', []]
         self.annotations = collections.defaultdict(list)
         self.annotations_lines = []
-        self.annotation_shown_for = (None, None, None)
         self.annotations_visible = 2
         self.AnnotationSetVisible(self.annotations_visible)
         ## if HAS_NATIVE_ANNOTATIONS:
