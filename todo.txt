@@ -194,4 +194,4 @@ Replace View -> Split * commands with a 'split in second window' command.
 * select + middle click on linux
 * select + middle click option in Windows
 * Switch to optparse for command line argument parsing.
-. find history linux bugs
+* find history linux bugs

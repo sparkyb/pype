@@ -2819,7 +2819,7 @@ class MainWindow(wx.Frame):
         if isinstance(box, wx.TextCtrl):
             box.SetSelection(0, box.GetLastPosition())
         else:
-            box.SetMark(0, box.GetLastPosition())
+            box.SetMark(0, len(box.GetValue()))
 
     def OnFindAgain(self, evt):
         num, win = self.getNumWin(evt)
