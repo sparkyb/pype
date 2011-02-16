@@ -683,7 +683,7 @@ fake_primary_clipboard = ''
 def GetClipboardText(use_primary=False):
     success = False
     if not sys.platform.startswith('win'):
-        wx.TheClipboard.UsePrimarySelection(use_primary)
+        pass
     elif use_primary:
         return fake_primary_clipboard
 
@@ -698,7 +698,7 @@ def GetClipboardText(use_primary=False):
 
 def SetClipboardText(txt, use_primary=False):
     if not sys.platform.startswith('win'):
-        wx.TheClipboard.UsePrimarySelection(use_primary)
+        pass
     elif use_primary:
         global fake_primary_clipboard
         fake_primary_clipboard = txt
@@ -5931,7 +5931,7 @@ class PythonSTC(stc.StyledTextCtrl):
         http://markmail.org/message/qyvzus77xpjqmxtw
         """
         evt.Skip()
-        if MIDDLE_PASTE or sys.platform.startswith('win'):
+        if MIDDLE_PASTE or not sys.platform.startswith('win'):
             wx.CallAfter(self._OnSelectionEnd)
 
     def _OnSelectionEnd(self):
