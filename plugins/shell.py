@@ -97,16 +97,13 @@ class StartupError(Exception):
 close_stdin = "<CLOSE STDIN>"
 blocksize = 512
 
-flags = 0
-if sys.platform != 'win32':
-    flags = wx.EXEC_MAKE_GROUP_LEADER 
-
 class process:
     def __init__(self, parent, cmd, end_callback):
         self.process = wx.Process(parent)
         self.process.Redirect()
-        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC|wx.EXEC_MAKE_GROUP_LEADER|flags, self.process)
+        self.process.pid = wx.Execute(cmd, wx.EXEC_ASYNC, self.process)
         self.b = []
+        self.last_result = ''
         if self.process.pid:
             #what was up with wx.Process.Get*Stream names?
             self.process._stdin_ = self.process.GetOutputStream()
@@ -115,7 +112,7 @@ class process:
             self.process.Bind(wx.EVT_END_PROCESS, end_callback)
             return
         raise StartupError
-            
+
     def Poll(self, input=''):
         if (input or self.b) and self.process and self.process._stdin_:
             if self.b or len(input) > blocksize:

@@ -103,10 +103,10 @@ else:
 def discover_python_installs(print_discovered=0):
     seen = {}
     possible_pythons = []
-    ok = '2.2 2.3 2.4 2.5 2.6 3.0 .exe'.split()    
-    
+    ok = '2.6 2.7 3.0 3.1 3.2 .exe'.split()
+
     pf = 0
-    
+
     se = sys.executable
     se1 = os.path.split(se)[1]
     if se1.startswith('python') and se1[6:].lower() in ok:
@@ -126,28 +126,28 @@ def discover_python_installs(print_discovered=0):
             try:
                 try:
                     a = _winreg.ConnectRegistry(None,mainkey)
-                    
-                    for ver in '2.6 2.5 2.4 2.3 2.2 3.0'.split():
+
+                    for ver in reversed(ok):
                         spth = 'SOFTWARE\\Python\\PythonCore\\%s\\InstallPath'%ver
                         b = None
                         try:
                             try:
                                 b = _winreg.OpenKey(a, spth)
-                                
+
                                 i_pth = _winreg.QueryValue(b, None)
                                 i_pth = os.path.join(i_pth, 'python.exe')
                                 i_pth = os.path.realpath(i_pth)
-                                
+
                                 if os.path.normcase(i_pth) in seen:
                                     continue
-                                
+
                                 m = os.stat(i_pth)
-                                
+
                                 if stat.S_ISREG(m.st_mode):
                                     if print_discovered: print "In Registry:", i_pth
                                     possible_pythons.append((m.st_mtime, i_pth))
                                     seen[os.path.normcase(i_pth)] = None
-                                
+
                             except:
                                 pass
                         finally:
@@ -167,7 +167,7 @@ def discover_python_installs(print_discovered=0):
                         pass
                 del a
         sp = ';'
-    
+
     #check PATH on all platforms
     for _pth in os.environ.get('PATH', '').split(';'):
         if _pth:
@@ -180,7 +180,7 @@ def discover_python_installs(print_discovered=0):
                     continue
                 i_pth = os.path.join(_pth, i)
                 i_pth = os.path.realpath(i_pth)
-                
+
                 if os.path.normcase(i_pth) in seen:
                     continue
                 try:
@@ -192,12 +192,12 @@ def discover_python_installs(print_discovered=0):
                     if print_discovered: print "On Path:", i_pth
                     possible_pythons.insert(-1, (sys.maxint-pf, i_pth))
                     seen[os.path.normcase(i_pth)] = None
-    
+
     possible_pythons.sort()
     possible_pythons.reverse()
-        
+
     return [j for i,j in possible_pythons], seen
-    
+
 python_choices, pythons_seen = discover_python_installs()
 which_python = (python_choices or ['python'])[0]
 
@@ -208,7 +208,7 @@ def check_paths(lst, ch=None):
                 m = os.stat(i)
             except:
                 continue
-            
+
             if stat.S_ISREG(m.st_mode):
                 python_choices.append(i)
                 pythons_seen[os.path.normcase(i)] = None
@@ -216,14 +216,14 @@ def check_paths(lst, ch=None):
     if ch and os.path.normcase(ch) in pythons_seen:
         global which_python
         which_python = ch
-    
+
     try:
         _ = python_choices.remove(which_python)
     except:
         pass
-    
+
     python_choices.insert(0, which_python)
-    
+
 
 def rsplit(st):
     st = list(st)
@@ -292,9 +292,7 @@ def poll_all(arg=None):
     j = 0
     while j < len(instances):
         i = instances[j]
-        try:
-            i.root
-        except:
+        if not hasattr(i, 'root'):
             del instances[j]
         else:
             j += 1
@@ -302,14 +300,6 @@ def poll_all(arg=None):
                 i.OnPoll()
             except:
                 traceback.print_exc()
-    
-    ## tt = time.time()
-    ## while fc and fc[0][0] < tt:
-        ## _, fcn, args, kwargs = heapq.heappop(fc)
-        ## try:
-            ## fcn(*args, **kwargs)
-        ## except:
-            ## traceback.print_exc()
 
 _Poller = scheduler.Timer(poll_all)
 
@@ -322,7 +312,7 @@ class MyShell(stc.StyledTextCtrl):
         self.lines = lineabstraction.LineAbstraction(self)
         self.NEWDOCUMENT = _pype.NEWDOCUMENT+1
         self.loaded = True
-        
+
         global pypestc
         if not pypestc:
             if not __name__ == '__main__':
@@ -331,7 +321,7 @@ class MyShell(stc.StyledTextCtrl):
                 class _pypestc:
                     pass
                 pypestc = _pypestc
-        
+
         self.root = root
         self.parent = parent
         self.filter = filter==1
@@ -348,17 +338,17 @@ class MyShell(stc.StyledTextCtrl):
         self.more = False
         for name in cpy:
             setattr(self, name, new.instancemethod(getattr(Shell, name).im_func, self, self.__class__))
-        
+
         for name in pypecopy:
             if not hasattr(pypestc, name):
                 continue
             setattr(self, name, new.instancemethod(getattr(pypestc, name).im_func, self, self.__class__))
-        
+
         for name in pypeprefix:
             if not hasattr(pypestc, name):
                 continue
             setattr(self, '_' + name, new.instancemethod(getattr(pypestc, name).im_func, self, self.__class__))
-        
+
         wx.EVT_KEY_DOWN(self, self.OnKeyDown)
         wx.EVT_KEY_DOWN(self, self.OnKeyDown2)
         wx.EVT_CHAR(self, self.OnChar)
@@ -380,19 +370,24 @@ class MyShell(stc.StyledTextCtrl):
         self.lastparse2 = 100
         self.m1 = None
         self.m2 = None
-        
-        self.Restart(None)
+
         instances.append(self)
-		
+
         if not _Poller.IsRunning():
             _Poller.Start(10)
-    
+
+    def AnnotationGetVisible(self):
+        return False
+
+    def AnnotationSetVisible(self, *args, **kwargs):
+        return
+
     def _gotcharacter2(self, e=None):
         pass
-    
+
     def _update_fold(self, *args):
         pass
-    
+
     def _config(self):
         self.setStyles(FACES)
         # Do we want to automatically pop up command completion options?
@@ -408,7 +403,7 @@ class MyShell(stc.StyledTextCtrl):
             self.SetEndAtLastLine(False)
         except AttributeError:
             pass
-    
+
     def getshort(self):
         if self.filter==1:
             x = "<Python Shell %i>"
@@ -418,18 +413,19 @@ class MyShell(stc.StyledTextCtrl):
             x = "<Command Output %i>"
         x = x%self.NEWDOCUMENT
         return x
+
     def getlong(self):
         return self.getshort()
-    
+
     def SetSaveState(self, state):
         state['FOLD'] = state['BM'] = []
         self._SetSaveState(state)
-    
+
     def kill(self):
         self.restart = 1
         if hasattr(self, 'remote'):
             self.remote.Kill("SIGKILL")
-    
+
     def clear(self):
         self.ClearAll()
         self.more = 0
@@ -485,19 +481,19 @@ class MyShell(stc.StyledTextCtrl):
                           "fore:#7F7F7F")
         self.StyleSetSpec(stc.STC_P_STRINGEOL,
                           "fore:#000000,face:%(mono)s,back:#E0C0E0,eolfilled" % faces)
-    
+
     def EnsureCaretVisible(self):
         if self.scroll:
             stc.StyledTextCtrl.EnsureCaretVisible(self)
-    
+
     def GetSelection(self):
         return self.GetCurrentPos(), self.GetAnchor()
-    
+
     def SetSelection(self, cp, an):
         self.SetCurrentPos(cp)
         self.SetAnchor(an)
         self.ScrollToColumn(0)
-    
+
     def real_poll(self, input=''):
         #todo: fix for unicode
         if not hasattr(self, 'remote'):
@@ -524,12 +520,12 @@ class MyShell(stc.StyledTextCtrl):
             self.EnsureCaretVisible()
             self.ScrollToColumn(0)
             self.EmptyUndoBuffer()
-    
+
     def OnPoll(self, evt=None):
         if hasattr(self, 'remote'):
             self.real_poll('')
         self.pushlines()
-        ## wx.FutureCall(poll_t, self.OnPoll)
+
     def push(self, command, remember=1):
         if remember:
             c = command
@@ -537,7 +533,7 @@ class MyShell(stc.StyledTextCtrl):
                 c = c.rstrip('\r\n')
             self.history.insert(0, c)
         self.historyIndex = -1
-        
+
         if print_transfer==1: print '-->', repr(command)
         command = command.rstrip(os.linesep)
         x = command.split('\n')
@@ -547,13 +543,13 @@ class MyShell(stc.StyledTextCtrl):
         x.append('')
         if print_transfer==1: print "need", self.waiting_for
         self.real_poll('\n'.join(x))
-    
+
     def insertLineBreak(self):
         if self.CanEdit():
             self.ReplaceSelection(os.linesep)
             self.more = self.filter
             self.prompt()
-    
+
     def prompt(self):
         if self.filter:
             skip = False
@@ -574,31 +570,31 @@ class MyShell(stc.StyledTextCtrl):
             self.EmptyUndoBuffer()
         self.EnsureCaretVisible()
         self.ScrollToColumn(0)
-    
+
     def write(self, data):
         if not data:
             return
-        
+
         lines = self.lines
-        
+
         if print_transfer==1: print '<--', len(data), repr(data)
         data = data.replace('\r', '')
         s,e = self.GetSelection()
         lp = self.promptPosEnd
         x = self.GetTextLength() #to handle unicode and line endings
-        
+
         self.SetTargetStart(lp)
         self.SetTargetEnd(lp)
         self.ReplaceTarget(data)
-        
+
         ld = self.GetTextLength()-x #to handle unicode and line endings
         self.promptPosEnd += ld
-        
+
         if __name__ != '__main__':
             self.indicate_text(lp, ld, 1)
-        
+
         x = 0
-        
+
         if LIMIT_LENGTH:
             lm = 0
             #handle too much raw data
@@ -607,33 +603,33 @@ class MyShell(stc.StyledTextCtrl):
                 posn = gtl-MAXDATA
                 ll = 0
                 lm = len(lines)
-                
+
                 while ll < lm:
                     lmi = (ll+lm)//2
                     if lines._line_range(lmi)[1] < posn:
                         ll = lmi + 1
                     else:
                         lm = lmi
-            
+
             #handle too many lines
             if len(lines) > MAXLINES:
                 lm = max(lm, len(lines)-MAXLINES)
-            
+
             #adjust the actual content
             if lm:
                 lines.selectedlinesi = 0, lm+1
                 lines.selectedlines = []
                 gtl -= self.GetTextLength()
                 x = gtl
-        
+
         self.promptPosEnd -= x
         self.SetSelection(s+ld-x, e+ld-x)
-        
+
     def processLine(self):
         thepos = self.GetCurrentPos()
         startpos = self.promptPosEnd
         endpos = self.GetTextLength()
-        
+
         if not self.filter:
             tosend = self.GetTextRange(startpos, endpos) + '\n'
             self.AddText('\n')
@@ -641,7 +637,7 @@ class MyShell(stc.StyledTextCtrl):
             self.SetCurrentPos(self.promptPosEnd)
             self.push(tosend)
             return
-        
+
         ps2 = str(sys.ps2)
         # If they hit RETURN inside the current command, execute the
         # command.
@@ -651,13 +647,13 @@ class MyShell(stc.StyledTextCtrl):
             command = self.GetTextRange(startpos, endpos)
             lines = command.split(os.linesep + ps2)
             command = '\n'.join(lines)
-            
+
             if startpos < thepos < endpos:
                 self.more = 1
                 self.SetCurrentPos(thepos)
                 self.prompt()
                 return
-            
+
             try:
                 command = command.encode('ascii')
             except UnicodeEncodeError, why:
@@ -669,20 +665,20 @@ class MyShell(stc.StyledTextCtrl):
                     lsc = why.start
                 else:
                     lsc = why.start - lsc
-                
+
                 le = command.count('\n', why.start, why.end-1) + ls
                 lec = command.rfind('\n', 0, why.end)
                 if lec == -1:
                     lec = why.end
                 else:
                     lec = why.end - lec
-                
+
                 self.AddText(encode_error%(why.encoding, ls, lsc, le, lec, why.reason))
                 self.promptPosEnd = self.GetTextLength()
                 self.prompt()
                 self.promptPosEnd = self.GetTextLength()
                 return
-            
+
             try:
                 code = compile_command(command)
             except (OverflowError, SyntaxError, ValueError):
@@ -718,7 +714,7 @@ class MyShell(stc.StyledTextCtrl):
             else:
                 self.SetCurrentPos(thepos)
                 self.SetAnchor(thepos)
-    
+
     def showsyntaxerror(self, filename=None):
         type, value, sys.last_traceback = sys.exc_info()
         sys.last_type = type
@@ -736,18 +732,18 @@ class MyShell(stc.StyledTextCtrl):
                 sys.last_value = value
         list = traceback.format_exception_only(type, value)
         map(self.write, list)
+
     def Restart(self, evt):
+        self.OnPoll() # force one final read loop call
         ## print "Restart"
         #we start up the console in the future so that if we get a Restart
         #call from the subprocess ending, we can *hopefully* pull the
         #exception from the subprocess shell
-        
-        try:
-            self.restart
-        except:
-            print "Process Ended, pid:%s,  exitCode: %s"%(evt.GetPid(), evt.GetExitCode())
+
+        if not hasattr(self, 'restart'):
+            print "Process Ended, pid=%i exitCode=%i"%(evt.GetPid(), evt.GetExitCode())
             return
-        
+
         if not self.restart:
             ## print "not restart"
             self.restart = 1
@@ -756,30 +752,28 @@ class MyShell(stc.StyledTextCtrl):
                 FutureCall(100, self._Restart, evt)
             else:
                 ## print "not restartable"
-                FutureCall(100, self._close, evt)
+                self._close(evt)
         else:
             ## print "tried to close!"
             self._close(evt)
             ## raise Exception
-        
-        ## try:
-        ## except:
-            ## pass
+
     def _close(self, evt):
         ## print "_close", evt
         if evt:
-            print "Process Ended, pid:%s,  exitCode: %s"%(evt.GetPid(), evt.GetExitCode())
+            print "Process Ended, pid=%i exitCode=%i"%(evt.GetPid(), evt.GetExitCode())
             remote.remove(self.remote)
             del self.remote
             if not self.restartable:
                 self.write('\n**** End of process output ****\n')
+
     def _Restart(self, evt):
         ## print "_Restart"
         if evt and not isinstance(evt, tuple):
             self._close(evt)
         del self.queue[:]
         self.killsteps = killsteps[:]
-        
+
         if self.restartable:
             ## print "Restartable!"
             d = ''
@@ -796,7 +790,7 @@ class MyShell(stc.StyledTextCtrl):
         else:
             ## print "quitting!"
             return
-        
+
         if d:
             x = os.getcwd()
             try:
@@ -807,8 +801,8 @@ class MyShell(stc.StyledTextCtrl):
         self.remote = shell.process(self, c, self.Restart)
         if d:
             os.chdir(x)
-        
-        print "Process started, pid:%s"%self.remote.process.pid
+
+        print "Process started, pid=%i"%self.remote.process.pid
         remote.append(self.remote)
         self.restart = 0
 
@@ -827,7 +821,7 @@ class MyShell(stc.StyledTextCtrl):
             event.Skip()
             if self.filter and __name__ != '__main__':
                 self.gotcharacter
-    
+
     def _kill_me(self):
         self.clearCommand()
         if self.killsteps:
@@ -839,7 +833,7 @@ class MyShell(stc.StyledTextCtrl):
             elif how == shell.close_stdin:
                 self.write("#Closing subshell STDIN\n")
             self.remote.Kill(how)
-    
+
     def OnKeyDown2(self, event):
         ## print event.GetEventType()
         key = event.GetKeyCode()
@@ -873,9 +867,9 @@ class MyShell(stc.StyledTextCtrl):
     def getcmd(self, ue=1):
         startpos = self.promptPosEnd
         endpos = self.GetTextLength()
-        
+
         ps2 = str(sys.ps2)
-        
+
         if ue:
             self.SetCurrentPos(endpos)
             self.promptPosEnd = endpos
@@ -907,22 +901,22 @@ class MyShell(stc.StyledTextCtrl):
 
         if not success:
             return
-        
+
         x,y = self.GetSelection()
         if x < self.promptPosEnd:
             x = self.promptPosEnd
         if y < self.promptPosEnd:
             y = self.promptPosEnd
         self.SetSelection(x,y)
-        
+
         self.ReplaceSelection('')
-        
+
         self.queue.extend(spliti(do.GetText(), '\n'))
 
     def Cut(self):
         if self.CanCut:
             stc.StyledTextCtrl.Cut(self)
-    
+
     def pushlines(self):
         if not self.waiting_for and self.queue:
             x = self.queue.pop(0)
@@ -953,7 +947,6 @@ class MyShell(stc.StyledTextCtrl):
             self.promptPosEnd = mi
         stc.StyledTextCtrl.DeleteBack(self)
 
-#
 
 class MyShellFrame(wx.Frame):
     def __init__(self):
