@@ -683,7 +683,7 @@ fake_primary_clipboard = ''
 def GetClipboardText(use_primary=False):
     success = False
     if not sys.platform.startswith('win'):
-        pass
+        wx.TheClipboard.UsePrimarySelection(use_primary)
     elif use_primary:
         return fake_primary_clipboard
 
@@ -698,7 +698,7 @@ def GetClipboardText(use_primary=False):
 
 def SetClipboardText(txt, use_primary=False):
     if not sys.platform.startswith('win'):
-        pass
+        wx.TheClipboard.UsePrimarySelection(use_primary)
     elif use_primary:
         global fake_primary_clipboard
         fake_primary_clipboard = txt

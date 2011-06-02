@@ -32,10 +32,16 @@ custom annotations for wxPython 2.8, or the standard annotations in wxPython
 (fixed) on linux, when history for the findbar is enabled, there was a bug
 that would cause selection of the text in the findbar to not include the last
 character.  Thanks to Christoph Thielecke for the report, it is now fixed.
+(fixed) behavior of middle-click on Linux.
+(fixed) when trying to run a script or open a shell, sometimes output produced
+by the shell or script would not make it back to PyPE. This has been fixed.
+
+
 
 #-------------------------------- PyPE 2.9.2 ---------------------------------
 (changed) Fixed licensing information for PyPE release on Linux.  There are no
 other changes in this revision.
+
 
 
 #-------------------------------- PyPE 2.9.1 ---------------------------------
@@ -44,6 +50,7 @@ allowed in both licenses.  I have removed the relevant wxwindows.txt and
 lgpl.txt files from the distribution.
 (changed) the source release no longer contains the MS VC 9.0 redistributable.
 (not changed) everything else.
+
 
 
 #--------------------------------- PyPE 2.9 ----------------------------------

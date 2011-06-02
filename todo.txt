@@ -195,3 +195,4 @@ Replace View -> Split * commands with a 'split in second window' command.
 * select + middle click option in Windows
 * Switch to optparse for command line argument parsing.
 * find history linux bugs
+* fix shell/console
