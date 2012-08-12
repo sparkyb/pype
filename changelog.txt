@@ -1,4 +1,17 @@
-﻿#-------------------------------- PyPE 2.9.3 ---------------------------------
+﻿#-------------------------------- PyPE 2.9.4 ---------------------------------
+(fixed) Closing PyPE after minimize on Windows no longer saves the position of
+the PyPE window as -32000,-32000. Thanks to Matic Kukovec for the report and
+fix.
+(fixed) Fast-running programs run from PyPE would sometimes not see any output
+due to a missed poll. Thanks to Matic Kukovec for the report and fix.
+(fixed) A variety of dialogs stopped being positioned correctly, so we stopped
+positioning them explicitly. Should fix most of the dialog positioning issues
+on all platforms. Thanks to Austin von Nehring for the report that prompted me
+to finally push my local changes up.
+
+
+
+#-------------------------------- PyPE 2.9.3 ---------------------------------
 (fixed) hotkey updates, report and patch thanks to Christoph Thielecke.
 (fixed) command shell on Linux.
 (fixed) an autocomplete bug on any Python document that included a decorator,

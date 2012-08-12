@@ -1536,7 +1536,7 @@ class MainWindow(wx.Frame):
         return globals()[nam]
 
     def getInt(self, title, text, default):
-        dlg = wx.TextEntryDialog(self, text, title, str(default), pos=(0,0))
+        dlg = wx.TextEntryDialog(self, text, title, str(default))
         resp = dlg.ShowModal()
         valu = dlg.GetValue()
         dlg.Destroy()
@@ -1766,7 +1766,7 @@ class MainWindow(wx.Frame):
             event.Skip()
 
     def dialog(self, message, title, styl=wx.OK, pos=(0,0)):
-        d= wx.MessageDialog(self, message, title, styl, pos=pos)
+        d= wx.MessageDialog(self, message, title, styl)
         retr = d.ShowModal()
         d.Destroy()
         return retr
@@ -1776,7 +1776,7 @@ class MainWindow(wx.Frame):
         traceback.print_exc(file=k)
         k = k.getvalue()
         print k
-        dlg = ScrolledMessageDialog(self, k, title, pos=(0,0))
+        dlg = ScrolledMessageDialog(self, k, title)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1868,7 +1868,7 @@ class MainWindow(wx.Frame):
             dlg = wx.MessageDialog(self,
                 "Some files seem to have been deleted by an external program.\n"
                 "Unless these files are saved, data loss may occur.\n" + '\n'.join(deleted),
-                "WARNING", pos=(0,0))
+                "WARNING")
             dlg.Destroy()
         if dirty:
             dlg = wx.MultiChoiceDialog(self, 
@@ -1877,7 +1877,7 @@ class MainWindow(wx.Frame):
                "Select the files that you would like to reload now.\n"
                "You can reload the files individually via File -> Reload,\n"
                "or you can force a re-check of the files via\n"
-               "File -> Check Mods.", "Some documents have changed", dirty, pos=(0,0))
+               "File -> Check Mods.", "Some documents have changed", dirty)
             dlg.SetSelections(range(len(dirty)))
             if dlg.ShowModal() == wx.ID_OK:
                 for name in (dirty[i] for i in dlg.GetSelections()):
@@ -2040,6 +2040,23 @@ class MainWindow(wx.Frame):
                 sav.append(self.getAlmostAbsolute(win.filename, win.dirname))
                 LASTOPEN.append((self.getAlmostAbsolute(win.filename, win.dirname), win.GetSaveState()))
 
+        #matic comment: on windows, when the you minimize the PyPE window by
+        #clicking on the taskbar icon and close PyPE, the global LASTPOSITION
+        #tuple is saved as(-32000,-32000), which causes PyPE to not show a
+        #window next time you run the app.
+        global LASTSIZE
+        global LASTPOSITION
+        if LASTPOSITION[0] < 0 and LASTPOSITION[1] < 0:
+            ## If LASTPOSITION tuple was detected to be (-32000,-32000),
+            ## change mainwindow and its subwindows sizes to something fixed
+            LASTPOSITION = (0, 0)
+            LASTSIZE = (640, 480)
+            SASH1_Position = 150
+            SASH2_Position = 150
+        else:
+            SASH1_Position = self.client2.getSize()
+            SASH2_Position = self.client.getSize()
+
         if 'LASTOPEN' in self.config:
             del self.config['LASTOPEN']
         #saving document state
@@ -2048,9 +2065,8 @@ class MainWindow(wx.Frame):
         self.config['LASTSIZE'] = LASTSIZE
         self.config['LASTPOSITION'] = LASTPOSITION
         self.config['LASTWINDOWSTATE'] = self.IsMaximized()
-        self.config['SASH1'] = self.client2.getSize()#BOTTOM.GetSize()[1]-self.control.GetSize()[1]
-        self.config['SASH2'] = self.client.getSize()#self.GetSize()[0]-self.control.GetSize()[0]
-        ## print 'savehistory sash sizes', self.config['SASH2'], self.config['SASH1']
+        self.config['SASH1'] = SASH1_Position
+        self.config['SASH2'] = SASH2_Position
 
         history = []
         for i in range(self.fileHistory.GetNoHistoryFiles()):
@@ -2210,7 +2226,7 @@ class MainWindow(wx.Frame):
     def OnSaveAs(self,e,upd=1):
         wnum, win = self.getNumWin(e)
 
-        dlg = wx.FileDialog(self, "Save file as...", current_path, "", "All files (*.*)|*.*", wx.SAVE|wx.OVERWRITE_PROMPT, pos=(0,0))
+        dlg = wx.FileDialog(self, "Save file as...", current_path, "", "All files (*.*)|*.*", wx.SAVE|wx.OVERWRITE_PROMPT)
         rslt = dlg.ShowModal()
         if rslt == wx.ID_OK:
             fn=dlg.GetFilename()
@@ -2280,7 +2296,7 @@ class MainWindow(wx.Frame):
 
     def OnOpen(self,e):
         wd = self.config.get('lastpath', current_path)
-        dlg = wx.FileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wx.OPEN|wx.MULTIPLE, pos=(0,0))
+        dlg = wx.FileDialog(self, "Choose a/some file(s)...", wd, "", wildcard, wx.OPEN|wx.MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.OnDrop(dlg.GetPaths())
             self.config['lp'] = dlg.GetDirectory()
@@ -2310,7 +2326,7 @@ class MainWindow(wx.Frame):
         return os.sep.join([pth[1], '__init__.py'])
 
     def OnOpenModule(self,e):
-        dlg = wx.TextEntryDialog(self, 'Enter the module name you would like to open', 'Open module...', pos=(0,0))
+        dlg = wx.TextEntryDialog(self, 'Enter the module name you would like to open', 'Open module...')
         if dlg.ShowModal() == wx.ID_OK:
             mod = dlg.GetValue()
         else:
@@ -2329,7 +2345,7 @@ class MainWindow(wx.Frame):
         if "lastopen" in self.config:
             self.OnDrop(self.config['lastopen'], 1)
     def AddSearchPath(self, e):
-        dlg = wx.DirDialog(self, "Choose a path", "", style=wx.DD_DEFAULT_STYLE|wx.DD_NEW_DIR_BUTTON, pos=(0,0))
+        dlg = wx.DirDialog(self, "Choose a path", "", style=wx.DD_DEFAULT_STYLE|wx.DD_NEW_DIR_BUTTON)
         if dlg.ShowModal() == wx.ID_OK:
             path = os.path.normcase(os.path.normpath(dlg.GetPath()))
             if not (path in self.config['modulepaths']) and not (path in sys.path):
@@ -2564,7 +2580,7 @@ class MainWindow(wx.Frame):
         if win == None:
             num, win = self.getNumWin(e)
         if not e is None:
-            dlg = wx.MessageDialog(self, "%s was modified after last save.\nReloading from disk will destroy all changes.\n\nContinue anyway?"%win.filename, 'File was modified, data loss may occur!', wx.YES_NO|wx.CANCEL, pos=(0,0))
+            dlg = wx.MessageDialog(self, "%s was modified after last save.\nReloading from disk will destroy all changes.\n\nContinue anyway?"%win.filename, 'File was modified, data loss may occur!', wx.YES_NO|wx.CANCEL)
             a = dlg.ShowModal()
             if a == wx.ID_CANCEL:
                 raise cancelled
@@ -2600,7 +2616,7 @@ class MainWindow(wx.Frame):
         if not win.dirname.strip():
             nam = "<untitled %i>"%win.NEWDOCUMENT
         a = self.dialog("%s was modified after last save.\nSave changes before closing?"%nam,\
-                        "Save changes?", wx.YES_NO|ex, pos=(0,0))
+                        "Save changes?", wx.YES_NO|ex)
         if a == wx.ID_CANCEL:
             raise cancelled
         elif a == wx.ID_NO:
@@ -3364,8 +3380,8 @@ class MainWindow(wx.Frame):
         dlg = wx.FileDialog(
             self, message="Choose a Python Interpreter", defaultDir=wd,
             defaultFile="", wildcard="All files (*.*)|*.*",
-            style=wx.OPEN|wx.HIDE_READONLY|wx.FILE_MUST_EXIST, pos=(0,0)
-            )
+            style=wx.OPEN|wx.HIDE_READONLY|wx.FILE_MUST_EXIST
+        )
 
         x = interpreter.python_choices[:]
         if dlg.ShowModal() == wx.ID_OK:
@@ -3408,7 +3424,7 @@ class MainWindow(wx.Frame):
         data = wx.ColourData()
         data.SetChooseFull(True)
         data.SetColour(SHELL_COLOR)
-        dlg = wx.ColourDialog(self, data, pos=(0,0))
+        dlg = wx.ColourDialog(self, data)
         changed = dlg.ShowModal() == wx.ID_OK
 
         if changed:
@@ -3421,7 +3437,7 @@ class MainWindow(wx.Frame):
         data = wx.ColourData()
         data.SetChooseFull(True)
         data.SetColour(COLOUR)
-        dlg = wx.ColourDialog(self, data, pos=(0,0))
+        dlg = wx.ColourDialog(self, data)
         changed = dlg.ShowModal() == wx.ID_OK
 
         if changed:
@@ -5064,7 +5080,7 @@ class PythonSTC(stc.StyledTextCtrl):
     def OnDedent(self, e):
         self.Dent(e, -1)
     def OnInsertComment(self, e):
-        dlg = wx.TextEntryDialog(self, '', 'Enter a comment.', '', pos=(0,0))
+        dlg = wx.TextEntryDialog(self, '', 'Enter a comment.', '')
         resp = dlg.ShowModal()
         valu = dlg.GetValue()
         dlg.Destroy()
@@ -5774,7 +5790,7 @@ class PythonSTC(stc.StyledTextCtrl):
         if HOW_OFTEN1 == -1:
             return
 
-        if self.lexer in ('text', 'tex') and isinstance(self, PythonSTC) and self.GetTextLength() < 200000:
+        if self.lexer in ('text', 'tex', 'xml') and isinstance(self, PythonSTC) and self.GetTextLength() < 200000:
             ## print "spellchecking", self.lexer
             self._spellcheck()
             return

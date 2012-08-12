@@ -761,6 +761,10 @@ class MyShell(stc.StyledTextCtrl):
     def _close(self, evt):
         ## print "_close", evt
         if evt:
+            #matic comment: this poll_all() is in case the process ended too quickly,
+            #so the scheduler.Timer didn't fire even once and stdout wasn't read!
+            poll_all()
+
             print "Process Ended, pid=%i exitCode=%i"%(evt.GetPid(), evt.GetExitCode())
             remote.remove(self.remote)
             del self.remote
