@@ -88,17 +88,38 @@ doclines = [i.strip() for i in __doc__.split("\n")]
 
 # The manifest will be inserted as a resource into the executable.  This
 # gives the controls the Windows XP appearance if run on XP.
-manifest_template = '''
+manifest_template = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-<assemblyIdentity
+  <assemblyIdentity
     version="5.0.0.0"
     processorArchitecture="x86"
     name="%(name)s"
     type="win32"
-/>
-<description>%(name)s, %(description)s</description>
-<dependency>
+  />
+  <description>%(description)s</description>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel
+            level="asInvoker"
+            uiAccess="false">
+        </requestedExecutionLevel>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+            type="win32"
+            name="Microsoft.VC90.CRT"
+            version="9.0.21022.8"
+            processorArchitecture="x86"
+            publicKeyToken="1fc8b3b9a1e18e3b">
+      </assemblyIdentity>
+    </dependentAssembly>
+  </dependency>
+  <dependency>
     <dependentAssembly>
         <assemblyIdentity
             type="win32"
@@ -109,14 +130,14 @@ manifest_template = '''
             language="*"
         />
     </dependentAssembly>
-</dependency>
+  </dependency>
 </assembly>
-'''
+"""
 info = dict(
     name=nam,
     version=__version__.VERSION_,
     author="Josiah Carlson",
-    author_email="jcarlson@uci.edu",
+    author_email="josiah.carlson@gmail.com",
     copyright="\xa9 2003-%i Josiah Carlson"%(time.gmtime()[0]),
     url="http://pype.sf.net/",
     license="GNU GPL v. 2",
@@ -134,26 +155,27 @@ class Target:
 
 PyPE = Target(
     # icon for executable:
-    icon_resources = [(1, os.path.join("icons", "pype.ico"))],
-    other_resources = [(24, 1, manifest_template%info)],   
+    icon_resources=[(1, os.path.join("icons", "pype.ico"))],
+    other_resources=[(24, 1, manifest_template%info)],
     #script to build:
-    script = "pype.py",
+    script="pype.py",
 )
 
 data_files=[('', glob.glob('*.txt')+\
             ['stc-styles.rc.cfg', 'readme.html', 'PKG-INFO', 'MANIFEST.in']),
             ('icons', glob.glob(os.path.join('icons', '*.*'))),
             #('macros', glob.glob(os.path.join('macros', '*.py'))),
-            (samples, glob_(samples, ('*.txt', '*.py')))]
-
-import wx
-if wx.VERSION >= (2, 7):
-    data_files[0][1].append('gdiplus.dll')
+            (samples, glob_(samples, ('*.txt', '*.py'))), "MSVCR90.dll", "gdiplus.dll"]
 
 setup(
     windows=[PyPE],
     data_files=data_files,
-    options={"py2exe": {"packages": ["encodings"],
-                        "compressed": 1}},
+    options={
+        "py2exe" : {
+            "compressed" : 1,
+            "packages": ["encodings"],
+            "excludes" : ["Tkinter",],
+            "dll_excludes": ["MSVCP90.dll"]
+    }},
     **info
 )
