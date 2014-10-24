@@ -966,7 +966,6 @@ class MyShellFrame(wx.Frame):
 
 def main():
     app = wx.App(0)
-    wx.InitAllImageHandlers()
     frame = MyShellFrame()
     frame.Show()
     app.SetTopWindow(frame)

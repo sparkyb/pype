@@ -109,7 +109,7 @@ class MyNB(BaseNotebook):
     def __init__(self, root, id, parent):
         BaseNotebook.__init__(self, parent, id, style=_style)
         self.root = root
-        if WHICHNB != 2:
+        if WHICHNB != 2 or wx.VERSION >= (3,):
             if __main__.USE_DOC_ICONS:
                 self.AssignImageList(__main__.IMGLIST2)
         else:
@@ -157,7 +157,7 @@ class MyNB(BaseNotebook):
             self.GetPage(self.GetSelection()).GetWindow1().SetFocus()
 
     def GNBI(self, i):
-        if WHICHNB == 2:
+        if WHICHNB == 2 and wx.VERSION < (3,):
             return self.imagelist[i]
         return i
 
@@ -403,7 +403,7 @@ class MyNB(BaseNotebook):
         self._seen()
 
     def SetPageImage(self, which, img):
-        if WHICHNB == 2:
+        if WHICHNB == 2 and wx.VERSION < (3,):
             self.SetPageBitmap(which, self.GNBI(img))
         else:
             BaseNotebook.SetPageImage(self, which, img)
