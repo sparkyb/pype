@@ -64,6 +64,8 @@ class ReplaceBar(wx.Panel):
         #textbox
         if self.root.getglobal('no_findbar_history'):
             self.box1 = box1 = wx.TextCtrl(self, -1, size=(125, -1), style=wx.TE_PROCESS_ENTER)
+            if prefs['find']:
+                box1.SetValue(prefs['find'][0])
         else:
             self.box1 = box1 = wx.ComboBox(self, -1, choices=prefs['find'], size=(125, -1), style=wx.TE_PROCESS_ENTER)
             if prefs['find']:
@@ -124,11 +126,13 @@ class ReplaceBar(wx.Panel):
             self.closebutton = self.addbutton(self.sizer, self, "Close", self.close, (0,5-bool(DOUBLE_ROW_ONE)))
         
         if isinstance(self, FindBar):
-            self.box1.MoveAfterInTabOrder(self.closebutton)
+            ## self.box1.MoveAfterInTabOrder(self.closebutton)
             return self.finish_setup()
         
         if self.root.getglobal('no_findbar_history'):
             self.box2 = box2 = wx.TextCtrl(self, -1, size=(125, -1))
+            if prefs['replace']:
+                box2.SetValue(prefs['replace'][0])
         else:
             self.box2 = box2 = wx.ComboBox(self, -1, choices=prefs['replace'], size=(125, -1))
             if prefs['replace']:
@@ -154,7 +158,7 @@ class ReplaceBar(wx.Panel):
         else:
             self.sizer.Add(self.smartcase, (1,4), flag=wx.ALIGN_CENTER_VERTICAL|wx.RIGHT)
         
-        self.box1.MoveAfterInTabOrder(self.smartcase)
+        ## self.box1.MoveAfterInTabOrder(self.smartcase)
         self.finish_setup()
 
     def finish_setup(self):
@@ -343,12 +347,12 @@ class ReplaceBar(wx.Panel):
             return
         elif kc == wx.WXK_SHIFT and self.FindFocus() == self.box1:
             self.shiftdown = 1
-        elif kc == wx.WXK_TAB:
-            foc = self.FindFocus()
-            if foc == self.box1:
-                return self.buttons[0].SetFocus()
-            elif len(self.buttons) == 2 and foc == self.box2:
-                return self.buttons[1].SetFocus()
+        ## elif kc == wx.WXK_TAB:
+            ## foc = self.FindFocus()
+            ## if foc == self.box1:
+                ## return self.buttons[0].SetFocus()
+            ## elif len(self.buttons) == 2 and foc == self.box2:
+                ## return self.buttons[1].SetFocus()
         if evt:
             evt.Skip()
     
@@ -706,9 +710,9 @@ class ReplaceBar(wx.Panel):
     def savePreferences(self):
         def getlist(c):
             if not isinstance(c, wx.ComboBox):
-                return []
+                return [c.GetValue()]
             if self.root.getglobal('no_findbar_history'):
-                return []
+                return [c.GetValue()]
             cc = c.GetCount()
             e = [c.GetString(i) for i in xrange(cc)]
             e = [i for i in e if i]
