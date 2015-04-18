@@ -107,6 +107,14 @@ class ReplaceBar(wx.Panel):
             ss.Add(self.wrap, flag=wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, border=5)
         else:
             self.sizer.Add(self.wrap, (0,4), flag=wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, border=5)
+        self.regex = wx.CheckBox(self, -1, "Regular Expression")
+        if USE_MINI_CHECKBOXES:
+            self.regex.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
+        if USE_BOX_SIZERS or DOUBLE_ROW_ONE:
+            ss.Add(self.regex, flag=wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, border=5)
+        else:
+            self.sizer.Add(self.regex, (0,5), flag=wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, border=5)
+        self.regex.SetValue(prefs['regex'])
         
         if DOUBLE_ROW_ONE:
             if not USE_BOX_SIZERS:
@@ -123,7 +131,7 @@ class ReplaceBar(wx.Panel):
             self.closebutton = self.addbutton(ss, self, "Close", self.close, 0)
             self.sizer.Add(ss, (0,3), flag=wx.EXPAND)
         else:
-            self.closebutton = self.addbutton(self.sizer, self, "Close", self.close, (0,5-bool(DOUBLE_ROW_ONE)))
+            self.closebutton = self.addbutton(self.sizer, self, "Close", self.close, (0,6-bool(DOUBLE_ROW_ONE)))
         
         if isinstance(self, FindBar):
             ## self.box1.MoveAfterInTabOrder(self.closebutton)
@@ -205,7 +213,7 @@ class ReplaceBar(wx.Panel):
             return
 
         #search in whatever direction we were before
-        if self._lastcall == self.OnFindN:
+        if self._lastcall == self.OnFindN and not self.regex.GetValue():
             self._lastcall(evt, 1)
 
     def OnNotFound(self):
@@ -224,7 +232,7 @@ class ReplaceBar(wx.Panel):
                 if evt:
                     evt.Skip()
                 raise cancelled
-            return "", None, None
+            return "", None, None, None
         
         #python strings in find automatically handled
         findTxt = self.root.getglobal('str_unrepr')(findTxt)
@@ -235,10 +243,17 @@ class ReplaceBar(wx.Panel):
                 if evt:
                     evt.Skip()
                 raise cancelled
-            return "", None, None
+            return "", None, None, None
+        
+        regex = self.regex.GetValue()
+        if (regex and not which):
+            try:
+                findTxt = re.compile(findTxt, not matchcase and re.I or 0)
+            except:
+                regex = 0
         
         win = self.parent.GetWindow1()
-        return findTxt, matchcase, win
+        return findTxt, matchcase, regex, win
 
     def sel(self, posns, posne, msg, win):
         if self.box1.GetBackgroundColour() != wx.WHITE:
@@ -283,7 +298,7 @@ class ReplaceBar(wx.Panel):
     def OnFindN(self, evt, incr=0):
         self._lastcall = self.OnFindN
         self.incr = incr
-        findTxt, matchcase, win = self.getFinds(evt)
+        findTxt, matchcase, regex, win = self.getFinds(evt)
         flags = wx.FR_DOWN|matchcase
         if self.wholeword:
             flags |= wx.stc.STC_FIND_WHOLEWORD
@@ -292,26 +307,45 @@ class ReplaceBar(wx.Panel):
         gs = win.GetSelection()
         gs = min(gs), max(gs)
         st = gs[1-incr]
-        posn = win.FindText(st, win.GetTextLength(), findTxt, flags)
-        if posn != -1:
-            self.sel(posn, posn+len(findTxt), '', win)
-            self.loop = 0
-            return
+        if (regex):
+            match = findTxt.search(win.GetTextUTF8(), st, win.GetTextLength())
+            if (match):
+                self.sel(match.start(), match.end(), '', win)
+                self.loop = 0
+                return
+        else:
+            posn = win.FindText(st, win.GetTextLength(), findTxt, flags)
+            if posn != -1:
+                self.sel(posn, posn+len(findTxt), '', win)
+                self.loop = 0
+                return
         
-        if self.wrap.GetValue() and st != 0:
-            posn = win.FindText(0, win.GetTextLength(), findTxt, flags)
         self.loop = 1
-        
-        if posn != -1:
-            self.sel(posn, posn+len(findTxt), "Reached end of document, continued from start.", win)
-            return
-        
+
+        if self.wrap.GetValue() and st != 0:
+            if (regex):
+                match = findTxt.search(win.GetText())
+                if (match):
+                    self.sel(match.start(), match.end(), "Reached end of document, continued from start.", win)
+                    self.loop = 0
+                    return
+            else:
+                posn = win.FindText(0, win.GetTextLength(), findTxt, flags)
+                if posn != -1:
+                    self.sel(posn, posn+len(findTxt), "Reached end of document, continued from start.", win)
+                    return
+            
         self.OnNotFound()
     
     def OnFindP(self, evt, incr=0):
         self._lastcall = self.OnFindP
         self.incr = 0
-        findTxt, matchcase, win = self.getFinds(evt)
+        findTxt, matchcase, regex, win = self.getFinds(evt)
+        
+        if (regex):
+            self.status("Can't search backwards with a regular expression.")
+            return
+        
         flags = matchcase
         if self.wholeword:
             flags |= wx.stc.STC_FIND_WHOLEWORD
@@ -378,20 +412,29 @@ class ReplaceBar(wx.Panel):
             evt.Skip()
 
     def OnReplace(self, evt):
-        findTxt, matchcase, win = self.getFinds(evt)
+        findTxt, matchcase, regex, win = self.getFinds(evt)
+        regex = self.regex.GetValue()
         sel = win.GetSelection()
         if sel[0] == sel[1]:
             self.OnFindN(evt)
             return (-1, -1), 0
         else:
             a = win.GetTextRange(sel[0], sel[1])
-            if (matchcase and a != findTxt) or \
-               (not matchcase and a.lower() != findTxt.lower()):
-                self.OnFindN(evt)
-                return (-1, -1), 0
+            if (regex):
+                match = findTxt.search(win.GetText(),sel[0],sel[1])
+                if (not match or match.start()!=sel[0] or match.end()!=sel[1]):
+                    self.OnFindN(evt)
+                    return (-1, -1), 0
+            else:
+                if (matchcase and a != findTxt) or \
+                   (not matchcase and a.lower() != findTxt.lower()):
+                    self.OnFindN(evt)
+                    return (-1, -1), 0
             
         
         replaceTxt = self.getFinds(None, 1)[0]
+        if (regex):
+            replaceTxt = findTxt.sub(replaceTxt,a)
         findTxt = a
         
         if self.smartcase.GetValue():
@@ -698,7 +741,7 @@ class ReplaceBar(wx.Panel):
         prefs.setdefault('case', 0)
         prefs.setdefault('wrap', 1)
         prefs.setdefault('smartcase', 0)
-        #prefs.setdefault('regex', 0)
+        prefs.setdefault('regex', 0)
         #prefs.setdefault('multiline', 0)
         #prefs.setdefault('whole_word', 0)
         #prefs.setdefault('quoted', 0)
