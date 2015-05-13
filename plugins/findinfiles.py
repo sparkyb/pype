@@ -450,7 +450,7 @@ class FindInFiles(wx.Panel):
 
         def combobox(ch, d=''):
             a = wx.ComboBox(SLF, -1, choices=ch, style=wx.CB_DROPDOWN,
-                size=(100, 1))
+                size=(100, -1))
             if ch: a.SetSelection(0)
             elif d: a.SetValue(d)
             return a
