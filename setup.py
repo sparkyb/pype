@@ -165,7 +165,7 @@ data_files=[('', glob.glob('*.txt')+\
             ['stc-styles.rc.cfg', 'readme.html', 'PKG-INFO', 'MANIFEST.in']),
             ('icons', glob.glob(os.path.join('icons', '*.*'))),
             #('macros', glob.glob(os.path.join('macros', '*.py'))),
-            (samples, glob_(samples, ('*.txt', '*.py'))), "MSVCR90.dll", "gdiplus.dll"]
+            (samples, glob_(samples, ('*.txt', '*.py'))), ]#"MSVCR90.dll", "gdiplus.dll"]
 
 setup(
     windows=[PyPE],
@@ -173,6 +173,7 @@ setup(
     options={
         "py2exe" : {
             "compressed" : 1,
+            "bundle_files" : 1,
             "packages": ["encodings"],
             "excludes" : ["Tkinter",],
             "dll_excludes": ["MSVCP90.dll"]
