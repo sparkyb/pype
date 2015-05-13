@@ -394,7 +394,18 @@ class MyNB(BaseNotebook):
         self.fr = None
         if cp is None:
             return
-        self.MoveTabPage(cp, i)
+        try:
+            self.Freeze()
+            if wx.VERSION >= (3,):
+                # wx >3.0 moves the page as you drag,
+                # so move it back before calling MoveTabPage
+                p = self.GetPage(i)
+                t = self.GetPageText(i)
+                BaseNotebook.RemovePage(self,i)
+                BaseNotebook.InsertPage(self,cp,p,t,1,self.GNBI(__main__.GDI(t)))
+            self.MoveTabPage(cp, i)
+        finally:
+            self.Thaw()
         evt.Skip()
 
     def SetPageText(self, posn, text):
