@@ -682,7 +682,7 @@ def get_filetype(fn):
 fake_primary_clipboard = ''
 def GetClipboardText(use_primary=False):
     success = False
-    if not sys.platform.startswith('win'):
+    if not sys.platform.startswith('win') and wx.VERSION >= (2, 9):
         wx.TheClipboard.UsePrimarySelection(use_primary)
     elif use_primary:
         return fake_primary_clipboard
@@ -697,7 +697,7 @@ def GetClipboardText(use_primary=False):
     return None
 
 def SetClipboardText(txt, use_primary=False):
-    if not sys.platform.startswith('win'):
+    if not sys.platform.startswith('win') and wx.VERSION >= (2, 9):
         wx.TheClipboard.UsePrimarySelection(use_primary)
     elif use_primary:
         global fake_primary_clipboard
