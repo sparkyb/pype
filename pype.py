@@ -1103,6 +1103,9 @@ class MainWindow(wx.Frame):
             menuAdd(self, viewmenu, "Previous Tab\tAlt+,", "View the tab to the left of the one you are currently", self.OnLeft, wx.NewId())
             menuAdd(self, viewmenu, "Next Tab\tAlt+.", "View the tab to the right of the one you are currently", self.OnRight, wx.NewId())
             viewmenu.AppendSeparator()
+            menuAdd(self, viewmenu, "Move Tab Left\tAlt+LEFT", "Move the current tab to the left", self.OnMoveLeft, wx.NewId())
+            menuAdd(self, viewmenu, "Move Tab Right\tAlt+RIGHT", "Move the current tab to the right", self.OnMoveRight, wx.NewId())
+            viewmenu.AppendSeparator()
             menuAdd(self, viewmenu, "Zoom In\tCtrl++", "Make the text in the editing component bigger", self.OnZoom, ZI)
             menuAdd(self, viewmenu, "Zoom Out\tCtrl+-", "Make the text in the editing component smaller", self.OnZoom, wx.NewId())
             viewmenu.AppendSeparator()
@@ -2943,6 +2946,16 @@ class MainWindow(wx.Frame):
             self.control.SetSelection(0)
         else:
             self.control.AdvanceSelection(True)
+
+    def OnMoveLeft(self, e):
+        pc = self.control.GetPageCount()
+        page = self.control.GetSelection()
+        self.control.MoveTabPage(page, (page - 1) % pc)
+
+    def OnMoveRight(self, e):
+        pc = self.control.GetPageCount()
+        page = self.control.GetSelection()
+        self.control.MoveTabPage(page, (page + 1) % pc)
 
     def OnFindDefn(self, e):
         if 'filter' not in window_management.enabled:
