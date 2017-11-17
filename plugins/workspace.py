@@ -7,7 +7,10 @@ It is also included with this archive as `gpl.txt <gpl.txt>`_.
 
 
 #system imports
+import glob
 import os
+import pprint
+import time
 
 #site-packages imports
 import wx
@@ -15,10 +18,47 @@ import wx
 #local imports
 import filehistory
 
+workspacepath = os.path.join(_pype.homedir, 'workspaces')
+
 #Why should I use an object when a closure works just as well?
 #God this is such a hack, but it makes me smile.
 def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
-    
+
+    def SaveWorkspace(name, paths):
+        if not os.path.exists(workspacepath):
+            os.makedirs(workspacepath)
+        path = os.path.join(workspacepath, name + '.txt')
+        f = open(path, "w")
+        f.write(pprint.pformat(paths))
+        f.close()
+
+    def TouchWorkspace(name):
+        try:
+            os.utime(os.path.join(workspacepath, name + '.txt'), None)
+        except:
+            return
+
+    def LoadWorkspaces():
+        # load new format
+        workspaces.clear()
+        workspace_order[:] = []
+
+        try:
+            for path in glob.glob(os.path.join(workspacepath, '*.txt')):
+                name = os.path.splitext(os.path.basename(path))[0]
+                f = open(path, 'r')
+                data = f.read()
+                f.close()
+                try:
+                    workspaces[name] = _pype.unrepr(data)
+                except:
+                    pass
+                else:
+                    workspace_order.append(name)
+        except:
+            pass
+        workspace_order.sort(key=lambda name: os.stat(os.path.join(workspacepath, name + '.txt')).st_mtime, reverse=True)
+
     def OnCloseAll(event):
         self = parentwindow
         sel = self.control.GetSelection()
@@ -96,6 +136,7 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
         #handle workspace ordering
         workspace_order.insert(0, wn)
         workspaces[wn] = l
+        SaveWorkspace(wn, l)
         openmenu.ItemAdd(wn)
         deletemenu.ItemAdd(wn)
     
@@ -107,6 +148,8 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
             workspace_order.remove(label)
         
         workspace_order.insert(0, label)
+
+        TouchWorkspace(label)
         
         #fetch the workspace
         ws = workspaces.get(label, [])
@@ -121,7 +164,20 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
         if label in workspace_order:
             workspace_order.remove(label)
         workspaces.pop(label, None)
+        path = os.path.join(workspacepath, label + '.txt')
+        try:
+            os.remove(path)
+        except:
+            pass
     
+
+    # upgrade old format to new.
+    for name in reversed(workspace_order):
+        SaveWorkspace(name, workspaces[name])
+        time.sleep(.5)
+
+    LoadWorkspaces()
+
     #code that actually modifies the menu
     if 1:
         closeall = wx.NewId()

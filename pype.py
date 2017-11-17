@@ -2082,8 +2082,10 @@ class MainWindow(wx.Frame):
         ## self.config['shellcommands'] = a
         self.config['match_flags'] = match_flags
         self.config['pathmarksn'] = self.pathmarks.op.GetLabels()
-        self.config['workspaces'] = workspaces
-        self.config['workspace_order'] = workspace_order
+        if 'workspaces' in self.config:
+          del self.config['workspaces']
+        if 'workspace_order' in self.config:
+          del self.config['workspace_order']
         self.config['logbarlocn'] = logbarlocn
         self.config['docbarlocn'] = docbarlocn
         self.config['dnd_file'] = dnd_file
