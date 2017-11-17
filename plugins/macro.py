@@ -19,7 +19,7 @@ import threading
 __main__ = _pype
 import wx
 
-macropath = os.path.join(_pype.runpath, 'macros')
+macropath = os.path.join(_pype.homedir, 'macros')
 
 columns = (
     (0, "Macro Name", 150, 0),
