@@ -109,6 +109,8 @@ class MyNB(BaseNotebook):
     def __init__(self, root, id, parent):
         BaseNotebook.__init__(self, parent, id, style=_style)
         self.root = root
+        if WHICHNB == 2 and wx.VERSION >= (3,):
+            self.SetArtProvider(aui.AuiGenericTabArt())
         if WHICHNB != 2 or wx.VERSION >= (3,):
             if __main__.USE_DOC_ICONS:
                 self.AssignImageList(__main__.IMGLIST2)

@@ -288,7 +288,7 @@ if 1:
             for i in xrange(menu.GetMenuCount()):
                 r = menu.GetMenu(i)
                 if r.FindItemById(id):
-                    return "%s->%s"%(menu.GetLabelTop(i), recmenu(r, id))
+                    return "%s->%s"%(menu.GetMenuLabelText(i), recmenu(r, id))
         elif isinstance(menu, wx.Menu):
             ITEMS = menu.GetMenuItems()
             for i in ITEMS:
@@ -949,6 +949,9 @@ class MainWindow(wx.Frame):
             self.BOTTOMNB = aui.AuiNotebook(bottom, -1, style=_style)
             ## self.RIGHTNB = wx.Notebook(right, -1)
             self.RIGHTNB = aui.AuiNotebook(right, -1, style=_style)
+            if wx.VERSION >= (3,):
+                self.BOTTOMNB.SetArtProvider(aui.AuiGenericTabArt())
+                self.RIGHTNB.SetArtProvider(aui.AuiGenericTabArt())
             bottom.SplitHorizontally(right, self.BOTTOMNB, -SASH1, not logbarlocn)
             wx.Yield()
             right.SplitVertically(self.control, self.RIGHTNB, -SASH2, not docbarlocn)
@@ -2477,6 +2480,8 @@ class MainWindow(wx.Frame):
             txt = ''
 
         split = SplitterWindow(self.control, wx.NewId(), style=wx.SP_NOBORDER)
+        if wx.VERSION >= (3,):
+            split.SetSashInvisible(True)
         split.SetMinimumPaneSize(0)
         wx.EVT_SPLITTER_SASH_POS_CHANGING(self, split.GetId(), veto)
 
@@ -2839,7 +2844,7 @@ class MainWindow(wx.Frame):
 
         box.SetFocus()
         if isinstance(box, wx.TextCtrl):
-            box.SetSelection(0, box.GetLastPosition())
+            wx.CallAfter(box.SetSelection, 0, box.GetLastPosition())
         else:
             box.SetMark(0, len(box.GetValue()))
 
