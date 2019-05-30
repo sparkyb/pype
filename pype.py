@@ -5399,7 +5399,7 @@ class PythonSTC(stc.StyledTextCtrl):
 
         #get information about the current cursor position
         linenum = self.GetCurrentLine()
-        pos = self.GetCurrentPos()
+        pos = self.GetSelectionStart()
         col = self.GetColumn(pos)
         linestart = self.PositionFromLine(linenum)
         line = self.GetLine(linenum)[:pos-linestart]
@@ -5411,173 +5411,180 @@ class PythonSTC(stc.StyledTextCtrl):
 
         lang = self.style()
 
-        if col <= ind:
-            xtra = None
-            if self.GetUseTabs():
-                self.ReplaceSelection(self.format+(col*' ').replace(self.GetTabWidth()*' ', '\t'))
-            else:
-                self.ReplaceSelection(self.format+(col*' '))
-        elif not pos:
-            xtra = None
-            self.ReplaceSelection(self.format)
+        self.BeginUndoAction()
+        try:
+            if line.strip() == '':
+              self.Remove(linestart, pos)
 
-        elif lang == 'cpp':
-            ## print "indent on return for cpp"
-            dmap = {'{':1, '}':2}
-            first = None
-            x = [0,0,0]
-            for ch in line:
-                y = dmap.get(ch, 0)
-                x[y] += 1
-                if not first and y:
-                    first=y
-            x[2] -= first==2
-            xtra = x[1]-x[2]
-            if line.split()[:1] == ['return']:
-                xtra -= 1
+            if col <= ind:
+                xtra = None
+                if self.GetUseTabs():
+                    self.ReplaceSelection(self.format+(col*' ').replace(self.GetTabWidth()*' ', '\t'))
+                else:
+                    self.ReplaceSelection(self.format+(col*' '))
+            elif not pos:
+                xtra = None
+                self.ReplaceSelection(self.format)
 
-        elif lang in ('xml', 'html'):
-            ## print "trying", lang
-            ls = line.split('<')
-            for i in xrange(len(ls)-1, -1, -1):
-                lsi = ls[i]
-                lsis = lsi.strip()
-                lsil = lsi.lower()
-                c = 0
-                for i in parsers.no_ends:
-                    if lsil.startswith(i):
-                        c = 1
-                        break
-                if c:
-                    continue
-
-                if '/>' in lsi or '/ >' in lsi:
-                    continue
-                elif lsi[:1] == '/':
+            elif lang == 'cpp':
+                ## print "indent on return for cpp"
+                dmap = {'{':1, '}':2}
+                first = None
+                x = [0,0,0]
+                for ch in line:
+                    y = dmap.get(ch, 0)
+                    x[y] += 1
+                    if not first and y:
+                        first=y
+                x[2] -= first==2
+                xtra = x[1]-x[2]
+                if line.split()[:1] == ['return']:
                     xtra -= 1
-                elif lsis:
-                    xtra += 1
-            #we are limiting ourselves to 1 indent/dedent per step
-            xtra = min(max(xtra, -1), 1)
 
-        elif lang == 'tex':
-            ## print "trying", lang, line.strip()
-            if line.lstrip().startswith('\\begin'):
-                xtra = 1
-            #end doesn't make sense, as it should be on the same indent level
-            #as the begin.
-            ## elif line.lstrip()[:4] == '\\end':
-                ## xtra = -1
-
-        #insert other indentation per language here.
-
-        else: #if language is python
-            ## print "indent on return for python"
-            candidates = set(['return', 'pass', 'break', 'continue'])
-            colon = ord(':')
-
-            if (line.find(':')>-1):
-                for i in xrange(linestart, min(pos, self.GetTextLength())):
-                    styl = self.GetStyleAt(i)
-                    #print styl, self.GetCharAt(i)
-                    if not xtra:
-                        if (styl==10) and (self.GetCharAt(i) == colon):
-                            xtra = 1
-                    elif (styl == 1):
-                        #it is a comment, ignore the character
-                        pass
-                    elif (styl == 0) and (self.GetCharAt(i) in [ord(i) for i in ' \t\r\n']):
-                        #is not a comment, but is the space before a comment
-                        #or the end of a line, ignore the character
-                        pass
-                    else:
-                        #this is not a comment or some innocuous other character
-                        #this is a docstring or otherwise, no additional indent
-                        xtra = 0
-                        #commenting the break fixes stuff like this
-                        # for i in blah[:]:
-                        #break
-                if xtra:
-                    #This deals with ending single and multi-line definitions properly.
-                    while linenum >= 0:
-                        found = []
-                        for i in ['def', 'class', 'if', 'else', 'elif', 'while',
-                                'for', 'try', 'except', 'finally', 'with', 'cdef']:
-                            a = line.find(i)
-                            if (a > -1):
-                                found.append(a)
-                        #print 'fnd', found
-                        if found: found = min(found)
-                        else:     found = -1
-                        if (found > -1) and\
-                        (self.GetStyleAt(self.GetLineEndPosition(linenum)-len(line)+found)==5) and\
-                        (self.GetLineIndentation(linenum) == found):
-                            ind = self.GetLineIndentation(linenum)
+            elif lang in ('xml', 'html'):
+                ## print "trying", lang
+                ls = line.split('<')
+                for i in xrange(len(ls)-1, -1, -1):
+                    lsi = ls[i]
+                    lsis = lsi.strip()
+                    lsil = lsi.lower()
+                    c = 0
+                    for i in parsers.no_ends:
+                        if lsil.startswith(i):
+                            c = 1
                             break
-                        linenum -= 1
-                        line = self.GetLine(linenum)
-            #if we were to do indentation for ()[]{}, it would be here
-            if not xtra:
-                #yep, right here.
-                fnd = 0
-                for i in "(){}[]":
-                    if (line.find(i) > -1):
-                        fnd = 1
-                        break
-                if fnd:
-                    seq = []
-                    #print "finding stuff"
+                    if c:
+                        continue
+
+                    if '/>' in lsi or '/ >' in lsi:
+                        continue
+                    elif lsi[:1] == '/':
+                        xtra -= 1
+                    elif lsis:
+                        xtra += 1
+                #we are limiting ourselves to 1 indent/dedent per step
+                xtra = min(max(xtra, -1), 1)
+
+            elif lang == 'tex':
+                ## print "trying", lang, line.strip()
+                if line.lstrip().startswith('\\begin'):
+                    xtra = 1
+                #end doesn't make sense, as it should be on the same indent level
+                #as the begin.
+                ## elif line.lstrip()[:4] == '\\end':
+                    ## xtra = -1
+
+            #insert other indentation per language here.
+
+            else: #if language is python
+                ## print "indent on return for python"
+                candidates = set(['return', 'pass', 'break', 'continue'])
+                colon = ord(':')
+
+                if (line.find(':')>-1):
+                    for i in xrange(linestart, min(pos, self.GetTextLength())):
+                        styl = self.GetStyleAt(i)
+                        #print styl, self.GetCharAt(i)
+                        if not xtra:
+                            if (styl==10) and (self.GetCharAt(i) == colon):
+                                xtra = 1
+                        elif (styl == 1):
+                            #it is a comment, ignore the character
+                            pass
+                        elif (styl == 0) and (self.GetCharAt(i) in [ord(i) for i in ' \t\r\n']):
+                            #is not a comment, but is the space before a comment
+                            #or the end of a line, ignore the character
+                            pass
+                        else:
+                            #this is not a comment or some innocuous other character
+                            #this is a docstring or otherwise, no additional indent
+                            xtra = 0
+                            #commenting the break fixes stuff like this
+                            # for i in blah[:]:
+                            #break
+                    if xtra:
+                        #This deals with ending single and multi-line definitions properly.
+                        while linenum >= 0:
+                            found = []
+                            for i in ['def', 'class', 'if', 'else', 'elif', 'while',
+                                    'for', 'try', 'except', 'finally', 'with', 'cdef']:
+                                a = line.find(i)
+                                if (a > -1):
+                                    found.append(a)
+                            #print 'fnd', found
+                            if found: found = min(found)
+                            else:     found = -1
+                            if (found > -1) and\
+                            (self.GetStyleAt(self.GetLineEndPosition(linenum)-len(line)+found)==5) and\
+                            (self.GetLineIndentation(linenum) == found):
+                                ind = self.GetLineIndentation(linenum)
+                                break
+                            linenum -= 1
+                            line = self.GetLine(linenum)
+                #if we were to do indentation for ()[]{}, it would be here
+                if not xtra:
+                    #yep, right here.
+                    fnd = 0
                     for i in "(){}[]":
-                        a = line.find(i)
-                        start = 0
-                        while a > -1:
-                            start += a+1
-                            if self.GetStyleAt(start+linestart-1)==10:
-                                seq.append((start, i))
-                            a = line[start:].find(i)
-                    seq.sort()
-                    cl = {')':'(', ']': '[', '}': '{',
-                        '(':'',  '[': '',  '{': ''}
-                    stk = []
-                    #print "making tree"
-                    for po, ch in seq:
-                        #print ch,
-                        if not cl[ch]:
-                            #standard opening
-                            stk.append((po, ch))
-                        elif stk:
-                            if cl[ch] == stk[-1][1]:
-                                #proper closing of something
-                                stk.pop()
+                        if (line.find(i) > -1):
+                            fnd = 1
+                            break
+                    if fnd:
+                        seq = []
+                        #print "finding stuff"
+                        for i in "(){}[]":
+                            a = line.find(i)
+                            start = 0
+                            while a > -1:
+                                start += a+1
+                                if self.GetStyleAt(start+linestart-1)==10:
+                                    seq.append((start, i))
+                                a = line[start:].find(i)
+                        seq.sort()
+                        cl = {')':'(', ']': '[', '}': '{',
+                            '(':'',  '[': '',  '{': ''}
+                        stk = []
+                        #print "making tree"
+                        for po, ch in seq:
+                            #print ch,
+                            if not cl[ch]:
+                                #standard opening
+                                stk.append((po, ch))
+                            elif stk:
+                                if cl[ch] == stk[-1][1]:
+                                    #proper closing of something
+                                    stk.pop()
+                                else:
+                                    #probably a syntax error
+                                    #does it matter what is done?
+                                    stk = []
+                                    break
                             else:
-                                #probably a syntax error
-                                #does it matter what is done?
+            #Probably closing something on another line, should probably find
+            #the indent level of the opening, but that would require checking
+            #multiple previous items for the opening item.
+            #single-line dedent.
                                 stk = []
                                 break
-                        else:
-        #Probably closing something on another line, should probably find
-        #the indent level of the opening, but that would require checking
-        #multiple previous items for the opening item.
-        #single-line dedent.
-                            stk = []
-                            break
-                    if stk:
-                        #print "stack remaining", stk
-                        ind = stk[-1][0]
-            if not xtra:
-                ls = line.split()
-                ls[0:1] = ls[0].split('#')
-                ls[0:1] = ls[0].split(';')
-                if ls[0] in candidates:
-                    xtra = -1
+                        if stk:
+                            #print "stack remaining", stk
+                            ind = stk[-1][0]
+                if not xtra:
+                    ls = line.split()
+                    ls[0:1] = ls[0].split('#')
+                    ls[0:1] = ls[0].split(';')
+                    if ls[0] in candidates:
+                        xtra = -1
 
-        if xtra != None:
-            a = max(ind+xtra*self.GetIndent(), 0)*' '
+            if xtra != None:
+                a = max(ind+xtra*self.GetIndent(), 0)*' '
 
-            if self.GetUseTabs():
-                a = a.replace(self.GetTabWidth()*' ', '\t')
-            ## self._tdisable(self.ReplaceSelection, self.format+a)
-            self.ReplaceSelection(self.format+a)
+                if self.GetUseTabs():
+                    a = a.replace(self.GetTabWidth()*' ', '\t')
+                ## self._tdisable(self.ReplaceSelection, self.format+a)
+                self.ReplaceSelection(self.format+a)
+        finally:
+            self.EndUndoAction()
 
     def OnSelectToggle(self, e):
         if self.selep is None:
