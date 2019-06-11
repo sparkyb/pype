@@ -4552,32 +4552,29 @@ class PythonSTC(stc.StyledTextCtrl):
 
 #-------------------- fix for SetText for the 'dirty bit' --------------------
     def SetText(self, txt, emptyundo=1):
-        tryencodings = ['ascii']
-        foundbom = 0
+        default_encodings = ['latin-1', 'utf-8', 'ascii']
         if UNICODE:
             ## if get_filetype(self.filename) in ('xml', 'html'):
                 ## #default XML and HTML encodings are utf-8 by spec:
                 ## #http://www.w3.org/TR/2000/REC-xml-20001006#NT-EncodingDecl
-                ## tryencodings.append('utf-8')
+                ## default_encodings.append('utf-8')
+            bom_encodings = []
             for bom, enc in BOM:
                 if bom and txt[:len(bom)] == bom:
-                    tryencodings.append(enc)
+                    bom_encodings.append(enc)
                     txt = txt[len(bom):]
-                    foundbom += 1
             twolines = txt.lstrip().split(self.format, 2)[:2]
-            foundcoding = 0
+            coding_encodings = []
             for line in twolines:
                 x = re.search('''[cC][oO][dD][iI][nN][gG][=:](?:["'\s]*)([-\w.]+)''', line)
                 if not x:
                     continue
                 x = x.group(1).lower()
                 ## print "ENCODING:", x
-                #always try to decode with the BOM first
-                tryencodings.insert(len(tryencodings)-foundbom, x)
-                foundcoding += 1
+                coding_encodings.append(x)
                 break
-            if 'utf-8' not in tryencodings:
-                tryencodings.insert(0, 'utf-8')
+            #always try to decode with the BOM first
+            tryencodings = default_encodings + coding_encodings + bom_encodings
             te = []
             while tryencodings:
                 i = tryencodings.pop()
@@ -4586,28 +4583,28 @@ class PythonSTC(stc.StyledTextCtrl):
 
             te.reverse()
 
-            while len(te) > 1:
-                prev = te[-1]
-                if te[-1] == 'ascii':
-                    te[-1] = 'latin-1'
+            while te:
+                enc = te.pop()
                 try:
-                    txt = txt.decode(te[-1])
+                    txt = txt.decode(enc)
                 except Exception, why:
-                    te[-1] = prev
-                    self.root.dialog(encoding_template%(te[-1], why, te[-2]),
-                                     "%r decoding error"%(te[-1],))
-                    _ = te.pop()
+                    if enc in bom_encodings or enc in coding_encodings:
+                        self.root.dialog(encoding_template%(enc, why, te[-1]),
+                                         "%r decoding error"%(enc,))
                     continue
                 else:
-                    te[-1] = prev
                     break
 
-            self.enc = te[-1]
+            self.enc = enc
 
-            if self.enc not in ADDBOM:
+            if enc == 'latin-1':
+                self.enc = 'ascii'
+            elif enc not in ADDBOM:
                 self.enc = 'other'
+            else:
+                self.enc = enc
         else:
-            self.enc = tryencodings[-1]
+            self.enc = 'ascii'
 
         self.SetEOLMode(fmt_mode[self.format])
         stc.StyledTextCtrl.SetText(self, txt)
@@ -4677,7 +4674,7 @@ class PythonSTC(stc.StyledTextCtrl):
                         self.root.SetStatusText("Using %r encoding for %s"%(i, y))
 
                     ## print 'SAVED ENCODING:', i
-                    if (always_write_bom and i == te[0]) or (i != te[0]):
+                    if always_write_bom or i != te[0]:
                         ## print "added BOM for", i
                         txt = ADDBOM.get(i, '') + txt
                     return txt

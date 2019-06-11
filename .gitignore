@@ -1,3 +1,6 @@
 .pype
 *.pyc
 *.pyo
+dist/
+build/
+
