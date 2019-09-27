@@ -1046,7 +1046,9 @@ class MainWindow(wx.Frame):
             menuAdd(self, filemenu, "&Reload",              "Reload the current document from disk", self.OnReload, wx.ID_REVERT)
             menuAdd(self, filemenu, "Check Mods\tShift+F5", "Check to see if any files have been modified", self.OnCheckMods, wx.NewId())
             menuAdd(self, filemenu, "&Close\tCtrl+W",       "Close the file in this tab", self.OnClose, wx.ID_CLOSE)
-            workspace.WorkspaceMenu(filemenu, self, workspaces, workspace_order)
+            menuAdd(self, filemenu, "Close All Documents",  "Closes all open documents, asking to save changes on modified files", self.OnCloseAll, wx.NewId())
+            filemenu.AppendSeparator()
+            workspace.CreateWorkspaceMenus(filemenu, self, workspaces, workspace_order)
             menuAdd(self, filemenu, "Restart",              "Restart PyPE", self.OnRestart, wx.NewId())
             menuAdd(self, filemenu, "E&xit\tAlt+F4",        "Terminate the program", self.OnExit, wx.NewId())
 
@@ -2685,6 +2687,24 @@ class MainWindow(wx.Frame):
         self.updateWindowTitle()
         self.docpanel._refresh()
         wx.CallAfter(self._updateChecks)
+
+    def OnCloseAll(self, e):
+        sel = self.control.GetSelection()
+        cnt = self.control.GetPageCount()
+        try:
+            for i in xrange(cnt):
+                win = self.control.GetPage(i).GetWindow1()
+
+                if isdirty(win):
+                    self.control.SetSelection(i)
+                    self.sharedsave(win)
+        except cancelled:
+            event.Skip()
+            return
+        self.starting = 1
+        for i in xrange(cnt-1, -1, -1):
+            self.OnClose(None, i, self.control.GetPage(i).GetWindow1())
+        self.starting = 0
 
     def OnRestart(self, e):
         self.OnExit(e, 0)

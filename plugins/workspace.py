@@ -22,12 +22,12 @@ workspacepath = os.path.join(_pype.homedir, 'workspaces')
 
 #Why should I use an object when a closure works just as well?
 #God this is such a hack, but it makes me smile.
-def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
+def CreateWorkspaceMenus(parentmenu, parentwindow, workspaces, workspace_order):
 
     def SaveWorkspace(name, paths):
-        if not os.path.exists(workspacepath):
-            os.makedirs(workspacepath)
         path = os.path.join(workspacepath, name + '.txt')
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
         f = open(path, "w")
         f.write(pprint.pformat(paths))
         f.close()
@@ -44,43 +44,22 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
         workspace_order[:] = []
 
         try:
-            for path in glob.glob(os.path.join(workspacepath, '*.txt')):
-                name = os.path.splitext(os.path.basename(path))[0]
-                f = open(path, 'r')
-                data = f.read()
-                f.close()
-                try:
-                    workspaces[name] = _pype.unrepr(data)
-                except:
-                    pass
-                else:
-                    workspace_order.append(name)
+            for dirpath, dirnames, filenames in os.walk(workspacepath):
+                for path in glob.glob(os.path.join(dirpath, '*.txt')):
+                    name = os.path.splitext(os.path.relpath(path, workspacepath))[0].replace('\\', '/')
+                    f = open(path, 'r')
+                    data = f.read()
+                    f.close()
+                    try:
+                        workspaces[name] = _pype.unrepr(data)
+                    except:
+                        pass
+                    else:
+                        workspace_order.append(name)
         except:
             pass
         workspace_order.sort(key=lambda name: os.stat(os.path.join(workspacepath, name + '.txt')).st_mtime, reverse=True)
 
-    def OnCloseAll(event):
-        self = parentwindow
-        sel = self.control.GetSelection()
-        cnt = self.control.GetPageCount()
-        try:
-            for i in xrange(cnt):
-                win = self.control.GetPage(i).GetWindow1()
-                
-                #Yeah, I know that using a function that is placed in the
-                #module's namespace AFTER import is bad form, but I do it
-                #anyways.
-                if isdirty(win):
-                    self.control.SetSelection(i)
-                    self.sharedsave(win)
-        except cancelled:
-            event.Skip()
-            return
-        self.starting = 1
-        for i in xrange(cnt-1, -1, -1):
-            self.OnClose(None, i, self.control.GetPage(i).GetWindow1())
-        self.starting = 0
-    
     def OnSave(event):
         #check for dirty and unnamed files...
         self = parentwindow
@@ -169,7 +148,8 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
             os.remove(path)
         except:
             pass
-    
+        else:
+            os.removedirs(os.path.dirname(path))
 
     # upgrade old format to new.
     for name in reversed(workspace_order):
@@ -180,18 +160,13 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
 
     #code that actually modifies the menu
     if 1:
-        closeall = wx.NewId()
-        parentmenu.Append(closeall, "Close All Documents",
-                        "Closes all open documents, asking to save changes on modified files")
-        wx.EVT_MENU(parentwindow, closeall, OnCloseAll)
-        parentmenu.AppendSeparator()
         nwksid = wx.NewId()
         parentmenu.Append(nwksid, "Save Workspace",
                         "Saves the current workspace, aborts if modified and unnamed files are open")
         wx.EVT_MENU(parentwindow, nwksid, OnSave)
         
-        openmenu = filehistory.FileHistory(parentwindow, callback=[OnOpen], seq=workspace_order)
-        deletemenu = filehistory.FileHistory(parentwindow, remove=1,
+        openmenu = WorkspaceMenu(parentwindow, callback=[OnOpen], seq=workspace_order)
+        deletemenu = WorkspaceMenu(parentwindow, remove=1,
                                 callback=[openmenu.ItemRemove, OnDelete],
                                 seq=workspace_order,
                                 delmsg=("Are you sure you want to delete the workspace:\n%s",
@@ -201,3 +176,99 @@ def WorkspaceMenu(parentmenu, parentwindow, workspaces, workspace_order):
         parentmenu.AppendMenu(wx.NewId(), "Delete Workspace", deletemenu)
         parentmenu.AppendSeparator()
 
+
+
+class WorkspaceMenu(wx.Menu):
+    def __init__(self, parent, name='', remove=0, callback=None, seq=[], delmsg=('', '')):
+        self.delmsg = delmsg
+        if name:
+            wx.Menu.__init__(self, name)
+        else:
+            wx.Menu.__init__(self)
+        
+        self.remove = remove
+        if not callback:
+            self.callback = []
+        else:
+            self.callback = callback
+        
+        self.parent = parent
+
+        self.submenus = {}
+        self.items = {}
+        self.names = {}
+
+        for name in seq:
+            parts = name.split('/')
+            submenuname = ''
+            submenu = self
+            for part in parts[:-1]:
+                submenuname += part
+                if submenuname not in self.submenus:
+                    self.submenus[submenuname] = submenu.AppendMenu(wx.NewId(), part, wx.Menu())
+                submenu = self.submenus[submenuname].GetSubMenu()
+                submenuname += '/'
+            iid = wx.NewId()
+            self.items[name] = submenu.Append(iid, parts[-1])
+            self.names[iid] = name
+            wx.EVT_MENU(self.parent, iid, self.OnClicked)
+        
+        self.last = None
+
+    def ItemRemove(self, name):
+        if name not in self.items:
+            return
+        if name == self.last:
+            self.last = None
+        item = self.items[name]
+        del self.items[name]
+        del self.names[item.GetId()]
+        item.GetMenu().DeleteItem(item)
+        name = os.path.dirname(name)
+        while name:
+            if self.submenus[name].GetSubMenu().GetMenuItemCount() == 0:
+                self.submenus[name].GetMenu().DeleteItem(self.submenus[name])
+                del self.submenus[name]
+            else:
+                break
+            name = os.path.dirname(name)
+    
+    def ItemAdd(self, name):
+        self.last = name
+        
+        parts = name.split('/')
+        submenuname = ''
+        submenu = self
+        for part in parts[:-1]:
+            submenuname += part
+            if submenuname not in self.submenus:
+                self.submenus[submenuname] = submenu.PrependMenu(wx.NewId(), part, wx.Menu())
+            else:
+                submenu.RemoveItem(self.submenus[submenuname])
+                submenu.PrependItem(self.submenus[submenuname])
+            submenu = self.submenus[submenuname].GetSubMenu()
+            submenuname += '/'
+
+        if name in self.items:
+            item = self.items[name]
+            submenu.RemoveItem(item)
+            submenu.PrependItem(item)
+        else:
+            iid = wx.NewId()
+            self.items[name] = submenu.Prepend(iid, parts[-1])
+            self.names[iid] = name
+            wx.EVT_MENU(self.parent, iid, self.OnClicked)
+        
+    def OnClicked(self, evt):
+        eid = evt.GetId()
+        if eid not in self.names:
+            return
+        name = self.names[eid]
+        if self.remove:
+            if filehistory.root.dialog(self.delmsg[0]%name, self.delmsg[1], wx.OK|wx.CANCEL)&1 != 0:
+                return
+            self.ItemRemove(name)
+        else:
+            self.ItemAdd(name)
+        for i in self.callback:
+            i(name)
